@@ -135,6 +135,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .filter-clear:hover{border-color:var(--red);color:var(--red)}
 .stu-shown{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-left:auto;align-self:center}
 .stu-shown strong{color:var(--accent)}
+.child-picker{padding:40px 0;text-align:center}
+.child-picker-title{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:24px}
+.child-cards{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
+.child-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 26px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:160px}
+.child-card:hover{border-color:var(--accent);box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.child-avatar{width:60px;height:60px;border-radius:50%;background:var(--accent-light);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--accent)}
+.child-avatar img{width:100%;height:100%;object-fit:cover}
+.child-name{font-size:16px;font-weight:700}
+.child-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
 .photo-preview{margin-top:10px}
 .photo-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
 .photo-preview-err{font-family:var(--font-mono);font-size:11px;color:var(--red)}
@@ -319,8 +328,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   <div class="login-screen" id="loginScreen" style="display:none;">
     <div class="login-card">
       <div class="login-icon"><img src="logo-on.png" alt="" onerror="this.parentElement.innerHTML='🤖'"></div>
-      <div class="login-title">Staff Sign In</div>
-      <div class="login-sub">Sign in with your ElectroBotics Google account to manage leads.</div>
+      <div class="login-title">Sign In</div>
+      <div class="login-sub">Sign in with your Google account. Staff manage students; parents view their child's progress.</div>
       <div style="display:flex;justify-content:center;margin:18px 0;">
         <button class="google-btn" id="googleBtn" onclick="doGoogleSignIn()">
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">Sign in with Google
@@ -455,7 +464,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
       </div>
       <div class="roadmap-controls">
         <button class="lvl-btn lvl-btn-markall" id="profEditBtn" onclick="openStudentForm(currentStudentId)" style="display:none;">Edit</button>
-        <button class="btn-logout" onclick="backFromProfile()"><span class="back-arrow">←</span> Back</button>
+        <button class="btn-logout" id="profBackBtn" onclick="backFromProfile()"><span class="back-arrow">←</span> Back</button>
       </div>
     </div>
     <div class="progress-summary" id="profSummary"></div>
@@ -636,17 +645,57 @@ onAuthStateChanged(auth, async (user)=>{
     const snap=await getDoc(doc(db,'users',user.email.toLowerCase()));
     userRole=snap.exists()?String(snap.data().role||'').toLowerCase():'';
   }catch(e){ console.error('role lookup',e); userRole=''; }
-  if(userRole==='admin'||userRole==='tutor'){ enterApp(); }
-  else{
-    showLogin();
-    $('loginErr').innerHTML='This account isn\'t authorized for the Leads pilot. <a href="#" onclick="doSignOut();return false;">Sign out</a>';
-  }
+  if(userRole==='admin'||userRole==='tutor'){ enterApp(); return; }
+  // Not staff → try the parent path: students whose parentEmails contains this email.
+  await enterParentMode(user.email.toLowerCase());
 });
 
-function showLogin(){ $('loginScreen').style.display=''; $('leadsScreen').style.display='none'; $('headerRight').innerHTML=''; }
+async function enterParentMode(email){
+  $('loginErr').innerHTML='<span class="spinner"></span> Signing in…';
+  let mine=[];
+  try{
+    await loadRefData();
+    const snap=await getDocs(query(collection(db,'students'),where('parentEmails','array-contains',email)));
+    mine=snap.docs.map(d=>({_id:d.id,...d.data()}));
+  }catch(e){console.error('parent lookup',e);}
+  if(!mine.length){
+    showLogin();
+    $('loginErr').innerHTML='This account isn\'t linked to any student. If you believe this is an error, contact ElectroBotics. <a href="#" onclick="doSignOut();return false;">Sign out</a>';
+    return;
+  }
+  userRole='parent';
+  studentsData=mine; // parent only ever holds their own children
+  $('loginScreen').style.display='none';
+  $('staffTabs').style.display='none';
+  $('headerRight').innerHTML=accountMenuHtml();
+  if(mine.length===1){ openProfile(mine[0].ID); }
+  else { showChildPicker(mine); }
+}
+
+function showChildPicker(kids){
+  $('leadsScreen').style.display='none';$('studentsScreen').style.display='none';$('profileScreen').style.display='none';
+  let pk=$('childPicker');
+  if(!pk){pk=document.createElement('div');pk.id='childPicker';pk.className='child-picker';document.querySelector('.app').appendChild(pk);}
+  pk.style.display='';
+  pk.innerHTML=`<div class="child-picker-title">Choose a student</div>
+    <div class="child-cards">${kids.map(s=>{
+      const initial=(s.Name||'?').charAt(0).toUpperCase();
+      return `<button class="child-card" onclick="openProfile('${esc(s.ID)}')">
+        <div class="child-avatar">${s.Photo?`<img src="${esc(s.Photo)}" onerror="this.parentElement.textContent='${initial}'">`:initial}</div>
+        <div class="child-name">${esc(s.Name||s.ID)}</div>
+        <div class="child-meta">${esc(s['Current Level']||'')}</div>
+      </button>`;
+    }).join('')}</div>`;
+}
+
+function showLogin(){ $('loginScreen').style.display=''; $('leadsScreen').style.display='none'; const ss=$('studentsScreen');if(ss)ss.style.display='none'; const ps=$('profileScreen');if(ps)ps.style.display='none'; const cp=$('childPicker');if(cp)cp.style.display='none'; $('staffTabs').style.display='none'; $('headerRight').innerHTML=''; }
+function accountMenuHtml(){
+  const roleLabel=userRole==='parent'?'Parent':userRole;
+  return `<div class="account-menu"><button class="account-trigger" onclick="toggleMenu(event)">${currentUser.photoURL?`<img class="account-avatar" src="${esc(currentUser.photoURL)}" alt="">`:`<span class="account-avatar" style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;color:var(--accent-dark);">${esc((currentUser.displayName||currentUser.email||'?').charAt(0).toUpperCase())}</span>`}</button><div class="account-dropdown" id="acctDrop"><div class="account-email">${esc(currentUser.email)}</div><div class="account-role">${esc(roleLabel)}</div><button class="account-logout" onclick="doSignOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div></div>`;
+}
 function enterApp(){
   $('loginScreen').style.display='none'; $('leadsScreen').style.display='';
-  $('headerRight').innerHTML=`<div class="account-menu"><button class="account-trigger" onclick="toggleMenu(event)">${currentUser.photoURL?`<img class="account-avatar" src="${esc(currentUser.photoURL)}" alt="">`:`<span class="account-avatar" style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;color:var(--accent-dark);">${esc((currentUser.displayName||currentUser.email||'?').charAt(0).toUpperCase())}</span>`}</button><div class="account-dropdown" id="acctDrop"><div class="account-email">${esc(currentUser.email)}</div><div class="account-role">${esc(userRole)}</div><button class="account-logout" onclick="doSignOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div></div>`;
+  $('headerRight').innerHTML=accountMenuHtml();
   if(userRole==='admin')$('migCard').style.display='';
   $('staffTabs').style.display='';
   setTab('leads');
@@ -1020,6 +1069,7 @@ window.openProfile=async function(id){
   currentStudentId=id;
   const s=studentsData.find(x=>x.ID===id);if(!s)return;
   $('leadsScreen').style.display='none';$('studentsScreen').style.display='none';$('staffTabs').style.display='none';
+  const cp=$('childPicker');if(cp)cp.style.display='none';
   $('profileScreen').style.display='';
   window.scrollTo(0,0);
   const initial=(s.Name||'?').charAt(0).toUpperCase();
@@ -1027,6 +1077,7 @@ window.openProfile=async function(id){
   $('profName').textContent=s.Name||id;
   $('profMeta').innerHTML=[`ID ${esc(s.ID)}`,s['Current Level']?esc(s['Current Level']):'',s.Tutor?('Tutor: '+esc(s.Tutor)):'',s.Batch?esc(s.Batch):'',s.Country?esc(s.Country):''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
   $('profEditBtn').style.display=canEdit()?'':'none';
+  $('profBackBtn').style.display=(userRole==='parent'&&studentsData.length<=1)?'none':'';
   $('profSummary').innerHTML='';
   $('roadmap').innerHTML='<div class="roadmap-loading"><div class="spinner"></div>Loading progress…</div>';
   await loadRefData();
@@ -1041,7 +1092,15 @@ window.openProfile=async function(id){
   }catch(e){console.error('load progress',e);$('roadmap').innerHTML='<div class="roadmap-error">Could not load progress. '+esc(e.code||e.message)+'</div>';}
 };
 window.backFromProfile=function(){
-  $('profileScreen').style.display='none';$('staffTabs').style.display='';setTab('students');
+  $('profileScreen').style.display='none';
+  if(userRole==='parent'){
+    if(studentsData.length>1)showChildPicker(studentsData);
+    else{ // single child — nothing to go back to; sign-out is via account menu
+      $('profileScreen').style.display='';
+    }
+  }else{
+    $('staffTabs').style.display='';setTab('students');
+  }
 };
 
 function topicsForLevel(levelName){
