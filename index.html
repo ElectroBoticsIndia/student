@@ -699,7 +699,7 @@ table.avail td.occ{border:1px solid transparent}
     </div>
     <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Availability by Day &amp; Time Slot</span></div></div>
-      <div style="padding:0 20px 8px;"><div id="availabilityLegend" class="avail-legend"></div></div>
+      <div style="padding:14px 20px 8px;"><div id="availabilityLegend" class="avail-legend"></div></div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="availabilityGrid"></div></div>
     </div>
   </div>
@@ -723,6 +723,12 @@ table.avail td.occ{border:1px solid transparent}
       <div class="stu-header">
         <div class="stu-title-wrap"><span class="table-title">At-Risk Students <span id="riskWindow" class="trend-summary"></span></span></div>
         <div class="stu-actions"><button class="btn-download" onclick="downloadRiskExcel()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Excel</button></div>
+      </div>
+      <div class="stu-filter-bar">
+        <div class="filter-group"><label>Country</label><select id="riskFilterCountry" onchange="setRiskCol('country',this.value)"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Tutor</label><select id="riskFilterTutor" onchange="setRiskCol('tutor',this.value)"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Batch</label><select id="riskFilterBatch" onchange="setRiskCol('batch',this.value)"><option value="">All</option></select></div>
+        <button class="filter-clear" onclick="clearRiskFilters()">Clear</button>
       </div>
       <div class="pay-summary" id="riskSummary" style="padding:12px 20px 0;"></div>
       <div class="risk-criteria">Risk = attendance &lt; 50% or submissions &lt; 40% · Watch = attendance 50–60% or submissions 40–50% · On track = above both · No data = nothing recorded (rolling 4 weeks).</div>
@@ -2283,24 +2289,17 @@ window.renderRisk=function(){
   if(riskCol.att)rows=rows.filter(s=>rateLabel(s.att_rate)===riskCol.att);
   if(riskCol.sub)rows=rows.filter(s=>rateLabel(s.sub_rate)===riskCol.sub);
   window.riskVisibleRows=rows;
-  const matchR=(s,skip)=>{if(skip!=='country'&&riskCol.country&&(s.country||'')!==riskCol.country)return false;if(skip!=='tutor'&&riskCol.tutor&&(s.tutor||'')!==riskCol.tutor)return false;if(skip!=='batch'&&riskCol.batch&&(s.batch||'')!==riskCol.batch)return false;if(skip!=='risk'&&riskCol.risk&&s.risk!==riskCol.risk)return false;if(skip!=='att'&&riskCol.att&&rateLabel(s.att_rate)!==riskCol.att)return false;if(skip!=='sub'&&riskCol.sub&&rateLabel(s.sub_rate)!==riskCol.sub)return false;return true;};
+  const matchR=(s,skip)=>{if(skip!=='country'&&riskCol.country&&(s.country||'')!==riskCol.country)return false;if(skip!=='tutor'&&riskCol.tutor&&(s.tutor||'')!==riskCol.tutor)return false;if(skip!=='batch'&&riskCol.batch&&(s.batch||'')!==riskCol.batch)return false;if(skip!=='risk'&&riskCol.risk&&s.risk!==riskCol.risk)return false;return true;};
   const uniqR=(skip,key)=>[...new Set(all.filter(s=>matchR(s,skip)).map(s=>s[key]).filter(Boolean))].sort();
-  const uniqRate=(skip,rk)=>[...new Set(all.filter(s=>matchR(s,skip)).map(s=>rateLabel(s[rk])))].sort((a,b)=>{if(a==='No data')return 1;if(b==='No data')return -1;return parseInt(a)-parseInt(b);});
-  const opt=(vals,sel)=>['<option value="">All</option>'].concat(vals.map(v=>`<option value="${esc(v)}"${sel===v?' selected':''}>${esc(v)}</option>`)).join('');
-  const riskBandsAvail=[...new Set(all.filter(s=>matchR(s,'risk')).map(s=>s.risk))];
-  const riskOpts=`<option value="">All</option>`+['red','yellow','green','nodata'].filter(b=>riskBandsAvail.includes(b)||riskCol.risk===b).map(b=>`<option value="${b}"${riskCol.risk===b?' selected':''}>${({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[b]}</option>`).join('');
+  const fillSel=(id,vals,cur)=>{const sel=$(id);if(!sel)return;let html='<option value="">All</option>'+vals.map(v=>`<option value="${esc(v)}"${cur===v?' selected':''}>${esc(v)}</option>`).join('');if(cur&&!vals.includes(cur))html+=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`;if(sel.innerHTML!==html)sel.innerHTML=html;sel.value=cur;};
+  fillSel('riskFilterCountry',uniqR('country','country'),riskCol.country);
+  fillSel('riskFilterTutor',uniqR('tutor','tutor'),riskCol.tutor);
+  fillSel('riskFilterBatch',uniqR('batch','batch'),riskCol.batch);
   const bandLabel={red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'};
   const t=$('riskTable');
   if(!rows.length){t.innerHTML='<div class="pay-empty">No students match. (If everything is empty, import Attendance & Assignments first.)</div>';return;}
   t.innerHTML=`<table class="pay-table"><thead>
     <tr><th>Student</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th></tr>
-    <tr class="risk-colfilter"><th></th>
-      <th><select onchange="setRiskCol('tutor',this.value)">${opt(uniqR('tutor','tutor'),riskCol.tutor)}</select></th>
-      <th><select onchange="setRiskCol('country',this.value)">${opt(uniqR('country','country'),riskCol.country)}</select></th>
-      <th><select onchange="setRiskCol('batch',this.value)">${opt(uniqR('batch','batch'),riskCol.batch)}</select></th>
-      <th><select onchange="setRiskCol('att',this.value)">${opt(uniqRate('att','att_rate'),riskCol.att)}</select></th>
-      <th><select onchange="setRiskCol('sub',this.value)">${opt(uniqRate('sub','sub_rate'),riskCol.sub)}</select></th>
-      <th><select onchange="setRiskCol('risk',this.value)">${riskOpts}</select></th></tr>
     </thead><tbody>${rows.map(s=>`<tr>
       <td><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span></td>
       <td>${esc(s.tutor||'—')}</td><td>${esc(s.country||'—')}</td><td>${esc(s.batch||'—')}</td>
@@ -2309,6 +2308,7 @@ window.renderRisk=function(){
       <td><span class="risk-badge ${s.risk}"><span class="risk-dot ${s.risk}"></span>${bandLabel[s.risk]}</span></td>
     </tr>`).join('')}</tbody></table>`;
 };
+window.clearRiskFilters=function(){riskCol={country:'',tutor:'',batch:'',risk:'',att:'',sub:''};renderRisk();};
 window.downloadRiskExcel=function(){
   if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
   const rows=(window.riskVisibleRows||[]).map(s=>({'ID':s.id,'Name':s.name,'Tutor':s.tutor,'Country':s.country,'Batch':s.batch,'Attendance':rateLabel(s.att_rate),'Submissions':rateLabel(s.sub_rate),'Risk':({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[s.risk]}));
