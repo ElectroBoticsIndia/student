@@ -6,6 +6,8 @@
 <title>ElectroBotics · Leads (Firebase)</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 :root{
   --bg:#f4f9f9;--surface:#ffffff;--surface-alt:#edf6f7;
@@ -360,6 +362,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-sid2{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
 #pay_Amount,#pay_Date,#pay_Method,#pay_Note,#wa_Msg{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;outline:none}
 #wa_Msg{resize:vertical;font-size:13px}
+.trend-summary{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-light);text-transform:none;letter-spacing:0}
+.trend-toggle{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.trend-tab{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:7px 12px;border:none;background:#fff;color:var(--text-dim);cursor:pointer;border-right:1px solid var(--border);transition:all .18s}
+.trend-tab:last-child{border-right:none}
+.trend-tab.active{background:var(--accent);color:#fff}
+.trend-note{font-family:var(--font-body);font-size:12px;color:var(--text-light);padding:0 20px 12px}
 .level-links .link-cert{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--amber-light);color:#9a7200;display:inline-flex;align-items:center;gap:4px;flex:1;justify-content:center}
 .level-links .link-cert:hover{background:var(--amber);color:#fff}
 .cert-preview{background:var(--surface-alt);border-radius:10px;padding:12px;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center}
@@ -561,15 +569,36 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
       <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="paymentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
-    <div class="chart-card" id="payMigCard" style="display:none;">
-      <div class="chart-title" style="margin-bottom:12px;">Payments Migration Helper (admin)</div>
-      <div class="note">Paste your Payments sheet CSV (columns: <strong>Student ID, Year, Month, Type, Status, Amount, Paid Date, Method, Note, MarkedBy</strong>). Type blank = Fee. Records are keyed by Student ID + Year + Month + Type, so re-imports update rather than duplicate. Your Google Sheet is untouched.</div>
-      <div class="mig-box">
-        <textarea id="migPayments" placeholder="Student ID,Year,Month,Type,Status,Amount,Paid Date,Method,Note&#10;EB001,2026,7,Fee,Paid,1500,2026-07-05,UPI,"></textarea>
-        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-          <button class="btn-primary" onclick="migPayments()">Import Payments</button>
-          <span class="msg" id="migPaymentsMsg" style="margin:0;text-align:left;"></span>
+    <div class="chart-card" id="trendCard" style="padding:0;overflow:hidden;">
+      <div class="stu-header">
+        <div class="stu-title-wrap">
+          <span class="table-title">Attendance &amp; Payment Trend <span id="trendSummary" class="trend-summary"></span></span>
         </div>
+        <div class="stu-actions">
+          <div class="trend-toggle">
+            <button class="trend-tab active" data-region="india" onclick="setTrendRegion('india')">India</button>
+            <button class="trend-tab" data-region="intl" onclick="setTrendRegion('intl')">International</button>
+            <button class="trend-tab" data-region="both" onclick="setTrendRegion('both')">Both</button>
+          </div>
+          <select id="trendYear" onchange="loadTrend()" class="pay-mini"></select>
+        </div>
+      </div>
+      <div class="trend-note">Active students vs Fee payments received vs attendance-equivalent (present ÷ 4) per month.</div>
+      <div class="enroll-scroll" style="overflow-x:auto;padding:0 16px 16px;"><div class="trend-canvas-wrap" style="height:320px;min-width:520px;position:relative;"><canvas id="chartTrend"></canvas></div></div>
+    </div>
+
+    <div class="chart-card" id="payMigCard" style="display:none;">
+      <div class="chart-title" style="margin-bottom:12px;">Payments &amp; Attendance Migration (admin)</div>
+      <div class="note">Import your Payments and Attendance sheets as CSV. Keys prevent duplicates on re-import. Google Sheets stay untouched.</div>
+      <div class="stu-mig">
+        <label class="stu-mig-label">Payments CSV <span class="stu-mig-hint">(Student ID, Year, Month, Type, Status, Amount, Paid Date, Method, Note)</span></label>
+        <textarea id="migPayments" placeholder="Student ID,Year,Month,Type,Status,Amount,Paid Date,Method,Note&#10;EB001,2026,7,Fee,Paid,1500,2026-07-05,UPI,"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migPayments()">Import Payments</button><span class="msg" id="migPaymentsMsg"></span></div>
+      </div>
+      <div class="stu-mig">
+        <label class="stu-mig-label">Attendance CSV <span class="stu-mig-hint">(StudentID, Date, Status, Count) — Status "present" counts</span></label>
+        <textarea id="migAttendance" placeholder="StudentID,Date,Status,Count&#10;EB001,2026-07-06,present,1"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migAttendance()">Import Attendance</button><span class="msg" id="migAttendanceMsg"></span></div>
       </div>
     </div>
   </div>
@@ -894,6 +923,7 @@ window.setTab=function(tab){
   if(tab==='payments'){
     if(userRole==='admin')$('payMigCard').style.display='';
     initPayments();
+    setTimeout(initTrend,300);
   }
 };
 window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
@@ -1901,6 +1931,7 @@ window.migPayments=async function(){
 };
 // ── Kit flow ──
 window.flagKit=async function(sid,btn){
+  if(!confirm('Flag a kit payment as due for this student this month?'))return;
   const year=$('payYear').value,month=$('payMonth').value;const done=payBtnBusy(btn);
   const ok=await payWrite({action:'savePayment',type:'Kit',studentId:sid,year,month,status:'Pending'});
   if(ok){payUpsertLocal(sid,year,month,'Kit',{Status:'Pending'});buildPayments();}else{if(done)done();alert('Could not flag kit.');}
@@ -1922,6 +1953,7 @@ window.revertKit=async function(sid,btn){
 };
 // ── Components flow ──
 window.flagComponents=async function(sid,btn){
+  if(!confirm('Flag a components payment as due for this student this month?'))return;
   const year=$('payYear').value,month=$('payMonth').value;const done=payBtnBusy(btn);
   const ok=await payWrite({action:'savePayment',type:'Components',studentId:sid,year,month,status:'Pending'});
   if(ok){payUpsertLocal(sid,year,month,'Components',{Status:'Pending'});buildPayments();}else{if(done)done();alert('Could not flag components.');}
@@ -1978,6 +2010,113 @@ function renderComponentHistory(sid){
     return `<div class="hist-item"><div class="hist-meta">${h.Amount?('₹'+esc(String(h.Amount))):''}${h['Paid Date']?(' · paid '+esc(String(h['Paid Date']))):''}${h.Month&&h.Year?(' · '+esc(String(h.Month))+'/'+esc(String(h.Year))):''}</div>${h.Note?`<div class="hist-text">${esc(String(h.Note))}</div>`:''}<div class="hist-meta" style="opacity:.7;">logged ${esc(when)}${h.LoggedBy?(' · '+esc(String(h.LoggedBy))):''}</div></div>`;
   }).join('');
 }
+
+// ═══════════ ATTENDANCE & PAYMENT TREND ═══════════
+let attendanceData=[], attendanceLoaded=false, trendData=null, trendRegion='india', trendChart=null;
+const TREND_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const isIndia=(c)=>/india/i.test(String(c||''));
+function parseD(v){const s=String(v||'').trim();if(!s)return null;const d=new Date(s);return isNaN(d)?null:d;}
+function initTrend(){
+  const ySel=$('trendYear');
+  if(ySel&&!ySel.options.length){const y=new Date().getFullYear();const years=[];for(let yy=y-3;yy<=y;yy++)years.push(yy);ySel.innerHTML=years.map(yy=>`<option value="${yy}"${yy===y?' selected':''}>${yy}</option>`).join('');}
+  loadTrend();
+}
+window.setTrendRegion=function(r){trendRegion=r;document.querySelectorAll('#trendCard .trend-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-region')===r));renderTrendChart();};
+window.loadTrend=async function(){
+  const year=+$('trendYear').value;
+  // students already loaded by payments; ensure attendance + payments for the year
+  if(!attendanceLoaded){try{const snap=await getDocs(collection(db,'attendance'));attendanceData=snap.docs.map(d=>d.data());attendanceLoaded=true;}catch(e){console.warn('attendance load',e);attendanceData=[];}}
+  // payments for the year (reuse paymentsData if same year already loaded, else fetch)
+  let pays=paymentsData;
+  const needYear=String(year);
+  if(!paymentsData.length||String(paymentsData[0]&&paymentsData[0].Year)!==needYear){
+    try{const snap=await getDocs(query(collection(db,'payments'),where('Year','==',needYear)));pays=snap.docs.map(d=>d.data());}catch(e){pays=paymentsData;}
+  }
+  trendData=computeTrend(year,pays);
+  updateTrendSummary();renderTrendChart();
+};
+function computeTrend(year,pays){
+  const now=new Date();const lastMonth=(year===now.getFullYear())?(now.getMonth()+1):12;
+  // roster with join/left for active-as-of
+  const idRegion={};const roster=[];
+  studentsData.forEach(s=>{
+    const id=String(s.ID||'').trim();const region=isIndia(s.Country)?'india':'intl';if(id)idRegion[id]=region;
+    const st=String(s.Status||'Active').toLowerCase();
+    let left=parseD(s['Inactive Date']);if(st!=='active'&&!left)left=null;
+    roster.push({region,join:parseD(s['Join Date']),left});
+  });
+  const activeAsOf=(y,m,region)=>{const end=new Date(y,m,0,23,59,59);let n=0;roster.forEach(r=>{if(r.region!==region)return;if(r.join&&r.join>end)return;if(r.left&&r.left<=end)return;n++;});return n;};
+  const payIndia={},payIntl={};
+  (pays||[]).forEach(p=>{
+    if(String(p.Year).trim()!==String(year))return;
+    if((String(p.Type||'Fee').trim()||'Fee')!=='Fee')return;
+    if(String(p.Status||'').toLowerCase()!=='paid')return;
+    const m=parseInt(p.Month,10);if(!m)return;const region=idRegion[String(p['Student ID']||'').trim()]||'intl';
+    if(region==='india')payIndia[m]=(payIndia[m]||0)+1;else payIntl[m]=(payIntl[m]||0)+1;
+  });
+  const attIndia={},attIntl={};
+  attendanceData.forEach(r=>{
+    if(String(r.Status||'').toLowerCase()!=='present')return;
+    const d=parseD(r.Date);if(!d||d.getFullYear()!==year)return;const m=d.getMonth()+1;
+    let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;
+    const region=idRegion[String(r.StudentID||'').trim()]||'intl';
+    if(region==='india')attIndia[m]=(attIndia[m]||0)+c;else attIntl[m]=(attIntl[m]||0)+c;
+  });
+  const div=4;const months=[];
+  for(let mm=1;mm<=lastMonth;mm++){
+    months.push({month:mm,
+      india:{active:activeAsOf(year,mm,'india'),payments:(payIndia[mm]||0),attendance:Math.round(((attIndia[mm]||0)/div)*10)/10},
+      intl:{active:activeAsOf(year,mm,'intl'),payments:(payIntl[mm]||0),attendance:Math.round(((attIntl[mm]||0)/div)*10)/10}});
+  }
+  return {year,months};
+}
+function updateTrendSummary(){
+  const el=$('trendSummary');if(!el||!trendData||!trendData.months.length){if(el)el.textContent='';return;}
+  const last=trendData.months[trendData.months.length-1];
+  el.textContent=`· ${TREND_MONTHS[last.month-1]}: India ${last.india.payments}/${last.india.active} paid · Intl ${last.intl.payments}/${last.intl.active} paid`;
+}
+window.renderTrendChart=function(){
+  if(!trendData||!Array.isArray(trendData.months))return;
+  const ctx=$('chartTrend');if(!ctx||typeof Chart==='undefined')return;
+  if(window.ChartDataLabels&&Chart.register)try{Chart.register(window.ChartDataLabels);}catch(e){}
+  const labels=trendData.months.map(m=>TREND_MONTHS[m.month-1]);
+  const fontMono="'JetBrains Mono', monospace";const datasets=[];
+  const add=(label,reg,key,color)=>datasets.push({label,data:trendData.months.map(m=>m[reg][key]),backgroundColor:color,borderRadius:5,categoryPercentage:0.7,barPercentage:0.9});
+  const C={activeIn:'#008fa0',payIn:'#8ab600',attIn:'#eab43a',activeI:'#0a6b78',payI:'#5a7a00',attI:'#c98f1e'};
+  if(trendRegion==='india'){add('Active','india','active',C.activeIn);add('Attendance-eq','india','attendance',C.attIn);add('Payments','india','payments',C.payIn);}
+  else if(trendRegion==='intl'){add('Active','intl','active',C.activeI);add('Attendance-eq','intl','attendance',C.attI);add('Payments','intl','payments',C.payI);}
+  else{add('India · Active','india','active',C.activeIn);add('India · Att','india','attendance',C.attIn);add('India · Pay','india','payments',C.payIn);add('Intl · Active','intl','active',C.activeI);add('Intl · Att','intl','attendance',C.attI);add('Intl · Pay','intl','payments',C.payI);}
+  if(trendChart)trendChart.destroy();
+  const mobile=window.matchMedia&&window.matchMedia('(max-width:600px)').matches;
+  trendChart=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:true,position:'top',labels:{font:{family:fontMono,size:11},boxWidth:12,boxHeight:12,padding:10,usePointStyle:false}},
+      datalabels:{anchor:'end',align:'end',offset:-2,color:'#0a373a',font:{family:fontMono,size:9,weight:700},formatter:v=>v>0?v:''},
+      tooltip:{enabled:!mobile,titleFont:{family:fontMono},bodyFont:{family:fontMono}}},
+    scales:{x:{grid:{display:false},ticks:{font:{family:fontMono,size:11}}},y:{beginAtZero:true,ticks:{font:{family:fontMono,size:11},precision:0},grid:{color:'rgba(0,0,0,.05)'}}}
+  }});
+  const scroller=document.querySelector('#trendCard .enroll-scroll');
+  if(scroller)requestAnimationFrame(()=>{scroller.scrollLeft=scroller.scrollWidth;});
+};
+
+window.migAttendance=async function(){
+  const records=parseCSV($('migAttendance').value.trim());const msg=$('migAttendanceMsg');
+  if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
+  msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
+  let done=0,fail=0,batch=writeBatch(db),n=0;
+  for(const r of records){
+    try{
+      const sid=String(r.StudentID||r['Student ID']||'').trim();const date=String(r.Date||'').trim();
+      if(!sid||!date){fail++;continue;}
+      const id=(sid+'_'+date).replace(/[\/#\.\[\]]/g,'_');
+      batch.set(doc(db,'attendance',id),{StudentID:sid,Date:date,Status:r.Status||'',Count:r.Count||'1',migratedAt:serverTimestamp()},{merge:true});
+      n++;done++;if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
+    }catch(e){console.error('mig att',r,e);fail++;}
+  }
+  try{if(n>0)await batch.commit();}catch(e){fail+=n;done-=n;}
+  msg.textContent=`Imported ${done} attendance row(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
+  attendanceLoaded=false;
+};
 </script>
 </body>
 </html>
