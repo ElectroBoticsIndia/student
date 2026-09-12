@@ -3,112 +3,150 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ElectroBotics · Firebase (Leads)</title>
+<title>ElectroBotics · Leads (Firebase)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f4f9f9;--surface:#fff;--surface-alt:#eef6f6;--border:#dce8e8;
-  --accent:#008fa0;--accent-dark:#006d7a;--accent-light:#d9f0f2;
-  --text:#0a373a;--text-dim:#3d6266;--text-light:#7fa6a9;
-  --green:#8ab600;--red:#d76241;--amber:#eab43a;
-  --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
-  --font-body:'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  --radius:14px;--shadow:0 2px 12px rgba(0,0,0,.06);
+  --bg:#f4f9f9;--surface:#ffffff;--surface-alt:#edf6f7;
+  --border:#d0e4e6;--border-accent:#008fa030;
+  --text:#0a373a;--text-dim:#5a8a8e;--text-light:#8db5b9;
+  --accent:#008fa0;--accent-light:#e0f5f7;--accent-dark:#006d7a;
+  --green:#8ab600;--green-light:#f0f8e0;--green-bg:#e8f5cc;
+  --amber:#eab43a;--amber-light:#fdf6e3;--amber-bg:#faedc5;
+  --red:#d76241;--red-light:#fef0ed;--bad:#d76241;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-body:'DM Sans',sans-serif;
+  --radius:14px;--radius-sm:10px;
+  --shadow:0 2px 16px rgba(0,143,160,0.08);
+  --shadow-lg:0 8px 32px rgba(0,143,160,0.12);
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;line-height:1.5}
-.site-header{background:#fff;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.12)}
-.header-inner{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-logo{width:36px;height:36px;border-radius:9px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:var(--font-mono)}
-.brand-name{font-weight:800;font-size:18px}.brand-name b{color:var(--red)}
-.brand-sub{font-family:var(--font-mono);font-size:10px;letter-spacing:2px;color:var(--accent);text-transform:uppercase}
-.env-tag{font-family:var(--font-mono);font-size:10px;font-weight:700;background:#fff4d6;color:#9a7200;border:1px solid #f0d98a;border-radius:20px;padding:3px 9px}
-.app{max-width:1200px;margin:0 auto;padding:22px 20px 60px}
-.user-chip{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-dim)}
-.user-chip img{width:28px;height:28px;border-radius:50%}
-.btn{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s}
-.btn:hover{border-color:var(--text-light)}
-.btn-primary{background:var(--accent);color:#fff;border:none}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh}
+
+.site-header{background:#fff;border-bottom:1px solid var(--border);padding:12px 24px;position:sticky;top:0;z-index:50;box-shadow:0 1px 8px rgba(0,143,160,0.06)}
+.header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.header-left{display:flex;align-items:center;gap:12px}
+.header-logo{width:44px;height:44px;flex-shrink:0}
+.header-logo img{width:100%;height:100%;object-fit:contain}
+.header-text{display:flex;flex-direction:column;justify-content:center}
+.header-brand{height:24px;object-fit:contain;object-position:left center;display:block;margin-bottom:1px}
+.header-brand-fallback{font-family:var(--font-body);font-weight:800;font-size:19px;color:var(--text);line-height:1}
+.header-brand-fallback b{color:var(--red)}
+.header-tagline{font-family:var(--font-mono);font-size:9px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase;text-indent:3px;display:flex;align-items:center}
+.env-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;background:#fff4d6;color:#9a7200;border:1px solid #f0d98a;border-radius:20px;padding:2px 8px;margin-left:8px;letter-spacing:1px}
+.header-right{display:flex;align-items:center;gap:10px}
+.account-menu{position:relative}
+.account-trigger{background:none;border:none;padding:0;cursor:pointer;display:flex;align-items:center;border-radius:50%}
+.account-avatar{width:34px;height:34px;border-radius:50%;border:2px solid var(--accent);object-fit:cover;display:block;background:var(--accent-light)}
+.account-dropdown{position:absolute;top:calc(100% + 8px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-lg);padding:14px;min-width:220px;z-index:100;display:none}
+.account-dropdown.open{display:block}
+.account-email{font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--text);word-break:break-all;margin-bottom:4px}
+.account-role{font-family:var(--font-mono);font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:12px}
+.account-logout{width:100%;font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--red);background:none;border:1px solid var(--red);border-radius:8px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:all .2s}
+.account-logout:hover{background:var(--red);color:#fff}
+.account-logout svg{width:15px;height:15px}
+
+.app{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+
+.login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:24px;animation:fadeUp .5s ease-out}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:40px 36px;max-width:460px;width:100%;box-shadow:var(--shadow-lg);text-align:center}
+.login-icon{width:80px;height:80px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:44px}
+.login-icon img{width:100%;height:100%;object-fit:contain}
+.login-title{font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--text-dim);margin-bottom:24px;line-height:1.5}
+.google-btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-body);font-weight:600;font-size:14px;padding:12px 22px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;transition:all .2s}
+.google-btn:hover{box-shadow:var(--shadow);border-color:var(--accent)}
+.google-btn img{width:18px;height:18px}
+.error-msg{font-family:var(--font-mono);font-size:12px;color:var(--red);margin-top:14px;min-height:16px}
+.error-msg a{color:var(--accent);font-weight:700}
+
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:24px}
+.chart-title{font-family:var(--font-mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dark);margin-bottom:0}
+.pay-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.pay-controls{display:flex;gap:8px}
+.pay-controls select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
+.pay-controls select:focus{border-color:var(--accent)}
+.pay-search{font-family:var(--font-mono);font-size:11px;padding:6px 10px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);outline:none;min-width:150px}
+.pay-search:focus{border-color:var(--accent)}
+.btn-primary{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:7px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;cursor:pointer;transition:all .18s}
 .btn-primary:hover{background:var(--accent-dark)}
-.btn-danger{color:var(--red);border-color:var(--red)}
-.btn-danger:hover{background:var(--red);color:#fff}
 
-/* Login */
-.login-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center}
-.login-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:36px 30px;max-width:400px;width:100%;text-align:center}
-.login-card h2{margin:8px 0 4px}
-.login-card p{color:var(--text-light);font-size:13px;margin:0 0 22px}
-.gsignin{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-body);font-weight:600;font-size:14px;padding:11px 20px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;transition:all .18s}
-.gsignin:hover{box-shadow:0 2px 10px rgba(0,0,0,.1)}
-.login-err{color:var(--red);font-size:13px;margin-top:14px;min-height:18px}
-.login-err a{color:var(--accent);font-weight:700}
+.pay-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.lead-stat{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;border:1px solid var(--border);color:var(--text-dim)}
+.lead-stat-btn{cursor:pointer;background:#fff;transition:all .15s}
+.lead-stat-btn:hover{border-color:var(--text-light)}
+.lead-stat-btn.active{outline:2px solid var(--accent);outline-offset:1px}
 
-/* Card + table */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:24px}
-.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.card-title{font-family:var(--font-mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dark)}
-.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.search,select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text);outline:none}
-.search{min-width:160px}
-.search:focus,select:focus{border-color:var(--accent)}
-.summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.chip{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .15s}
-.chip:hover{border-color:var(--text-light)}
-.chip.active{outline:2px solid var(--accent);outline-offset:1px}
-.chip.st-new{color:var(--accent-dark)}.chip.st-progress{color:#9a7200}.chip.st-converted{color:#5a7a00}.chip.st-dropped{color:#c0472a}
+.lead-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
+.lead-badge-new{background:var(--accent-light);color:var(--accent-dark)}
+.lead-badge-progress{background:#fdf1d6;color:#9a7200}
+.lead-badge-converted{background:#eef6d8;color:#5a7a00}
+.lead-badge-lost{background:#fdeae5;color:#c0472a}
 
-.table-scroll{overflow-x:auto;overflow-y:auto;max-height:62vh}
-table.leads{width:100%;border-collapse:collapse;font-size:13px}
-table.leads th{position:sticky;top:0;z-index:2;background:var(--surface);text-align:left;font-family:var(--font-mono);font-size:11px;color:var(--text-light);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
-table.leads td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
-table.leads tbody tr:hover{background:var(--accent-light)}
-.badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
-.badge.st-new{background:var(--accent-light);color:var(--accent-dark)}
-.badge.st-progress{background:#fdf1d6;color:#9a7200}
-.badge.st-converted{background:#eef6d8;color:#5a7a00}
-.badge.st-dropped{background:#fdeae5;color:#c0472a}
-.tel{color:var(--accent-dark);text-decoration:none;border-bottom:1px dashed var(--accent)}
-.act{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:5px 9px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .15s;white-space:nowrap}
-.act:hover{border-color:var(--accent);color:var(--accent)}
-.act-row{white-space:nowrap;display:flex;gap:5px}
-.empty,.loading{padding:26px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
+.avail-scroll{overflow-x:auto;overflow-y:auto;max-height:62vh}
+.avail-scroll thead th{position:sticky;top:0;z-index:2;background:var(--surface)}
+.pay-table{width:100%;border-collapse:collapse;font-size:13px}
+.pay-table th{text-align:left;font-family:var(--font-mono);font-size:11px;color:var(--text-light);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.pay-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.pay-table tbody tr:hover{background:var(--accent-light)}
+.pay-sid{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.lead-tel{color:var(--accent-dark);text-decoration:none;border-bottom:1px dashed var(--accent)}
+.lead-tel:hover{color:var(--accent)}
+.lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
+.pay-act{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;transition:all .2s;white-space:nowrap}
+.pay-act-paid{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pay-act-paid:hover{background:var(--accent-dark)}
+.pay-act-history:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.lead-action-cell{white-space:nowrap;display:flex;gap:5px}
+.pay-empty,.pay-loading{padding:26px 16px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
 
-/* Spinner */
 .spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;box-sizing:border-box}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Modal */
-.overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(6,31,34,.4);align-items:center;justify-content:center;padding:16px}
-.overlay.on{display:flex}
-.modal{background:#fff;border-radius:var(--radius);max-width:460px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.3)}
-.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
-.modal-head h3{margin:0;font-size:16px}
-.modal-close{background:none;border:none;font-size:22px;color:var(--text-light);cursor:pointer;line-height:1}
-.modal-body{padding:18px 20px}
-.frow{margin-bottom:14px}
-.frow label{display:block;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
-.frow input,.frow select,.frow textarea{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:14px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
-.frow input:focus,.frow select:focus,.frow textarea:focus{border-color:var(--accent)}
-.req{color:var(--red)}
-.modal-actions{display:flex;align-items:center;gap:10px;margin-top:8px}
-.modal-actions .btn-primary{margin-left:auto}
-.trash-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(6,31,34,.55);z-index:1000;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal-card{background:var(--surface);border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(6,31,34,.35);overflow:hidden;animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.modal-head h3{font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--text);margin:0}
+.modal-close{background:none;border:none;font-size:26px;line-height:1;color:var(--text-light);cursor:pointer;padding:0 4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:18px 22px;max-height:70vh;overflow-y:auto}
+.form-row{margin-bottom:14px;display:flex;flex-direction:column;gap:5px}
+.form-row label{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+.form-row .req{color:var(--red)}
+.form-row input,.form-row select,.form-row textarea{font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--accent)}
+.form-row textarea{resize:vertical;min-height:48px;box-sizing:border-box}
+.wa-actions{display:flex;align-items:center;gap:10px;margin-top:16px}
+.wa-btn{font-family:var(--font-body);font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;border:1px solid var(--border);transition:all .2s;background:#fff;color:var(--text-dim)}
+.wa-btn:hover{border-color:var(--text-light)}
+.wa-cancel{color:var(--text-dim)}
+.pf-save{background:var(--accent);color:#fff;border-color:var(--accent);margin-left:auto}
+.pf-save:hover{background:var(--accent-dark)}
+.trash-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
 .trash-btn:hover{border-color:var(--red);color:var(--red);background:#fff5f2}
 .msg{font-family:var(--font-mono);font-size:12px;margin-top:10px;text-align:right;min-height:16px}
 .msg.err{color:var(--red)}.msg.ok{color:var(--green)}.msg.busy{color:var(--text-light)}
 
-/* History list */
+.hist-list{max-height:280px;overflow:auto;margin-bottom:14px}
 .hist-item{padding:10px 0;border-bottom:1px solid var(--border)}
 .hist-item:last-child{border-bottom:none}
 .hist-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:3px}
 .hist-text{font-size:13px;white-space:pre-wrap}
 
-.note{background:var(--accent-light);color:var(--accent-dark);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:16px}
-.mig-box{border:1px dashed var(--border);border-radius:10px;padding:14px;margin-top:10px}
-.mig-box textarea{width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:90px}
+.note{background:var(--accent-light);color:var(--accent-dark);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px}
+.mig-box{border:1px dashed var(--border);border-radius:10px;padding:14px}
+.mig-box textarea{width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:90px;outline:none}
+.mig-box textarea:focus{border-color:var(--accent)}
+
 @media(max-width:600px){
-  .controls{width:100%}.controls .search{flex:1 1 100%}
-  .controls select{flex:1 1 auto}.controls .btn-primary{flex:1 1 auto}
+  .app{padding:16px 12px 40px}
+  .pay-controls{flex-wrap:wrap;width:100%}
+  .pay-controls .pay-search{flex:1 1 100%}
+  .pay-controls select{flex:1 1 auto}
+  .pay-controls .btn-primary{flex:1 1 auto}
 }
 </style>
 </head>
@@ -116,40 +154,38 @@ table.leads tbody tr:hover{background:var(--accent-light)}
 
 <div class="site-header">
   <div class="header-inner">
-    <div class="brand">
-      <div class="brand-logo">E</div>
-      <div>
-        <div class="brand-name">Electro<b>Botics</b></div>
-        <div class="brand-sub">Student Progress</div>
+    <div class="header-left">
+      <div class="header-logo"><img src="logo-on.png" alt="ElectroBotics" onerror="this.parentElement.innerHTML='🤖'"></div>
+      <div class="header-text">
+        <img src="ElectroBotics_No_Makerspace.png" alt="ElectroBotics" class="header-brand" onerror="this.outerHTML='<div class=&quot;header-brand-fallback&quot;>Electro<b>Botics</b></div>'">
+        <div class="header-tagline">Leads <span class="env-tag">FIREBASE</span></div>
       </div>
-      <span class="env-tag">FIREBASE · BETA</span>
     </div>
-    <div id="headerRight"></div>
+    <div class="header-right" id="headerRight"></div>
   </div>
 </div>
 
 <div class="app">
-  <!-- Login -->
-  <div id="loginScreen" class="login-wrap">
+  <div class="login-screen" id="loginScreen" style="display:none;">
     <div class="login-card">
-      <div class="brand-logo" style="margin:0 auto 12px;width:48px;height:48px;font-size:22px;">E</div>
-      <h2>Sign in</h2>
-      <p>ElectroBotics — Firebase edition (Leads pilot)</p>
-      <button class="gsignin" id="googleBtn" onclick="doGoogleSignIn()">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Continue with Google
-      </button>
-      <div class="login-err" id="loginErr"></div>
+      <div class="login-icon"><img src="logo-on.png" alt="" onerror="this.parentElement.innerHTML='🤖'"></div>
+      <div class="login-title">Staff Sign In</div>
+      <div class="login-sub">Sign in with your ElectroBotics Google account to manage leads.</div>
+      <div style="display:flex;justify-content:center;margin:18px 0;">
+        <button class="google-btn" id="googleBtn" onclick="doGoogleSignIn()">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">Sign in with Google
+        </button>
+      </div>
+      <div class="error-msg" id="loginErr"></div>
     </div>
   </div>
 
-  <!-- Leads -->
   <div id="leadsScreen" style="display:none;">
-    <div class="card">
-      <div class="card-head">
-        <div class="card-title">Leads</div>
-        <div class="controls">
-          <input type="text" id="leadSearch" class="search" placeholder="Search name, ref, note…" oninput="renderLeads()">
+    <div class="chart-card">
+      <div class="pay-head">
+        <div class="chart-title">Leads</div>
+        <div class="pay-controls">
+          <input type="text" id="leadSearch" class="pay-search" placeholder="Search name, ref, note…" oninput="renderLeads()">
           <select id="statusFilter" onchange="renderLeads()">
             <option value="">All statuses</option>
             <option>Enquiry</option><option>Trial Pending</option><option>Waiting for a batch</option>
@@ -158,36 +194,33 @@ table.leads tbody tr:hover{background:var(--accent-light)}
           <button class="btn-primary" onclick="openLeadForm()">+ Add Lead</button>
         </div>
       </div>
-      <div class="summary" id="leadSummary"></div>
-      <div class="table-scroll"><div id="leadsList"><div class="loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="pay-summary" id="leadSummary"></div>
+      <div class="avail-scroll"><div id="leadsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
-    <!-- Admin-only: migration helper -->
-    <div class="card" id="migCard" style="display:none;">
-      <div class="card-title" style="margin-bottom:10px;">Migration helper (admin)</div>
-      <div class="note">Paste your exported Leads as JSON or CSV to import them into Firestore for testing. Your production Google Sheet is untouched. Existing Firestore leads with the same Lead ID are updated, not duplicated.</div>
+    <div class="chart-card" id="migCard" style="display:none;">
+      <div class="chart-title" style="margin-bottom:12px;">Migration Helper (admin)</div>
+      <div class="note">Paste your exported Leads as CSV (with headers) or a JSON array to import into Firestore for testing. Your production Google Sheet is untouched. Re-imports with the same Lead ID update rather than duplicate.</div>
       <div class="mig-box">
-        <label style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);">Paste CSV (with headers) or JSON array</label>
         <textarea id="migInput" placeholder="Name,Country,Contact,Preferred Batch,Source,Status,Notes,Lead ID&#10;Arjun,India,9198...,Sun 9:30,Google,Enquiry,,L001"></textarea>
         <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
           <button class="btn-primary" onclick="runMigration()">Import to Firestore</button>
-          <span class="msg" id="migMsg" style="text-align:left;margin:0;"></span>
+          <span class="msg" id="migMsg" style="margin:0;text-align:left;"></span>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Lead form modal -->
-<div class="overlay" id="leadModal">
-  <div class="modal">
+<div class="modal-overlay" id="leadModal">
+  <div class="modal-card">
     <div class="modal-head"><h3 id="leadModalTitle">Add Lead</h3><button class="modal-close" onclick="closeLeadForm()">&times;</button></div>
     <div class="modal-body">
-      <div class="frow"><label>Student Name <span class="req">*</span></label><input type="text" id="l_Name" placeholder="Student name"></div>
-      <div class="frow"><label>Country</label><input type="text" id="l_Country" placeholder="Country" list="countryList"><datalist id="countryList"></datalist></div>
-      <div class="frow"><label>Mobile Contact <span class="req">*</span></label><input type="text" id="l_Contact" placeholder="With country code, e.g. 9198…"></div>
-      <div class="frow"><label>Preferred Batch</label><input type="text" id="l_Batch" placeholder="e.g. Sun - 9:30 am" list="batchList"><datalist id="batchList"></datalist></div>
-      <div class="frow"><label>Source</label>
+      <div class="form-row"><label>Student Name <span class="req">*</span></label><input type="text" id="l_Name" placeholder="Student name"></div>
+      <div class="form-row"><label>Country</label><input type="text" id="l_Country" placeholder="Country" list="countryList"><datalist id="countryList"></datalist></div>
+      <div class="form-row"><label>Mobile Contact <span class="req">*</span></label><input type="text" id="l_Contact" placeholder="With country code, e.g. 9198…"></div>
+      <div class="form-row"><label>Preferred Batch</label><input type="text" id="l_Batch" placeholder="e.g. Sun - 9:30 am" list="batchList"><datalist id="batchList"></datalist></div>
+      <div class="form-row"><label>Source</label>
         <select id="l_Source" onchange="onSourceChange()">
           <option value="">— How did they find us? —</option>
           <option>Google</option><option>Website</option><option>Reference</option><option>WhatsApp</option>
@@ -196,37 +229,36 @@ table.leads tbody tr:hover{background:var(--accent-light)}
         </select>
         <input type="text" id="l_SourceOther" placeholder="Please specify" style="display:none;margin-top:8px;">
       </div>
-      <div class="frow"><label>Status</label>
+      <div class="form-row"><label>Status</label>
         <select id="l_Status">
           <option>Enquiry</option><option>Trial Pending</option><option>Waiting for a batch</option><option>Dropped</option>
         </select>
       </div>
-      <div class="frow"><label>Additional Information</label><textarea id="l_Notes" rows="3" placeholder="Any details from the enquiry…"></textarea></div>
-      <div class="modal-actions">
+      <div class="form-row"><label>Additional Information</label><textarea id="l_Notes" rows="3" placeholder="Any details from the enquiry…"></textarea></div>
+      <div class="wa-actions">
         <button class="trash-btn" id="l_DeleteBtn" onclick="deleteLead()" title="Delete this lead" style="display:none;">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 5v6m4-6v6"/></svg>
         </button>
-        <button class="btn" onclick="closeLeadForm()">Cancel</button>
-        <button class="btn-primary" id="l_SaveBtn" onclick="saveLead()">Save</button>
+        <button class="wa-btn wa-cancel" onclick="closeLeadForm()">Cancel</button>
+        <button class="wa-btn pf-save" id="l_SaveBtn" onclick="saveLead()">Save</button>
       </div>
       <div class="msg" id="l_Msg"></div>
     </div>
   </div>
 </div>
 
-<!-- History modal -->
-<div class="overlay" id="histModal">
-  <div class="modal">
+<div class="modal-overlay" id="histModal">
+  <div class="modal-card">
     <div class="modal-head"><h3 id="histTitle">Lead History</h3><button class="modal-close" onclick="closeHist()">&times;</button></div>
     <div class="modal-body">
-      <div id="histList" style="max-height:280px;overflow:auto;margin-bottom:14px;"></div>
-      <div class="frow"><label>Update status</label>
+      <div class="hist-list" id="histList"></div>
+      <div class="form-row"><label>Update status</label>
         <select id="h_Status">
           <option>Enquiry</option><option>Trial Pending</option><option>Waiting for a batch</option><option>Dropped</option>
         </select>
       </div>
-      <div class="frow"><label>Note (what happened)</label><textarea id="h_Note" rows="2" placeholder="e.g. Called, discussed weekend batch…"></textarea></div>
-      <div class="modal-actions"><button class="btn" onclick="closeHist()">Close</button><button class="btn-primary" id="h_SaveBtn" onclick="saveHist()">Add update</button></div>
+      <div class="form-row"><label>Note (what happened)</label><textarea id="h_Note" rows="2" placeholder="e.g. Called, discussed weekend batch…"></textarea></div>
+      <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeHist()">Close</button><button class="wa-btn pf-save" id="h_SaveBtn" onclick="saveHist()">Add update</button></div>
       <div class="msg" id="h_Msg"></div>
     </div>
   </div>
@@ -237,7 +269,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
-  query, where, orderBy, serverTimestamp, onSnapshot }
+  query, orderBy, serverTimestamp, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -248,127 +280,96 @@ const firebaseConfig = {
   messagingSenderId: "895965285614",
   appId: "1:895965285614:web:714d50c91bbfafb58db7ff"
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ─── App state ───
-let currentUser=null;   // firebase user
-let userRole='';        // 'admin' | 'tutor' | '' 
-let leadsData=[];       // cached leads
-let editingLeadId=null;
-let histLeadId=null;
-let statusFilter='';
+let currentUser=null, userRole='', leadsData=[], editingLeadId=null, histLeadId=null, statusFilter='';
 const LEAD_STATUSES=['Enquiry','Trial Pending','Waiting for a batch','Converted','Dropped'];
+const PRESET_SOURCES=['Google','Website','Reference','WhatsApp','Instagram','AI Agent','Summer Camp','Apartment Outreach','Stalls'];
 
-// ─── Helpers ───
 const esc=(t)=>{if(t===null||t===undefined)return '';const d=document.createElement('div');d.textContent=String(t);return d.innerHTML;};
 const $=(id)=>document.getElementById(id);
 function statusClass(st){const s=String(st||'').toLowerCase();
-  if(s==='converted')return 'st-converted';if(s==='dropped')return 'st-dropped';
-  if(s==='enquiry')return 'st-new';return 'st-progress';}
+  if(s==='converted')return 'lead-badge-converted';if(s==='dropped')return 'lead-badge-lost';
+  if(s==='enquiry')return 'lead-badge-new';return 'lead-badge-progress';}
 
-// ─── Auth ───
 window.doGoogleSignIn=async function(){
   $('loginErr').textContent='';
-  try{
-    const provider=new GoogleAuthProvider();
-    await signInWithPopup(auth,provider);
-  }catch(e){
-    console.error('sign-in error',e);
-    $('loginErr').textContent='Sign-in failed: '+(e.code||e.message);
-  }
+  try{ await signInWithPopup(auth,new GoogleAuthProvider()); }
+  catch(e){ console.error('sign-in',e); $('loginErr').textContent='Sign-in failed: '+(e.code||e.message); }
 };
-window.doSignOut=async function(){await signOut(auth);location.reload();};
+window.doSignOut=async function(){ await signOut(auth); location.reload(); };
 
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){showLogin();return;}
+  if(!user){ showLogin(); return; }
   currentUser=user;
-  // Look up role in the users collection (doc id = email, lowercase)
   try{
-    const uref=doc(db,'users',user.email.toLowerCase());
-    const snap=await getDoc(uref);
+    const snap=await getDoc(doc(db,'users',user.email.toLowerCase()));
     userRole=snap.exists()?String(snap.data().role||'').toLowerCase():'';
-  }catch(e){console.error('role lookup failed',e);userRole='';}
-  if(userRole==='admin'||userRole==='tutor'){
-    enterApp();
-  }else{
-    // Not staff. (Parent flow will come in a later slice; for the Leads pilot, staff only.)
+  }catch(e){ console.error('role lookup',e); userRole=''; }
+  if(userRole==='admin'||userRole==='tutor'){ enterApp(); }
+  else{
     showLogin();
-    $('loginErr').innerHTML='This account isn\'t authorized for the Leads pilot. '+
-      '<a href="#" onclick="doSignOut();return false;">Sign out</a>';
+    $('loginErr').innerHTML='This account isn\'t authorized for the Leads pilot. <a href="#" onclick="doSignOut();return false;">Sign out</a>';
   }
 });
 
-function showLogin(){
-  $('loginScreen').style.display='';$('leadsScreen').style.display='none';
-  $('headerRight').innerHTML='';
-}
+function showLogin(){ $('loginScreen').style.display=''; $('leadsScreen').style.display='none'; $('headerRight').innerHTML=''; }
 function enterApp(){
-  $('loginScreen').style.display='none';$('leadsScreen').style.display='';
-  $('headerRight').innerHTML=`<div class="user-chip">${currentUser.photoURL?`<img src="${esc(currentUser.photoURL)}" alt="">`:''}<span>${esc(currentUser.displayName||currentUser.email)} · ${esc(userRole)}</span><button class="btn" onclick="doSignOut()">Sign out</button></div>`;
+  $('loginScreen').style.display='none'; $('leadsScreen').style.display='';
+  $('headerRight').innerHTML=`<div class="account-menu"><button class="account-trigger" onclick="toggleMenu(event)">${currentUser.photoURL?`<img class="account-avatar" src="${esc(currentUser.photoURL)}" alt="">`:`<span class="account-avatar" style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;color:var(--accent-dark);">${esc((currentUser.displayName||currentUser.email||'?').charAt(0).toUpperCase())}</span>`}</button><div class="account-dropdown" id="acctDrop"><div class="account-email">${esc(currentUser.email)}</div><div class="account-role">${esc(userRole)}</div><button class="account-logout" onclick="doSignOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div></div>`;
   if(userRole==='admin')$('migCard').style.display='';
   subscribeLeads();
 }
+window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
+document.addEventListener('click',()=>{const d=$('acctDrop');if(d)d.classList.remove('open');});
 
-// ─── Leads: live subscription ───
 function subscribeLeads(){
   const qy=query(collection(db,'leads'),orderBy('createdAt','desc'));
   onSnapshot(qy,(snap)=>{
     leadsData=snap.docs.map(d=>({_id:d.id,...d.data()}));
-    fillDatalists();
-    renderLeads();
+    fillDatalists(); renderLeads();
   },(err)=>{
-    console.error('leads subscription error',err);
-    $('leadsList').innerHTML='<div class="empty">Could not load leads: '+esc(err.code||err.message)+'</div>';
+    console.error('leads sub error',err);
+    $('leadsList').innerHTML='<div class="pay-empty">Could not load leads: '+esc(err.code||err.message)+'</div>';
   });
 }
-
 function fillDatalists(){
-  const countries=[...new Set(leadsData.map(l=>l.Country).filter(Boolean))].sort();
-  const batches=[...new Set(leadsData.map(l=>l['Preferred Batch']).filter(Boolean))].sort();
-  $('countryList').innerHTML=countries.map(c=>`<option value="${esc(c)}">`).join('');
-  $('batchList').innerHTML=batches.map(b=>`<option value="${esc(b)}">`).join('');
+  const c=[...new Set(leadsData.map(l=>l.Country).filter(Boolean))].sort();
+  const b=[...new Set(leadsData.map(l=>l['Preferred Batch']).filter(Boolean))].sort();
+  $('countryList').innerHTML=c.map(x=>`<option value="${esc(x)}">`).join('');
+  $('batchList').innerHTML=b.map(x=>`<option value="${esc(x)}">`).join('');
 }
-
 window.setStatusFilter=function(s){statusFilter=s;$('statusFilter').value=s;renderLeads();};
 
 window.renderLeads=function(){
-  const list=$('leadsList');const summary=$('leadSummary');
+  const list=$('leadsList'),summary=$('leadSummary');
   const q=($('leadSearch').value||'').trim().toLowerCase();
   const fStatus=$('statusFilter').value;statusFilter=fStatus;
   let rows=leadsData.slice();
   if(fStatus)rows=rows.filter(l=>String(l.Status||'')===fStatus);
-  if(q)rows=rows.filter(l=>['Name','Country','Contact','Preferred Batch','Source','Status','Notes','Lead ID']
-    .some(k=>String(l[k]||'').toLowerCase().includes(q)));
-
-  // summary chips
+  if(q)rows=rows.filter(l=>['Name','Country','Contact','Preferred Batch','Source','Status','Notes','Lead ID'].some(k=>String(l[k]||'').toLowerCase().includes(q)));
   const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
   leadsData.forEach(l=>{const s=String(l.Status||'Enquiry');if(counts[s]!==undefined)counts[s]++;});
-  summary.innerHTML=`<button class="chip${fStatus===''?' active':''}" onclick="setStatusFilter('')">${leadsData.length} All</button>`+
-    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="chip ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${esc(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
-
-  if(!rows.length){list.innerHTML='<div class="empty">No leads. Click "+ Add Lead" to add one.</div>';return;}
-  list.innerHTML=`<table class="leads"><thead><tr>
+  summary.innerHTML=`<button class="lead-stat lead-stat-btn${fStatus===''?' active':''}" onclick="setStatusFilter('')">${leadsData.length} All</button>`+
+    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${esc(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
+  if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
+  list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
     </tr></thead><tbody>${rows.map(l=>`<tr>
-      <td><strong>${esc(l.Name||'—')}</strong></td>
+      <td><strong>${esc(l.Name||'—')}</strong>${l['Lead ID']?`<br><span class="pay-sid">${esc(l['Lead ID'])}</span>`:''}</td>
       <td>${esc(l.Country||'—')}</td>
-      <td>${l.Contact?`<a href="tel:${esc(String(l.Contact).replace(/[^0-9+]/g,''))}" class="tel">${esc(l.Contact)}</a>`:'—'}</td>
+      <td>${l.Contact?`<a href="tel:${esc(String(l.Contact).replace(/[^0-9+]/g,''))}" class="lead-tel">${esc(l.Contact)}</a>`:'—'}</td>
       <td>${esc(l['Preferred Batch']||'—')}</td>
       <td>${esc(l.Source||'—')}</td>
-      <td><span class="badge ${statusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
-      <td style="max-width:200px;">${esc(l.Notes||'')}</td>
-      <td><div class="act-row"><button class="act" onclick="openLeadForm('${esc(l._id)}')">Edit</button><button class="act" onclick="openHist('${esc(l._id)}')">History</button></div></td>
+      <td><span class="lead-badge ${statusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
+      <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
+      <td><div class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l._id)}')">Edit</button><button class="pay-act pay-act-history" onclick="openHist('${esc(l._id)}')">History</button></div></td>
     </tr>`).join('')}</tbody></table>`;
 };
 
-// ─── Lead form ───
-window.onSourceChange=function(){
-  const other=$('l_Source').value==='Others';
-  $('l_SourceOther').style.display=other?'':'none';if(!other)$('l_SourceOther').value='';
-};
+window.onSourceChange=function(){const other=$('l_Source').value==='Others';$('l_SourceOther').style.display=other?'':'none';if(!other)$('l_SourceOther').value='';};
 window.openLeadForm=function(id){
   editingLeadId=id||null;
   const lead=id?leadsData.find(l=>l._id===id):null;
@@ -380,15 +381,13 @@ window.openLeadForm=function(id){
   $('l_Notes').value=lead?(lead.Notes||''):'';
   $('l_Status').value=lead?(lead.Status||'Enquiry'):'Enquiry';
   const src=lead?(lead.Source||''):'';
-  const preset=['Google','Website','Reference','WhatsApp','Instagram','AI Agent','Summer Camp','Apartment Outreach','Stalls'];
-  if(src&&!preset.includes(src)){$('l_Source').value='Others';$('l_SourceOther').value=src;$('l_SourceOther').style.display='';}
+  if(src&&!PRESET_SOURCES.includes(src)){$('l_Source').value='Others';$('l_SourceOther').value=src;$('l_SourceOther').style.display='';}
   else{$('l_Source').value=src;$('l_SourceOther').value='';$('l_SourceOther').style.display='none';}
   $('l_Msg').textContent='';$('l_SaveBtn').disabled=false;
   const del=$('l_DeleteBtn');del.style.display=editingLeadId?'':'none';del.disabled=false;
-  $('leadModal').classList.add('on');
+  $('leadModal').classList.add('open');
 };
-window.closeLeadForm=function(){$('leadModal').classList.remove('on');editingLeadId=null;};
-
+window.closeLeadForm=function(){$('leadModal').classList.remove('open');editingLeadId=null;};
 function currentSource(){const s=$('l_Source').value;return s==='Others'?$('l_SourceOther').value.trim():s;}
 
 window.saveLead=async function(){
@@ -396,17 +395,13 @@ window.saveLead=async function(){
   const name=$('l_Name').value.trim(),contact=$('l_Contact').value.trim();
   if(!name){msg.textContent='Please enter the student name.';msg.className='msg err';return;}
   if(!contact){msg.textContent='Please enter the mobile contact.';msg.className='msg err';return;}
-  const data={
-    Name:name,Country:$('l_Country').value.trim(),Contact:contact,
-    'Preferred Batch':$('l_Batch').value.trim(),Source:currentSource(),
-    Status:$('l_Status').value,Notes:$('l_Notes').value.trim(),
-    updatedAt:serverTimestamp(),updatedBy:currentUser.email
-  };
+  const data={Name:name,Country:$('l_Country').value.trim(),Contact:contact,'Preferred Batch':$('l_Batch').value.trim(),
+    Source:currentSource(),Status:$('l_Status').value,Notes:$('l_Notes').value.trim(),
+    updatedAt:serverTimestamp(),updatedBy:currentUser.email};
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
   try{
-    let oldStatus='';
     if(editingLeadId){
-      const cur=leadsData.find(l=>l._id===editingLeadId);oldStatus=cur?String(cur.Status||''):'';
+      const cur=leadsData.find(l=>l._id===editingLeadId);const oldStatus=cur?String(cur.Status||''):'';
       await updateDoc(doc(db,'leads',editingLeadId),data);
       if(oldStatus!==data.Status)await logHistory(editingLeadId,data.Status,`Status changed from ${oldStatus||'—'} to ${data.Status}`);
     }else{
@@ -415,7 +410,7 @@ window.saveLead=async function(){
       const ref=await addDoc(collection(db,'leads'),data);
       await logHistory(ref.id,data.Status,`Lead created with status ${data.Status}`);
     }
-    closeLeadForm(); // live subscription refreshes the table
+    closeLeadForm();
   }catch(e){console.error('saveLead',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
 };
 
@@ -425,19 +420,13 @@ window.deleteLead=async function(){
   if(!confirm('Delete lead "'+(lead?lead.Name:editingLeadId)+'"? This cannot be undone.'))return;
   const msg=$('l_Msg'),btn=$('l_DeleteBtn');
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Deleting…';msg.className='msg busy';
-  try{
-    await deleteDoc(doc(db,'leads',editingLeadId));
-    btn.disabled=false;closeLeadForm();
-  }catch(e){console.error('deleteLead',e);msg.textContent='Could not delete: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
+  try{ await deleteDoc(doc(db,'leads',editingLeadId)); btn.disabled=false; closeLeadForm(); }
+  catch(e){console.error('deleteLead',e);msg.textContent='Could not delete: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
 };
 
-// ─── History (subcollection under each lead) ───
 async function logHistory(leadId,status,note){
-  try{
-    await addDoc(collection(db,'leads',leadId,'history'),{
-      status:status||'',note:note||'',at:serverTimestamp(),by:currentUser.email
-    });
-  }catch(e){console.warn('logHistory failed',e);}
+  try{ await addDoc(collection(db,'leads',leadId,'history'),{status:status||'',note:note||'',at:serverTimestamp(),by:currentUser.email}); }
+  catch(e){console.warn('logHistory',e);}
 }
 window.openHist=async function(id){
   histLeadId=id;
@@ -445,21 +434,19 @@ window.openHist=async function(id){
   $('histTitle').textContent=lead?`History · ${lead.Name||id}`:'Lead History';
   $('h_Status').value=lead?(lead.Status||'Enquiry'):'Enquiry';
   $('h_Note').value='';$('h_Msg').textContent='';$('h_SaveBtn').disabled=false;
-  $('histList').innerHTML='<div class="empty"><span class="spinner"></span> Loading…</div>';
-  $('histModal').classList.add('on');
+  $('histList').innerHTML='<div class="pay-empty"><span class="spinner"></span> Loading…</div>';
+  $('histModal').classList.add('open');
   try{
-    const qy=query(collection(db,'leads',id,'history'),orderBy('at','desc'));
-    const snap=await getDocs(qy);
+    const snap=await getDocs(query(collection(db,'leads',id,'history'),orderBy('at','desc')));
     const items=snap.docs.map(d=>d.data());
-    if(!items.length){$('histList').innerHTML='<div class="empty">No history yet.</div>';return;}
+    if(!items.length){$('histList').innerHTML='<div class="pay-empty">No history yet.</div>';return;}
     $('histList').innerHTML=items.map(h=>{
       const when=h.at&&h.at.toDate?h.at.toDate().toLocaleString():'';
-      return `<div class="hist-item"><div class="hist-meta">${h.status?`<span class="badge ${statusClass(h.status)}" style="margin-right:6px;">${esc(h.status)}</span>`:''}${esc(when)}${h.by?(' · '+esc(h.by)):''}</div>${h.note?`<div class="hist-text">${esc(h.note)}</div>`:''}</div>`;
+      return `<div class="hist-item"><div class="hist-meta">${h.status?`<span class="lead-badge ${statusClass(h.status)}" style="margin-right:6px;">${esc(h.status)}</span>`:''}${esc(when)}${h.by?(' · '+esc(h.by)):''}</div>${h.note?`<div class="hist-text">${esc(h.note)}</div>`:''}</div>`;
     }).join('');
-  }catch(e){console.error('openHist',e);$('histList').innerHTML='<div class="empty">Could not load history.</div>';}
+  }catch(e){console.error('openHist',e);$('histList').innerHTML='<div class="pay-empty">Could not load history.</div>';}
 };
-window.closeHist=function(){$('histModal').classList.remove('on');histLeadId=null;};
-
+window.closeHist=function(){$('histModal').classList.remove('open');histLeadId=null;};
 window.saveHist=async function(){
   const status=$('h_Status').value,note=$('h_Note').value.trim();
   const msg=$('h_Msg'),btn=$('h_SaveBtn');
@@ -468,61 +455,35 @@ window.saveHist=async function(){
   try{
     await logHistory(histLeadId,status,note);
     await updateDoc(doc(db,'leads',histLeadId),{Status:status,updatedAt:serverTimestamp(),updatedBy:currentUser.email});
-    $('h_Note').value='';msg.textContent='';btn.disabled=false;
-    openHist(histLeadId); // reload list
+    $('h_Note').value='';msg.textContent='';btn.disabled=false;openHist(histLeadId);
   }catch(e){console.error('saveHist',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
 };
 
-// ─── Migration helper (admin) ───
-function parseCSV(text){
-  const lines=text.trim().split(/\r?\n/);if(lines.length<2)return [];
-  const headers=splitCsvLine(lines[0]);
-  const out=[];
-  for(let i=1;i<lines.length;i++){
-    if(!lines[i].trim())continue;
-    const cells=splitCsvLine(lines[i]);const obj={};
-    headers.forEach((h,j)=>obj[h.trim()]=(cells[j]||'').trim());
-    out.push(obj);
-  }
-  return out;
-}
-function splitCsvLine(line){
-  const out=[];let cur='',inQ=false;
-  for(let i=0;i<line.length;i++){const c=line[i];
-    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
-    else if(c===','&&!inQ){out.push(cur);cur='';}
-    else cur+=c;}
-  out.push(cur);return out;
-}
+function splitCsvLine(line){const out=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}
+function parseCSV(text){const lines=text.trim().split(/\r?\n/);if(lines.length<2)return [];const headers=splitCsvLine(lines[0]).map(h=>h.trim());const out=[];for(let i=1;i<lines.length;i++){if(!lines[i].trim())continue;const cells=splitCsvLine(lines[i]);const obj={};headers.forEach((h,j)=>obj[h]=(cells[j]||'').trim());out.push(obj);}return out;}
 window.runMigration=async function(){
   const raw=$('migInput').value.trim();const msg=$('migMsg');
   if(!raw){msg.textContent='Paste CSV or JSON first.';msg.className='msg err';return;}
   let records=[];
-  try{
-    if(raw[0]==='['){records=JSON.parse(raw);}
-    else{records=parseCSV(raw);}
-  }catch(e){msg.textContent='Could not parse input: '+e.message;msg.className='msg err';return;}
+  try{ records=raw[0]==='['?JSON.parse(raw):parseCSV(raw); }
+  catch(e){msg.textContent='Could not parse: '+e.message;msg.className='msg err';return;}
   if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
   msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
   let done=0,fail=0;
   for(const r of records){
     try{
       const leadId=String(r['Lead ID']||r.LeadID||('L'+Date.now()+Math.random().toString(36).slice(2,6)));
-      const data={
+      await setDoc(doc(db,'leads',leadId),{
         'Lead ID':leadId,Name:r.Name||'',Country:r.Country||'',Contact:String(r.Contact||''),
-        'Preferred Batch':r['Preferred Batch']||r.Batch||'',Source:r.Source||'',
-        Status:r.Status||'Enquiry',Notes:r.Notes||'',
-        'Converted Student ID':r['Converted Student ID']||'',
+        'Preferred Batch':r['Preferred Batch']||r.Batch||'',Source:r.Source||'',Status:r.Status||'Enquiry',
+        Notes:r.Notes||'','Converted Student ID':r['Converted Student ID']||'',
         createdAt:serverTimestamp(),migratedAt:serverTimestamp(),migratedBy:currentUser.email
-      };
-      // Use Lead ID as the doc id so re-imports update rather than duplicate
-      await setDoc(doc(db,'leads',leadId),data,{merge:true});
+      },{merge:true});
       done++;
-    }catch(e){console.error('migrate row failed',r,e);fail++;}
+    }catch(e){console.error('migrate row',r,e);fail++;}
   }
   msg.textContent=`Imported ${done} lead(s)`+(fail?`, ${fail} failed (see console)`:'')+'.';
-  msg.className=fail?'msg err':'msg ok';
-  $('migInput').value='';
+  msg.className=fail?'msg err':'msg ok';$('migInput').value='';
 };
 </script>
 </body>
