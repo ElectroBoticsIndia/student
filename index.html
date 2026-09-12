@@ -1730,7 +1730,7 @@ function parseJoinYM(raw){
   const d=new Date(s);if(!isNaN(d))return {y:d.getFullYear(),mo:d.getMonth()+1};
   return null;
 }
-function initPayments(){
+window.initPayments=function(){
   const mSel=$('payMonth'),ySel=$('payYear');
   if(mSel&&!mSel.options.length){
     const now=new Date();
@@ -1740,7 +1740,7 @@ function initPayments(){
   }
   if(!paymentsLoaded)loadPayments(); else buildPayments();
 }
-async function loadPayments(){
+window.loadPayments=async function(){
   const year=$('payYear').value;const list=$('paymentsList');
   payLoading=true;list.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
   if(!studentsLoaded){try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}catch(e){console.error(e);}}
@@ -1769,7 +1769,7 @@ async function payWrite(body){
     await setDoc(doc(db,'payments',id),data,{merge:true});return true;
   }catch(e){console.error('payWrite',e);return false;}
 }
-function buildPayments(){
+window.buildPayments=function(){
   const list=$('paymentsList'),summary=$('paySummary');
   const year=$('payYear').value,month=$('payMonth').value;const selY=+year,selM=+month;
   const joinedBy=(s)=>{const j=parseJoinYM(s['Join Date']);if(!j)return true;return (j.y<selY)||(j.y===selY&&j.mo<=selM);};
