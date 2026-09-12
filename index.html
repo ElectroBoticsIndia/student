@@ -157,7 +157,99 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   .pay-controls .pay-search{flex:1 1 100%}
   .pay-controls select{flex:1 1 auto}
   .pay-controls .btn-primary{flex:1 1 auto}
+  .topic-edit-row{flex-direction:column;align-items:stretch;margin-left:0}
+  .topic-status-sel,.topic-notes-input{width:100%}
+  .student-header{flex-direction:column;text-align:center;gap:12px}
+  .roadmap-controls{flex-wrap:wrap}
 }
+
+/* ── Student profile + roadmap (ported from production) ── */
+.student-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;margin-bottom:24px;box-shadow:var(--shadow);display:flex;align-items:center;gap:20px}
+.student-avatar{width:64px;height:64px;border-radius:50%;background:var(--accent-light);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;font-family:var(--font-mono);font-size:24px;font-weight:700;color:var(--accent)}
+.student-avatar img{width:100%;height:100%;object-fit:cover}
+.student-info{flex:1;min-width:0}
+.student-name{font-size:22px;font-weight:700;margin-bottom:2px}
+.student-meta{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);display:flex;gap:16px;flex-wrap:wrap}
+.student-meta span{display:inline-flex;align-items:center;gap:4px}
+.roadmap-controls{display:flex;gap:8px;flex-shrink:0}
+.btn-logout{font-family:var(--font-mono);font-size:13px;font-weight:700;color:#fff;background:var(--accent);border:none;border-radius:9px;padding:9px 18px;cursor:pointer;transition:all .2s;flex-shrink:0;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,143,160,0.25)}
+.btn-logout:hover{background:var(--accent-dark)}
+.progress-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 26px;margin-bottom:24px;box-shadow:var(--shadow);display:flex;align-items:center;gap:26px}
+.progress-summary-info{flex:1;min-width:0}
+.progress-summary-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+.progress-summary-stats{font-family:var(--font-mono);font-size:13px;color:var(--text-dim);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.progress-summary-stats strong{color:var(--accent);font-weight:700}
+.progress-summary-stats .dot{opacity:.4}
+.ring-wrap{flex-shrink:0}
+.ring-bg{fill:none;stroke:var(--surface-alt);stroke-width:10}
+.ring-fill{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .6s ease-out;transform:rotate(-90deg);transform-origin:60px 60px}
+.ring-pct{font-family:var(--font-mono);font-size:22px;font-weight:700;fill:var(--text);text-anchor:middle}
+.ring-sub{font-family:var(--font-mono);font-size:9px;fill:var(--text-light);text-anchor:middle;text-transform:uppercase;letter-spacing:1px}
+.roadmap{display:flex;flex-direction:column;gap:16px;margin-bottom:32px}
+.roadmap-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 20px;font-family:var(--font-mono);font-size:13px;color:var(--text-dim)}
+.roadmap-loading .spinner{width:38px;height:38px;border:4px solid var(--border);border-top-color:var(--accent)}
+.roadmap-error{padding:40px 20px;text-align:center;font-family:var(--font-mono);font-size:13px;color:var(--red)}
+.level-card{background:var(--surface);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all .3s;cursor:pointer}
+.level-card.current{border-color:#eab43a;box-shadow:0 0 0 3px #eab43a22}
+.level-card.completed{border-color:#8ab600}
+.level-card.upcoming{border-color:var(--border)}
+.level-card.na-level{opacity:.7;border-color:var(--border)!important;background:var(--surface-alt)}
+.level-card.na-level .level-name{color:var(--text-dim)}
+.level-top{display:flex;align-items:center;gap:16px;padding:18px 22px}
+.level-num{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:16px;font-weight:700;flex-shrink:0;color:#fff}
+.level-info{flex:1;min-width:0}
+.level-name{font-size:16px;font-weight:700;margin-bottom:2px}
+.level-desc{font-size:13px;color:var(--text-dim);line-height:1.4}
+.level-statusline{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.level-status-badge{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
+.badge-completed{background:var(--green-bg);color:#5a7a00}
+.badge-current{background:var(--amber-bg);color:#9a7200}
+.badge-locked{background:var(--surface-alt);color:var(--text-light)}
+.badge-upcoming{background:var(--surface-alt);color:var(--text-dim)}
+.level-topic-count{font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
+.level-pct{font-family:var(--font-mono);font-size:15px;font-weight:700}
+.level-progress-bar{width:100%;height:8px;background:var(--surface-alt);border-radius:3px;overflow:hidden;margin-top:8px}
+.level-progress-fill{height:100%;border-radius:3px;transition:width .5s ease-out}
+.level-detail{display:none;border-top:1px solid var(--border);padding:20px 22px;background:var(--surface-alt)}
+.level-card.expanded .level-detail{display:block}
+.topics-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+.topic-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.topic-item{display:flex;flex-direction:column;gap:8px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.topic-row{display:flex;align-items:center;gap:10px}
+.topic-check{width:22px;height:22px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.topic-check.done{background:var(--green);color:#fff}
+.topic-check.progress{background:var(--amber);color:#fff}
+.topic-check.locked{background:var(--surface-alt);border:2px solid var(--border)}
+.topic-check.na{background:var(--surface-alt);border:2px dashed var(--border)}
+.topic-check svg{width:14px;height:14px}
+.topic-name{font-size:14px;font-weight:500;flex:1}
+.topic-name.done{color:var(--text)}.topic-name.progress{color:var(--amber)}.topic-name.locked{color:var(--text-light)}.topic-name.na{color:var(--text-light);text-decoration:line-through}
+.topic-notes-view{font-family:var(--font-body);font-size:12px;color:var(--text-dim);background:var(--bg);border-radius:6px;padding:6px 10px;margin-left:32px}
+.topic-edit-row{display:flex;gap:8px;align-items:center;margin-left:32px;flex-wrap:wrap}
+.topic-status-sel{font-family:var(--font-mono);font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);cursor:pointer;min-width:120px}
+.topic-notes-input{flex:1;min-width:160px;font-family:var(--font-body);font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;outline:none}
+.topic-notes-input:focus,.topic-status-sel:focus{border-color:var(--accent)}
+.lvl-btn{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;border:none;cursor:pointer;transition:all .18s}
+.lvl-btn-markall{background:var(--green-bg,#eef6d8);color:#5a7a00}
+.lvl-btn-markna{background:var(--surface-alt);color:var(--text-dim)}
+.lvl-btn-save{background:var(--accent);color:#fff}
+.lvl-btn-save:hover{background:var(--accent-dark)}
+.topics-save-bar{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+.topics-save-spacer{flex:1}
+.topics-save-msg{font-family:var(--font-mono);font-size:12px}
+.topics-save-msg.saving{display:inline-flex;align-items:center;gap:8px;color:var(--text-dim)}
+.topics-save-msg.ok{color:var(--green)}.topics-save-msg.err{color:var(--red)}
+.no-topics-msg{font-family:var(--font-mono);font-size:12px;color:var(--text-light);padding:8px 0}
+.level-projects{margin-top:8px}
+.proj-item{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
+.proj-name{font-weight:700;font-size:14px;margin-bottom:2px}
+.proj-desc{font-size:12px;color:var(--text-dim);margin-bottom:6px}
+.proj-links{display:flex;gap:8px;flex-wrap:wrap}
+.proj-links a{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent-dark);background:var(--accent-light);padding:4px 10px;border-radius:6px;text-decoration:none}
+.level-links{display:flex;gap:8px;padding:0 22px 14px;flex-wrap:wrap}
+.level-links a{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;flex:1;justify-content:center}
+.level-links .link-cert{background:var(--amber-light);color:#9a7200}
+.level-links .link-ref{background:var(--accent-light);color:var(--accent-dark)}
 </style>
 </head>
 <body>
@@ -231,13 +323,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   <div id="studentsScreen" style="display:none;">
     <div class="chart-card">
       <div class="pay-head">
-        <div class="chart-title">Students — Data (Phase 1)</div>
-        <button class="btn-primary" onclick="refreshStudentCounts()">Refresh counts</button>
+        <div class="chart-title">Students</div>
+        <div class="pay-controls">
+          <input type="text" id="stuSearch" class="pay-search" placeholder="Search name or ID…" oninput="renderStudents()">
+          <select id="stuFilterLevel" onchange="renderStudents()"><option value="">All levels</option></select>
+          <select id="stuFilterTutor" onchange="renderStudents()"><option value="">All tutors</option></select>
+          <select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All statuses</option><option value="inactive">Inactive</option></select>
+          <button class="btn-primary" onclick="openStudentForm()">+ Add Student</button>
+        </div>
       </div>
-      <div class="note" id="studentCounts">Loading counts…</div>
-      <div style="font-size:13px;color:var(--text-dim);">
-        Sub-step 1 imports and verifies your data. The staff list, add/edit, roadmap and the parent view come in the next sub-steps.
-        Migrated collections: <strong>students</strong>, and per-student <strong>progress</strong> and <strong>projects</strong>; plus shared <strong>levels</strong> (with the Certificate Template column) and <strong>topics</strong>.
+      <div class="note" id="stuCountLine" style="margin-bottom:12px;"></div>
+      <div class="avail-scroll"><div id="studentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+    </div>
+
+    <!-- Admin migration (collapsible) -->
+    <div class="chart-card" id="stuMigToggleCard" style="display:none;">
+      <div class="pay-head" style="margin-bottom:0;cursor:pointer;" onclick="toggleMig()">
+        <div class="chart-title">Migration Helper (admin)</div>
+        <span id="migChevron" style="font-family:var(--font-mono);color:var(--text-light);">▾</span>
       </div>
     </div>
 
@@ -277,6 +380,62 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
       </div>
 
       <div class="note" style="margin-top:12px;margin-bottom:0;">Certificates aren't a separate sheet — the <strong>Certificate Template</strong> column travels with the Levels import (step 2), and each certificate is generated on the fly from that template plus the student's completion date. Nothing extra to import.</div>
+    </div>
+  </div>
+
+  <!-- ═══ STUDENT PROFILE / ROADMAP ═══ -->
+  <div id="profileScreen" style="display:none;">
+    <div class="student-header">
+      <div class="student-avatar" id="profAvatar"></div>
+      <div class="student-info">
+        <div class="student-name" id="profName"></div>
+        <div class="student-meta" id="profMeta"></div>
+      </div>
+      <div class="roadmap-controls">
+        <button class="lvl-btn lvl-btn-markall" id="profEditBtn" onclick="openStudentForm(currentStudentId)" style="display:none;">Edit</button>
+        <button class="btn-logout" onclick="backFromProfile()"><span class="back-arrow">←</span> Back</button>
+      </div>
+    </div>
+    <div class="progress-summary" id="profSummary"></div>
+    <div class="roadmap" id="roadmap"></div>
+  </div>
+</div>
+
+<!-- Add/Edit Student modal -->
+<div class="modal-overlay" id="studentModal">
+  <div class="modal-card">
+    <div class="modal-head"><h3 id="studentModalTitle">Add Student</h3><button class="modal-close" onclick="closeStudentForm()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Student ID <span class="req">*</span></label><input type="text" id="s_ID" placeholder="e.g. EB001"></div>
+      <div class="form-row"><label>Name <span class="req">*</span></label><input type="text" id="s_Name"></div>
+      <div class="form-row"><label>Current Level</label><input type="text" id="s_Level" list="levelList"><datalist id="levelList"></datalist></div>
+      <div class="form-row"><label>Country</label><input type="text" id="s_Country" list="stuCountryList"><datalist id="stuCountryList"></datalist></div>
+      <div class="form-row"><label>Tutor</label><input type="text" id="s_Tutor" list="tutorList"><datalist id="tutorList"></datalist></div>
+      <div class="form-row"><label>Batch</label><input type="text" id="s_Batch" list="stuBatchList"><datalist id="stuBatchList"></datalist></div>
+      <div class="form-row"><label>Status</label>
+        <select id="s_Status" onchange="onStuStatusChange()"><option>Active</option><option>Inactive</option></select>
+      </div>
+      <div class="form-row" id="inactiveReasonRow" style="display:none;"><label>Inactive Reason <span class="req">*</span></label>
+        <select id="s_InactiveReason" onchange="onStuReasonChange()">
+          <option value="">— Select a reason —</option>
+          <option>Waiting for batch</option><option>Academics / higher grade</option>
+          <option>Lost interest</option><option>Re-location</option><option>Other</option>
+        </select>
+        <input type="text" id="s_InactiveReasonOther" placeholder="Please specify" style="display:none;margin-top:8px;">
+      </div>
+      <div class="form-row"><label>Join Date</label><input type="date" id="s_JoinDate"></div>
+      <div class="form-row"><label>Parent / Student Email <small>(comma-separate multiple)</small></label><input type="text" id="s_Email" placeholder="mom@gmail.com, dad@gmail.com"></div>
+      <div class="form-row"><label>Contact</label><input type="text" id="s_Contact"></div>
+      <div class="form-row"><label>School</label><input type="text" id="s_School"></div>
+      <div class="form-row"><label>Address</label><input type="text" id="s_Address"></div>
+      <div class="form-row"><label>Monthly Fee</label><input type="text" id="s_Fee"></div>
+      <div class="form-row"><label>Payment Ref</label><input type="text" id="s_PayRef" placeholder="acct / UPI ref"></div>
+      <div class="form-row"><label>Photo (Drive link or URL)</label><input type="text" id="s_Photo"></div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeStudentForm()">Cancel</button>
+        <button class="wa-btn pf-save" id="s_SaveBtn" onclick="saveStudent()">Save</button>
+      </div>
+      <div class="msg" id="s_Msg"></div>
     </div>
   </div>
 </div>
@@ -399,8 +558,8 @@ window.setTab=function(tab){
   });
   document.querySelectorAll('#staffTabs .dash-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tab')===tab));
   if(tab==='students'){
-    if(userRole==='admin')$('stuMigCard').style.display='';
-    refreshStudentCounts();
+    if(userRole==='admin')$('stuMigToggleCard').style.display='';
+    if(!studentsLoaded)loadStudentsList();
   }
 };
 window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
@@ -649,17 +808,314 @@ window.migProjects=async function(){
 };
 
 // Count verification — reads server-side counts (cheap, 1 read each).
-window.refreshStudentCounts=async function(){
-  const el=$('studentCounts');if(!el)return;
-  el.innerHTML='<span class="spinner"></span> Counting…';
+window.refreshStudentCounts=function(){/* counts panel removed in sub-step 2; kept as no-op */};
+window.toggleMig=function(){
+  const card=$('stuMigCard');const chev=$('migChevron');
+  const open=card.style.display==='none';
+  card.style.display=open?'':'none';if(chev)chev.textContent=open?'▴':'▾';
+};
+
+/* ═══════════ STUDENTS (sub-step 2) ═══════════ */
+let studentsData=[], levelsData=[], topicsData=[], studentsLoaded=false, refDataLoaded=false;
+let currentStudentId=null, currentProgress=[], currentProjects=[];
+let editStatusOnOpen='';
+
+const normLevel=(name)=>String(name||'').toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+const canEdit=()=>userRole==='admin'||userRole==='tutor';
+
+async function loadRefData(){
+  if(refDataLoaded)return;
   try{
-    const cnt=async(path,q)=>{try{const s=await getCountFromServer(q||collection(db,path));return s.data().count;}catch(e){return '—';}}
-    const students=await cnt('students');
-    const levels=await cnt('levels');
-    const topics=await cnt('topics');
-    el.innerHTML=`Firestore now holds: <strong>${students}</strong> students · <strong>${levels}</strong> levels · <strong>${topics}</strong> topics. `+
-      `(Per-student progress/projects/certificates are stored under each student.) Compare these to your sheet row counts to confirm the import.`;
-  }catch(e){el.textContent='Could not read counts: '+(e.code||e.message);}
+    const [lv,tp]=await Promise.all([
+      getDocs(query(collection(db,'levels'),orderBy('order'))),
+      getDocs(query(collection(db,'topics'),orderBy('order')))
+    ]);
+    levelsData=lv.docs.map((d,i)=>{const r=d.data();return {num:parseInt(r['Level Number']||r.order||(i+1)),name:String(r['Level Name']||'').trim(),desc:String(r['Description']||'').trim(),refDoc:String(r['Reference Doc']||'').trim(),certTemplate:String(r['Certificate Template']||'').trim()};}).filter(l=>l.name);
+    topicsData=tp.docs.map(d=>d.data());
+    refDataLoaded=true;
+  }catch(e){console.error('loadRefData',e);}
+}
+
+async function loadStudentsList(){
+  const list=$('studentsList');
+  list.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
+  await loadRefData();
+  try{
+    const snap=await getDocs(collection(db,'students'));
+    studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));
+    studentsLoaded=true;
+    fillStudentFilters();
+    renderStudents();
+  }catch(e){console.error('loadStudentsList',e);list.innerHTML='<div class="pay-empty">Could not load students: '+esc(e.code||e.message)+'</div>';}
+}
+
+function fillStudentFilters(){
+  const levels=[...new Set(studentsData.map(s=>s['Current Level']).filter(Boolean))].sort();
+  const tutors=[...new Set(studentsData.map(s=>s.Tutor).filter(Boolean))].sort();
+  const lvlSel=$('stuFilterLevel'),tutSel=$('stuFilterTutor');
+  lvlSel.innerHTML='<option value="">All levels</option>'+levels.map(l=>`<option>${esc(l)}</option>`).join('');
+  tutSel.innerHTML='<option value="">All tutors</option>'+tutors.map(t=>`<option>${esc(t)}</option>`).join('');
+  // datalists for the form
+  const countries=[...new Set(studentsData.map(s=>s.Country).filter(Boolean))].sort();
+  const batches=[...new Set(studentsData.map(s=>s.Batch).filter(Boolean))].sort();
+  $('levelList').innerHTML=levelsData.map(l=>`<option value="${esc(l.name)}">`).join('');
+  $('stuCountryList').innerHTML=countries.map(c=>`<option value="${esc(c)}">`).join('');
+  $('tutorList').innerHTML=tutors.map(t=>`<option value="${esc(t)}">`).join('');
+  $('stuBatchList').innerHTML=batches.map(b=>`<option value="${esc(b)}">`).join('');
+}
+
+window.renderStudents=function(){
+  const list=$('studentsList');
+  const q=($('stuSearch').value||'').trim().toLowerCase();
+  const fLvl=$('stuFilterLevel').value,fTut=$('stuFilterTutor').value,fStat=$('stuFilterStatus').value;
+  let rows=studentsData.slice();
+  if(fStat==='')rows=rows.filter(s=>(s.Status||'Active').toLowerCase()==='active');
+  else if(fStat==='inactive')rows=rows.filter(s=>(s.Status||'Active').toLowerCase()!=='active');
+  if(fLvl)rows=rows.filter(s=>(s['Current Level']||'')===fLvl);
+  if(fTut)rows=rows.filter(s=>(s.Tutor||'')===fTut);
+  if(q)rows=rows.filter(s=>String(s.Name||'').toLowerCase().includes(q)||String(s.ID||'').toLowerCase().includes(q));
+  rows.sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||'')));
+  $('stuCountLine').innerHTML=`<strong>${rows.length}</strong> student${rows.length!==1?'s':''} shown · ${studentsData.length} total`;
+  if(!rows.length){list.innerHTML='<div class="pay-empty">No students match.</div>';return;}
+  list.innerHTML=`<table class="pay-table"><thead><tr>
+    <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Batch</th><th>Status</th><th></th>
+    </tr></thead><tbody>${rows.map(s=>`<tr>
+      <td><span class="pay-sid">${esc(s.ID)}</span></td>
+      <td><strong>${esc(s.Name||'—')}</strong></td>
+      <td>${esc(s['Current Level']||'—')}</td>
+      <td>${esc(s.Tutor||'—')}</td>
+      <td>${esc(s.Batch||'—')}</td>
+      <td>${(s.Status||'Active').toLowerCase()==='active'?'<span class="lead-badge lead-badge-converted">Active</span>':'<span class="lead-badge lead-badge-lost">Inactive</span>'}</td>
+      <td><button class="pay-act pay-act-paid" onclick="openProfile('${esc(s.ID)}')">Open</button></td>
+    </tr>`).join('')}</tbody></table>`;
+};
+
+/* ── Profile / roadmap ── */
+window.openProfile=async function(id){
+  currentStudentId=id;
+  const s=studentsData.find(x=>x.ID===id);if(!s)return;
+  $('leadsScreen').style.display='none';$('studentsScreen').style.display='none';$('staffTabs').style.display='none';
+  $('profileScreen').style.display='';
+  window.scrollTo(0,0);
+  const initial=(s.Name||'?').charAt(0).toUpperCase();
+  $('profAvatar').innerHTML=s.Photo?`<img src="${esc(s.Photo)}" onerror="this.parentElement.textContent='${initial}'">`:initial;
+  $('profName').textContent=s.Name||id;
+  $('profMeta').innerHTML=[`ID ${esc(s.ID)}`,s['Current Level']?esc(s['Current Level']):'',s.Tutor?('Tutor: '+esc(s.Tutor)):'',s.Batch?esc(s.Batch):'',s.Country?esc(s.Country):''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
+  $('profEditBtn').style.display=canEdit()?'':'none';
+  $('profSummary').innerHTML='';
+  $('roadmap').innerHTML='<div class="roadmap-loading"><div class="spinner"></div>Loading progress…</div>';
+  await loadRefData();
+  try{
+    const [pr,pj]=await Promise.all([
+      getDocs(collection(db,'students',id,'progress')),
+      getDocs(collection(db,'students',id,'projects'))
+    ]);
+    currentProgress=pr.docs.map(d=>({_id:d.id,...d.data()}));
+    currentProjects=pj.docs.map(d=>({_id:d.id,...d.data()}));
+    buildRoadmap();
+  }catch(e){console.error('load progress',e);$('roadmap').innerHTML='<div class="roadmap-error">Could not load progress. '+esc(e.code||e.message)+'</div>';}
+};
+window.backFromProfile=function(){
+  $('profileScreen').style.display='none';$('staffTabs').style.display='';setTab('students');
+};
+
+function topicsForLevel(levelName){
+  const nLvl=normLevel(levelName);
+  const prog=currentProgress.filter(p=>normLevel(p['Level Name'])===nLvl);
+  const byTopic={};prog.forEach(p=>byTopic[normLevel(p.Topic)]=p);
+  const master=topicsData.filter(t=>normLevel(t['Level Name'])===nLvl);
+  if(master.length>0){
+    return master.map(m=>{const p=byTopic[normLevel(m.Topic)];return {topic:String(m.Topic||'').trim(),description:String(m.Description||'').trim(),status:(p&&p.Status)?String(p.Status).trim():'not-started',notes:(p&&p.Notes!==undefined)?String(p.Notes):'',completionDate:(p&&p['Completion Date'])||''};});
+  }
+  return prog.map(p=>({topic:String(p.Topic||'').trim(),description:'',status:String(p.Status||'not-started').trim(),notes:(p.Notes!==undefined?String(p.Notes):''),completionDate:p['Completion Date']||''}));
+}
+
+function buildRoadmap(){
+  const roadmap=$('roadmap');
+  let completedLevels=0,visibleLevels=0,totalPctSum=0;
+  const cards=levelsData.map((level,i)=>{
+    const merged=topicsForLevel(level.name);
+    const naTopics=merged.filter(t=>(t.status||'').toLowerCase()==='not-applicable');
+    const isNA=merged.length>0&&naTopics.length===merged.length;
+    if(isNA&&!canEdit())return '';
+    const topics=(isNA&&canEdit())?merged:merged.filter(t=>(t.status||'').toLowerCase()!=='not-applicable');
+    const done=topics.filter(t=>(t.status||'').toLowerCase()==='completed').length;
+    const inProg=topics.filter(t=>(t.status||'').toLowerCase()==='in-progress').length;
+    const total=topics.length;
+    let status,badgeClass,badgeText;
+    if(total>0&&done===total){status='completed';badgeClass='badge-completed';badgeText='✓ Completed';}
+    else if(done>0||inProg>0){status='current';badgeClass='badge-current';badgeText='● In Progress';}
+    else{status='upcoming';badgeClass='badge-upcoming';badgeText='Upcoming';}
+    if(isNA&&canEdit()){badgeClass='badge-locked';badgeText='⊘ Not applicable';}
+    const pct=total>0?Math.round((done/total)*100):0;
+    if(!isNA){visibleLevels++;if(status==='completed')completedLevels++;totalPctSum+=pct;}
+    const statusColor=isNA?'#9aa7a3':(status==='completed'?'#8ab600':status==='current'?'#eab43a':'#9aa7a3');
+    const projects=currentProjects.filter(p=>normLevel(p['Level Name'])===normLevel(level.name));
+
+    const topicsHtml=topics.length?topics.map((t,ti)=>{
+      const st=(t.status||'not-started').toLowerCase();
+      const chk=st==='completed'?'done':st==='in-progress'?'progress':st==='not-applicable'?'na':'locked';
+      const tick=st==='completed'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':'';
+      const editRow=canEdit()?`<div class="topic-edit-row">
+        <select class="topic-status-sel" data-lvl="${esc(level.name)}" data-topic="${esc(t.topic)}">
+          ${['not-started','in-progress','completed','not-applicable'].map(o=>`<option value="${o}"${st===o?' selected':''}>${o.replace('-',' ')}</option>`).join('')}
+        </select>
+        <input class="topic-notes-input" placeholder="Notes…" value="${esc(t.notes||'')}" data-lvl="${esc(level.name)}" data-topic="${esc(t.topic)}">
+      </div>`:(t.notes?`<div class="topic-notes-view">${esc(t.notes)}</div>`:'');
+      return `<div class="topic-item"><div class="topic-row"><div class="topic-check ${chk}">${tick}</div><div class="topic-name ${chk}">${esc(t.topic)}</div></div>${editRow}</div>`;
+    }).join(''):'<div class="no-topics-msg">No topics defined for this level.</div>';
+
+    const projHtml=projects.length?`<div class="topics-title" style="margin-top:8px;">Projects</div><div class="level-projects">${projects.map(p=>`<div class="proj-item"><div class="proj-name">${esc(p['Project Name']||'')}</div>${p.Description?`<div class="proj-desc">${esc(p.Description)}</div>`:''}<div class="proj-links">${p['Video Link']?`<a href="${esc(p['Video Link'])}" target="_blank">▶ Video</a>`:''}${p['Code Link']?`<a href="${esc(p['Code Link'])}" target="_blank">◇ Code</a>`:''}</div></div>`).join('')}</div>`:'';
+
+    const editBar=canEdit()?`<div class="topics-save-bar">
+      <button class="lvl-btn lvl-btn-markall" onclick="markAll(${i},'completed')">✓ Mark all done</button>
+      <button class="lvl-btn lvl-btn-markna" onclick="markAll(${i},'not-applicable')">⊘ Mark N/A</button>
+      <span class="topics-save-spacer"></span>
+      <button class="lvl-btn lvl-btn-save" onclick="saveProgress(${i})">Save progress</button>
+      <span class="topics-save-msg" id="saveMsg${i}"></span>
+    </div>`:'';
+
+    const links=(status==='completed'&&level.certTemplate?`<a class="link-cert" href="${esc(level.certTemplate)}" target="_blank">🏆 Certificate</a>`:'')+(level.refDoc?`<a class="link-ref" href="${esc(level.refDoc)}" target="_blank">📄 Reference</a>`:'');
+
+    return `<div class="level-card ${status}${isNA?' na-level':''}" data-idx="${i}">
+      <div class="level-top" onclick="toggleLevel(${i})">
+        <div class="level-num" style="background:${statusColor}">L${level.num}</div>
+        <div class="level-info">
+          <div class="level-name">${esc(level.name)}</div>
+          <div class="level-desc">${esc(level.desc)}</div>
+          <div class="level-statusline">
+            <span class="level-status-badge ${badgeClass}">${badgeText}</span>
+            ${total>0?`<span class="level-topic-count">${done}/${total} topics</span>`:''}
+            ${(total>0||status==='completed')?`<span class="level-pct" style="color:${statusColor}">${pct}%</span>`:''}
+          </div>
+          ${(total>0)?`<div class="level-progress-bar"><div class="level-progress-fill" style="width:${pct}%;background:${statusColor}"></div></div>`:''}
+        </div>
+      </div>
+      ${links?`<div class="level-links">${links}</div>`:''}
+      <div class="level-detail">
+        <div class="topics-title">Topics</div>
+        <div class="topic-list">${topicsHtml}</div>
+        ${editBar}
+        ${projHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  const overallPct=visibleLevels>0?Math.round(totalPctSum/visibleLevels):0;
+  const circ=2*Math.PI*54;const offset=circ*(1-overallPct/100);
+  $('profSummary').innerHTML=`
+    <div class="ring-wrap"><svg width="120" height="120" viewBox="0 0 120 120">
+      <circle class="ring-bg" cx="60" cy="60" r="54"/>
+      <circle class="ring-fill" cx="60" cy="60" r="54" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+      <text class="ring-pct" x="60" y="58">${overallPct}%</text><text class="ring-sub" x="60" y="76">complete</text>
+    </svg></div>
+    <div class="progress-summary-info">
+      <div class="progress-summary-title">Learning Progress</div>
+      <div class="progress-summary-stats"><span><strong>${completedLevels}</strong> of <strong>${visibleLevels}</strong> levels completed</span></div>
+    </div>`;
+  roadmap.classList.toggle('editor-mode',canEdit());
+  roadmap.innerHTML=cards||'<div class="pay-empty">No levels defined.</div>';
+}
+
+window.toggleLevel=function(i){
+  const card=document.querySelector(`.level-card[data-idx="${i}"]`);
+  if(card)card.classList.toggle('expanded');
+};
+window.markAll=function(i,status){
+  const card=document.querySelector(`.level-card[data-idx="${i}"]`);if(!card)return;
+  card.querySelectorAll('.topic-status-sel').forEach(sel=>sel.value=status);
+};
+window.saveProgress=async function(i){
+  const level=levelsData[i];const card=document.querySelector(`.level-card[data-idx="${i}"]`);
+  const msg=$('saveMsg'+i);if(msg){msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='topics-save-msg saving';}
+  const sels=card.querySelectorAll('.topic-status-sel');
+  const notesInputs=card.querySelectorAll('.topic-notes-input');
+  const notesByTopic={};notesInputs.forEach(inp=>notesByTopic[inp.getAttribute('data-topic')]=inp.value);
+  const today=new Date().toISOString().slice(0,10);
+  try{
+    const batch=writeBatch(db);
+    sels.forEach(sel=>{
+      const topic=sel.getAttribute('data-topic');const status=sel.value;
+      const key=(String(level.name)+'|'+String(topic)).replace(/[\/#\.\[\]]/g,'_').slice(0,180);
+      const existing=currentProgress.find(p=>normLevel(p['Level Name'])===normLevel(level.name)&&normLevel(p.Topic)===normLevel(topic));
+      const complDate=status==='completed'?((existing&&existing['Completion Date'])||today):'';
+      batch.set(doc(db,'students',currentStudentId,'progress',key),{
+        'Level Name':level.name,Topic:topic,Status:status,'Completion Date':complDate,Notes:notesByTopic[topic]||'',updatedAt:serverTimestamp(),updatedBy:currentUser.email
+      },{merge:true});
+    });
+    await batch.commit();
+    // refresh local progress
+    const pr=await getDocs(collection(db,'students',currentStudentId,'progress'));
+    currentProgress=pr.docs.map(d=>({_id:d.id,...d.data()}));
+    buildRoadmap();
+    const m2=$('saveMsg'+i);if(m2){m2.textContent='Saved ✓';m2.className='topics-save-msg ok';}
+  }catch(e){console.error('saveProgress',e);const m2=$('saveMsg'+i);if(m2){m2.textContent='Could not save: '+(e.code||e.message);m2.className='topics-save-msg err';}}
+};
+
+/* ── Add/Edit student ── */
+window.onStuStatusChange=function(){
+  const inactive=$('s_Status').value==='Inactive';
+  $('inactiveReasonRow').style.display=inactive?'':'none';
+  if(!inactive){$('s_InactiveReason').value='';$('s_InactiveReasonOther').value='';$('s_InactiveReasonOther').style.display='none';}
+};
+window.onStuReasonChange=function(){const o=$('s_InactiveReason').value==='Other';$('s_InactiveReasonOther').style.display=o?'':'none';if(!o)$('s_InactiveReasonOther').value='';};
+let editingStudentId=null;
+window.openStudentForm=function(id){
+  editingStudentId=id||null;
+  const s=id?studentsData.find(x=>x.ID===id):null;
+  $('studentModalTitle').textContent=s?'Edit Student':'Add Student';
+  $('s_ID').value=s?s.ID:'';$('s_ID').disabled=!!s;
+  $('s_Name').value=s?(s.Name||''):'';$('s_Level').value=s?(s['Current Level']||''):'';
+  $('s_Country').value=s?(s.Country||''):'';$('s_Tutor').value=s?(s.Tutor||''):'';
+  $('s_Batch').value=s?(s.Batch||''):'';$('s_Status').value=s?(s.Status||'Active'):'Active';
+  $('s_JoinDate').value=s?(s['Join Date']||''):'';$('s_Email').value=s?(s.Email||''):'';
+  $('s_Contact').value=s?(s.Contact||''):'';$('s_School').value=s?(s.School||''):'';
+  $('s_Address').value=s?(s.Address||''):'';$('s_Fee').value=s?(s['Monthly Fee']||''):'';
+  $('s_PayRef').value=s?(s['Payment Ref']||''):'';$('s_Photo').value=s?(s.Photo||''):'';
+  const reason=s?(s['Inactive Reason']||''):'';
+  const presets=['Waiting for batch','Academics / higher grade','Lost interest','Re-location'];
+  if(reason&&!presets.includes(reason)){$('s_InactiveReason').value='Other';$('s_InactiveReasonOther').value=reason;}
+  else{$('s_InactiveReason').value=reason;$('s_InactiveReasonOther').value='';}
+  onStuStatusChange();onStuReasonChange();
+  editStatusOnOpen=s?(s.Status||'Active'):'Active';
+  $('s_Msg').textContent='';$('s_SaveBtn').disabled=false;
+  $('studentModal').classList.add('open');
+};
+window.closeStudentForm=function(){$('studentModal').classList.remove('open');editingStudentId=null;};
+function splitEmailsClient(raw){return String(raw||'').toLowerCase().split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);}
+window.saveStudent=async function(){
+  const msg=$('s_Msg'),btn=$('s_SaveBtn');
+  const id=$('s_ID').value.trim();const name=$('s_Name').value.trim();
+  if(!id){msg.textContent='Student ID is required.';msg.className='msg err';return;}
+  if(!name){msg.textContent='Name is required.';msg.className='msg err';return;}
+  const status=$('s_Status').value;
+  let inactiveReason='';
+  if(status==='Inactive'){
+    inactiveReason=$('s_InactiveReason').value==='Other'?$('s_InactiveReasonOther').value.trim():$('s_InactiveReason').value;
+    if(!inactiveReason){msg.textContent='Please provide the Inactive Reason.';msg.className='msg err';return;}
+  }
+  const email=$('s_Email').value.trim();
+  const data={
+    ID:id,Name:name,'Current Level':$('s_Level').value.trim(),Country:$('s_Country').value.trim(),
+    Tutor:$('s_Tutor').value.trim(),Batch:$('s_Batch').value.trim(),Status:status,
+    'Join Date':$('s_JoinDate').value,Email:email,parentEmails:splitEmailsClient(email),
+    Contact:$('s_Contact').value.trim(),School:$('s_School').value.trim(),Address:$('s_Address').value.trim(),
+    'Monthly Fee':$('s_Fee').value.trim(),'Payment Ref':$('s_PayRef').value.trim(),Photo:$('s_Photo').value.trim(),
+    'Inactive Reason':inactiveReason,updatedAt:serverTimestamp(),updatedBy:currentUser.email
+  };
+  // Stamp Inactive Date when moving to Inactive; clear when back to Active
+  if(status==='Inactive'&&editStatusOnOpen==='Active')data['Inactive Date']=new Date().toISOString().slice(0,10);
+  if(status==='Active')data['Inactive Date']='';
+  btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  try{
+    await setDoc(doc(db,'students',id),data,{merge:true});
+    // update local cache
+    const idx=studentsData.findIndex(s=>s.ID===id);
+    if(idx>=0)studentsData[idx]={...studentsData[idx],...data};
+    else studentsData.push({_id:id,...data});
+    closeStudentForm();fillStudentFilters();renderStudents();
+    if($('profileScreen').style.display!=='none'&&currentStudentId===id)openProfile(id);
+  }catch(e){console.error('saveStudent',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
 };
 </script>
 </body>
