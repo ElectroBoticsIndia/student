@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ElectroBotics · Leads (Firebase)</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --bg:#f4f9f9;--surface:#ffffff;--surface-alt:#edf6f7;
@@ -90,6 +91,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-table th{text-align:left;font-family:var(--font-mono);font-size:11px;color:var(--text-light);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
 .pay-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
 .pay-table tbody tr:hover{background:var(--accent-light)}
+.student-row{cursor:pointer}
+.btn-edit{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.btn-edit:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.form-row small{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
 .pay-sid{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
 .lead-tel{color:var(--accent-dark);text-decoration:none;border-bottom:1px dashed var(--accent)}
 .lead-tel:hover{color:var(--accent)}
@@ -326,9 +331,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
         <div class="chart-title">Students</div>
         <div class="pay-controls">
           <input type="text" id="stuSearch" class="pay-search" placeholder="Search name or ID…" oninput="renderStudents()">
+          <select id="stuFilterCountry" onchange="renderStudents()"><option value="">All countries</option></select>
           <select id="stuFilterLevel" onchange="renderStudents()"><option value="">All levels</option></select>
           <select id="stuFilterTutor" onchange="renderStudents()"><option value="">All tutors</option></select>
+          <select id="stuFilterBatch" onchange="renderStudents()"><option value="">All batches</option></select>
           <select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All statuses</option><option value="inactive">Inactive</option></select>
+          <button class="btn-primary" onclick="downloadStudentsExcel()">↓ Excel</button>
           <button class="btn-primary" onclick="openStudentForm()">+ Add Student</button>
         </div>
       </div>
@@ -406,7 +414,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   <div class="modal-card">
     <div class="modal-head"><h3 id="studentModalTitle">Add Student</h3><button class="modal-close" onclick="closeStudentForm()">&times;</button></div>
     <div class="modal-body">
-      <div class="form-row"><label>Student ID <span class="req">*</span></label><input type="text" id="s_ID" placeholder="e.g. EB001"></div>
+      <div class="form-row"><label>Student ID <span class="req">*</span></label><input type="text" id="s_ID" placeholder="e.g. EB001"><small id="s_ID_note"></small></div>
       <div class="form-row"><label>Name <span class="req">*</span></label><input type="text" id="s_Name"></div>
       <div class="form-row"><label>Current Level</label><input type="text" id="s_Level" list="levelList"><datalist id="levelList"></datalist></div>
       <div class="form-row"><label>Country</label><input type="text" id="s_Country" list="stuCountryList"><datalist id="stuCountryList"></datalist></div>
@@ -852,42 +860,64 @@ async function loadStudentsList(){
 function fillStudentFilters(){
   const levels=[...new Set(studentsData.map(s=>s['Current Level']).filter(Boolean))].sort();
   const tutors=[...new Set(studentsData.map(s=>s.Tutor).filter(Boolean))].sort();
-  const lvlSel=$('stuFilterLevel'),tutSel=$('stuFilterTutor');
-  lvlSel.innerHTML='<option value="">All levels</option>'+levels.map(l=>`<option>${esc(l)}</option>`).join('');
-  tutSel.innerHTML='<option value="">All tutors</option>'+tutors.map(t=>`<option>${esc(t)}</option>`).join('');
-  // datalists for the form
   const countries=[...new Set(studentsData.map(s=>s.Country).filter(Boolean))].sort();
   const batches=[...new Set(studentsData.map(s=>s.Batch).filter(Boolean))].sort();
+  const keep=(sel,val)=>{const cur=sel.value;sel.value=[...sel.options].some(o=>o.value===cur)?cur:'';};
+  const setSel=(id,all,vals)=>{const sel=$(id);const cur=sel.value;sel.innerHTML=`<option value="">${all}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join('');if([...sel.options].some(o=>o.value===cur))sel.value=cur;};
+  setSel('stuFilterLevel','All levels',levels);
+  setSel('stuFilterTutor','All tutors',tutors);
+  setSel('stuFilterCountry','All countries',countries);
+  setSel('stuFilterBatch','All batches',batches);
   $('levelList').innerHTML=levelsData.map(l=>`<option value="${esc(l.name)}">`).join('');
   $('stuCountryList').innerHTML=countries.map(c=>`<option value="${esc(c)}">`).join('');
   $('tutorList').innerHTML=tutors.map(t=>`<option value="${esc(t)}">`).join('');
   $('stuBatchList').innerHTML=batches.map(b=>`<option value="${esc(b)}">`).join('');
 }
 
+let filteredStudents=[];
 window.renderStudents=function(){
   const list=$('studentsList');
   const q=($('stuSearch').value||'').trim().toLowerCase();
   const fLvl=$('stuFilterLevel').value,fTut=$('stuFilterTutor').value,fStat=$('stuFilterStatus').value;
+  const fCountry=$('stuFilterCountry').value,fBatch=$('stuFilterBatch').value;
   let rows=studentsData.slice();
   if(fStat==='')rows=rows.filter(s=>(s.Status||'Active').toLowerCase()==='active');
   else if(fStat==='inactive')rows=rows.filter(s=>(s.Status||'Active').toLowerCase()!=='active');
   if(fLvl)rows=rows.filter(s=>(s['Current Level']||'')===fLvl);
   if(fTut)rows=rows.filter(s=>(s.Tutor||'')===fTut);
+  if(fCountry)rows=rows.filter(s=>(s.Country||'')===fCountry);
+  if(fBatch)rows=rows.filter(s=>(s.Batch||'')===fBatch);
   if(q)rows=rows.filter(s=>String(s.Name||'').toLowerCase().includes(q)||String(s.ID||'').toLowerCase().includes(q));
   rows.sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||'')));
+  filteredStudents=rows;
   $('stuCountLine').innerHTML=`<strong>${rows.length}</strong> student${rows.length!==1?'s':''} shown · ${studentsData.length} total`;
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match.</div>';return;}
+  const editIco='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Batch</th><th>Status</th><th></th>
-    </tr></thead><tbody>${rows.map(s=>`<tr>
+    <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th>${canEdit()?'<th></th>':''}
+    </tr></thead><tbody>${rows.map(s=>`<tr class="student-row" onclick="openProfile('${esc(s.ID)}')">
       <td><span class="pay-sid">${esc(s.ID)}</span></td>
       <td><strong>${esc(s.Name||'—')}</strong></td>
       <td>${esc(s['Current Level']||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
+      <td>${esc(s.Country||'—')}</td>
       <td>${esc(s.Batch||'—')}</td>
       <td>${(s.Status||'Active').toLowerCase()==='active'?'<span class="lead-badge lead-badge-converted">Active</span>':'<span class="lead-badge lead-badge-lost">Inactive</span>'}</td>
-      <td><button class="pay-act pay-act-paid" onclick="openProfile('${esc(s.ID)}')">Open</button></td>
+      ${canEdit()?`<td><button class="btn-edit" title="Edit student" onclick="event.stopPropagation();openStudentForm('${esc(s.ID)}')">${editIco}</button></td>`:''}
     </tr>`).join('')}</tbody></table>`;
+};
+
+// Download the currently-filtered students as an Excel file (matches production).
+window.downloadStudentsExcel=function(){
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
+  const rows=(filteredStudents.length?filteredStudents:studentsData).map(s=>({
+    'ID':s.ID||'','Name':s.Name||'','Current Level':s['Current Level']||'','Tutor':s.Tutor||'',
+    'Country':s.Country||'','Batch':s.Batch||'','Status':s.Status||'Active','Join Date':s['Join Date']||'',
+    'Email':s.Email||'','Contact':s.Contact||'','School':s.School||'','Address':s.Address||'','Monthly Fee':s['Monthly Fee']||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Students');
+  XLSX.writeFile(wb,`ElectroBotics_Students_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
 
 /* ── Profile / roadmap ── */
@@ -1060,15 +1090,24 @@ window.onStuStatusChange=function(){
 };
 window.onStuReasonChange=function(){const o=$('s_InactiveReason').value==='Other';$('s_InactiveReasonOther').style.display=o?'':'none';if(!o)$('s_InactiveReasonOther').value='';};
 let editingStudentId=null;
+// Next EB### id from existing students (matches production logic).
+function nextStudentId(){
+  let max=0,prefix='EB',pad=3;
+  studentsData.forEach(s=>{const m=String(s.ID||'').match(/^([A-Za-z]+)(\d+)$/);if(m){const n=parseInt(m[2]);if(n>max){max=n;prefix=m[1];pad=m[2].length;}}});
+  return prefix+String(max+1).padStart(pad,'0');
+}
 window.openStudentForm=function(id){
   editingStudentId=id||null;
   const s=id?studentsData.find(x=>x.ID===id):null;
   $('studentModalTitle').textContent=s?'Edit Student':'Add Student';
-  $('s_ID').value=s?s.ID:'';$('s_ID').disabled=!!s;
+  const idInput=$('s_ID'),note=$('s_ID_note');
+  if(s){idInput.value=s.ID;idInput.disabled=true;note.textContent='ID cannot be changed';}
+  else{idInput.value=nextStudentId();idInput.disabled=false;note.textContent='Auto-generated (edit if needed)';}
   $('s_Name').value=s?(s.Name||''):'';$('s_Level').value=s?(s['Current Level']||''):'';
   $('s_Country').value=s?(s.Country||''):'';$('s_Tutor').value=s?(s.Tutor||''):'';
   $('s_Batch').value=s?(s.Batch||''):'';$('s_Status').value=s?(s.Status||'Active'):'Active';
-  $('s_JoinDate').value=s?(s['Join Date']||''):'';$('s_Email').value=s?(s.Email||''):'';
+  $('s_JoinDate').value=s?(s['Join Date']||''):(new Date().toISOString().slice(0,10));
+  $('s_Email').value=s?(s.Email||''):'';
   $('s_Contact').value=s?(s.Contact||''):'';$('s_School').value=s?(s.School||''):'';
   $('s_Address').value=s?(s.Address||''):'';$('s_Fee').value=s?(s['Monthly Fee']||''):'';
   $('s_PayRef').value=s?(s['Payment Ref']||''):'';$('s_Photo').value=s?(s.Photo||''):'';
