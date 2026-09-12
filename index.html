@@ -135,15 +135,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .filter-clear:hover{border-color:var(--red);color:var(--red)}
 .stu-shown{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-left:auto;align-self:center}
 .stu-shown strong{color:var(--accent)}
-.child-picker{padding:40px 0;text-align:center}
-.child-picker-title{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:24px}
-.child-cards{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
-.child-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 26px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:160px}
-.child-card:hover{border-color:var(--accent);box-shadow:var(--shadow-lg);transform:translateY(-2px)}
-.child-avatar{width:60px;height:60px;border-radius:50%;background:var(--accent-light);border:3px solid var(--accent);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--accent)}
-.child-avatar img{width:100%;height:100%;object-fit:cover}
-.child-name{font-size:16px;font-weight:700}
-.child-meta{font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
+.picker-list{display:flex;flex-direction:column;gap:10px;margin-top:20px;text-align:left}
+.picker-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;transition:all .2s;width:100%}
+.picker-card:hover{border-color:var(--accent);box-shadow:var(--shadow);transform:translateY(-1px)}
+.picker-avatar{width:46px;height:46px;border-radius:50%;background:var(--accent-light);color:var(--accent-dark);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:18px;flex-shrink:0;overflow:hidden}
+.picker-avatar img{width:100%;height:100%;object-fit:cover}
+.picker-info{flex:1;min-width:0}
+.picker-name{font-size:16px;font-weight:700;color:var(--text)}
+.picker-level{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:2px}
+.picker-arrow{width:20px;height:20px;color:var(--text-light);flex-shrink:0}
 .photo-preview{margin-top:10px}
 .photo-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
 .photo-preview-err{font-family:var(--font-mono);font-size:11px;color:var(--red)}
@@ -675,17 +675,23 @@ async function enterParentMode(email){
 function showChildPicker(kids){
   $('leadsScreen').style.display='none';$('studentsScreen').style.display='none';$('profileScreen').style.display='none';
   let pk=$('childPicker');
-  if(!pk){pk=document.createElement('div');pk.id='childPicker';pk.className='child-picker';document.querySelector('.app').appendChild(pk);}
-  pk.style.display='';
-  pk.innerHTML=`<div class="child-picker-title">Choose a student</div>
-    <div class="child-cards">${kids.map(s=>{
+  if(!pk){pk=document.createElement('div');pk.id='childPicker';pk.className='login-screen';document.querySelector('.app').appendChild(pk);}
+  pk.style.display='flex';
+  pk.innerHTML=`<div class="login-card">
+    <div class="login-icon"><img src="logo-on.png" alt="" onerror="this.parentElement.innerHTML='🤖'"></div>
+    <div class="login-title">Choose a Student</div>
+    <div class="login-sub">You have more than one student linked to this account. Select one to view their progress.</div>
+    <div class="picker-list">${kids.map(s=>{
+      const lvl=s['Current Level']||'Not started';
       const initial=(s.Name||'?').charAt(0).toUpperCase();
-      return `<button class="child-card" onclick="openProfile('${esc(s.ID)}')">
-        <div class="child-avatar">${s.Photo?`<img src="${esc(s.Photo)}" onerror="this.parentElement.textContent='${initial}'">`:initial}</div>
-        <div class="child-name">${esc(s.Name||s.ID)}</div>
-        <div class="child-meta">${esc(s['Current Level']||'')}</div>
+      const photo=s.Photo?`<img src="${esc(s.Photo)}" alt="" onerror="this.parentElement.textContent='${initial}'">`:initial;
+      return `<button class="picker-card" onclick="openProfile('${esc(s.ID)}')">
+        <div class="picker-avatar">${photo}</div>
+        <div class="picker-info"><div class="picker-name">${esc(s.Name)}</div><div class="picker-level">${esc(lvl)}</div></div>
+        <svg class="picker-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
       </button>`;
-    }).join('')}</div>`;
+    }).join('')}</div>
+  </div>`;
 }
 
 function showLogin(){ $('loginScreen').style.display=''; $('leadsScreen').style.display='none'; const ss=$('studentsScreen');if(ss)ss.style.display='none'; const ps=$('profileScreen');if(ps)ps.style.display='none'; const cp=$('childPicker');if(cp)cp.style.display='none'; $('staffTabs').style.display='none'; $('headerRight').innerHTML=''; }
