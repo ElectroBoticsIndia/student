@@ -137,6 +137,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .hist-text{font-size:13px;white-space:pre-wrap}
 
 .note{background:var(--accent-light);color:var(--accent-dark);border-radius:8px;padding:10px 12px;font-size:12px;margin-bottom:14px}
+.dash-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.dash-tab{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:10px 16px;border:none;background:transparent;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap}
+.dash-tab:hover{color:var(--text)}
+.dash-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent)}
+.stu-mig{border:1px dashed var(--border);border-radius:10px;padding:14px;margin-top:12px}
+.stu-mig-label{display:block;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:6px}
+.stu-mig-hint{font-weight:400;color:var(--text-light);text-transform:none;letter-spacing:0}
+.stu-mig textarea{width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:70px;outline:none}
+.stu-mig textarea:focus{border-color:var(--accent)}
+.stu-mig-actions{display:flex;gap:10px;margin-top:8px;align-items:center}
 .mig-box{border:1px dashed var(--border);border-radius:10px;padding:14px}
 .mig-box textarea{width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:90px;outline:none}
 .mig-box textarea:focus{border-color:var(--accent)}
@@ -180,6 +190,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
     </div>
   </div>
 
+  <!-- Staff tabs (shown only for staff after login) -->
+  <div class="dash-tabs" id="staffTabs" style="display:none;">
+    <button class="dash-tab active" data-tab="leads" onclick="setTab('leads')">Leads</button>
+    <button class="dash-tab" data-tab="students" onclick="setTab('students')">Students</button>
+  </div>
+
   <div id="leadsScreen" style="display:none;">
     <div class="chart-card">
       <div class="pay-head">
@@ -199,7 +215,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
     </div>
 
     <div class="chart-card" id="migCard" style="display:none;">
-      <div class="chart-title" style="margin-bottom:12px;">Migration Helper (admin)</div>
+      <div class="chart-title" style="margin-bottom:12px;">Leads Migration Helper (admin)</div>
       <div class="note">Paste your exported Leads as CSV (with headers) or a JSON array to import into Firestore for testing. Your production Google Sheet is untouched. Re-imports with the same Lead ID update rather than duplicate.</div>
       <div class="mig-box">
         <textarea id="migInput" placeholder="Name,Country,Contact,Preferred Batch,Source,Status,Notes,Lead ID&#10;Arjun,India,9198...,Sun 9:30,Google,Enquiry,,L001"></textarea>
@@ -207,6 +223,63 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
           <button class="btn-primary" onclick="runMigration()">Import to Firestore</button>
           <span class="msg" id="migMsg" style="margin:0;text-align:left;"></span>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ STUDENTS (sub-step 1: migration + verification) ═══ -->
+  <div id="studentsScreen" style="display:none;">
+    <div class="chart-card">
+      <div class="pay-head">
+        <div class="chart-title">Students — Data (Phase 1)</div>
+        <button class="btn-primary" onclick="refreshStudentCounts()">Refresh counts</button>
+      </div>
+      <div class="note" id="studentCounts">Loading counts…</div>
+      <div style="font-size:13px;color:var(--text-dim);">
+        Sub-step 1 imports and verifies your data. The staff list, add/edit, roadmap and the parent view come in the next sub-steps.
+        Migrated collections: <strong>students</strong>, and per-student <strong>progress</strong>, <strong>projects</strong>, <strong>certificates</strong>; plus shared <strong>levels</strong> and <strong>topics</strong>.
+      </div>
+    </div>
+
+    <!-- Admin migration: Students -->
+    <div class="chart-card" id="stuMigCard" style="display:none;">
+      <div class="chart-title" style="margin-bottom:12px;">Students Migration Helper (admin)</div>
+      <div class="note">Paste each sheet's CSV export below and import in order. Student docs are keyed by <strong>ID</strong>. The <strong>Email</strong> field is split into a <code>parentEmails</code> array for secure parent access. Re-imports update, never duplicate. Your Google Sheets stay untouched.</div>
+
+      <div class="stu-mig">
+        <label class="stu-mig-label">1 · Students sheet CSV <span class="stu-mig-hint">(ID, Name, Current Level, Country, Tutor, Batch, Status, Join Date, Email, Contact, School, Address, Monthly Fee, Photo, Payment Ref, Inactive Date, Inactive Reason)</span></label>
+        <textarea id="migStudents" placeholder="Paste Students CSV (with header row)…"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migStudents()">Import Students</button><span class="msg" id="migStudentsMsg"></span></div>
+      </div>
+
+      <div class="stu-mig">
+        <label class="stu-mig-label">2 · Levels sheet CSV <span class="stu-mig-hint">(Level Name, …)</span></label>
+        <textarea id="migLevels" placeholder="Paste Levels CSV…"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migLevels()">Import Levels</button><span class="msg" id="migLevelsMsg"></span></div>
+      </div>
+
+      <div class="stu-mig">
+        <label class="stu-mig-label">3 · Topics sheet CSV <span class="stu-mig-hint">(Level Name, Topic, Description)</span></label>
+        <textarea id="migTopics" placeholder="Paste Topics CSV…"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migTopics()">Import Topics</button><span class="msg" id="migTopicsMsg"></span></div>
+      </div>
+
+      <div class="stu-mig">
+        <label class="stu-mig-label">4 · Progress sheet CSV <span class="stu-mig-hint">(Student ID, Level Name, Topic, Status, Completion Date, Notes)</span></label>
+        <textarea id="migProgress" placeholder="Paste Progress CSV…"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migProgress()">Import Progress</button><span class="msg" id="migProgressMsg"></span></div>
+      </div>
+
+      <div class="stu-mig">
+        <label class="stu-mig-label">5 · Projects sheet CSV <span class="stu-mig-hint">(Student ID, Level Name, Project Name, Description, Video Link, Code Link)</span></label>
+        <textarea id="migProjects" placeholder="Paste Projects CSV…"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migProjects()">Import Projects</button><span class="msg" id="migProjectsMsg"></span></div>
+      </div>
+
+      <div class="stu-mig">
+        <label class="stu-mig-label">6 · Certificates sheet CSV <span class="stu-mig-hint">(Student ID, Level Name, Completion Date, Certificate URL, …)</span></label>
+        <textarea id="migCerts" placeholder="Paste Certificates CSV…"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migCerts()">Import Certificates</button><span class="msg" id="migCertsMsg"></span></div>
       </div>
     </div>
   </div>
@@ -269,7 +342,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
-  query, orderBy, serverTimestamp, onSnapshot }
+  query, orderBy, where, serverTimestamp, onSnapshot, writeBatch, getCountFromServer }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -320,8 +393,20 @@ function enterApp(){
   $('loginScreen').style.display='none'; $('leadsScreen').style.display='';
   $('headerRight').innerHTML=`<div class="account-menu"><button class="account-trigger" onclick="toggleMenu(event)">${currentUser.photoURL?`<img class="account-avatar" src="${esc(currentUser.photoURL)}" alt="">`:`<span class="account-avatar" style="display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;color:var(--accent-dark);">${esc((currentUser.displayName||currentUser.email||'?').charAt(0).toUpperCase())}</span>`}</button><div class="account-dropdown" id="acctDrop"><div class="account-email">${esc(currentUser.email)}</div><div class="account-role">${esc(userRole)}</div><button class="account-logout" onclick="doSignOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div></div>`;
   if(userRole==='admin')$('migCard').style.display='';
+  $('staffTabs').style.display='';
+  setTab('leads');
   subscribeLeads();
 }
+window.setTab=function(tab){
+  ['leads','students'].forEach(t=>{
+    const s=$(t+'Screen');if(s)s.style.display=(t===tab)?'':'none';
+  });
+  document.querySelectorAll('#staffTabs .dash-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tab')===tab));
+  if(tab==='students'){
+    if(userRole==='admin')$('stuMigCard').style.display='';
+    refreshStudentCounts();
+  }
+};
 window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
 document.addEventListener('click',()=>{const d=$('acctDrop');if(d)d.classList.remove('open');});
 
@@ -484,6 +569,111 @@ window.runMigration=async function(){
   }
   msg.textContent=`Imported ${done} lead(s)`+(fail?`, ${fail} failed (see console)`:'')+'.';
   msg.className=fail?'msg err':'msg ok';$('migInput').value='';
+};
+
+/* ═══ STUDENTS migration (sub-step 1) ═══ */
+// Split an Email cell (comma/semicolon/space separated) into a clean array.
+function splitEmails(raw){
+  return String(raw||'').toLowerCase().split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
+}
+async function importRows(records, mapFn, msgEl, label){
+  if(!records.length){msgEl.textContent='No rows found.';msgEl.className='msg err';return;}
+  msgEl.innerHTML='<span class="spinner"></span> Importing '+records.length+' '+label+'…';msgEl.className='msg busy';
+  let done=0,fail=0;
+  // Batched writes (up to 400 per batch) for speed.
+  let batch=writeBatch(db),n=0;
+  for(const r of records){
+    try{
+      const {ref,data}=mapFn(r);
+      if(!ref){fail++;continue;}
+      batch.set(ref,data,{merge:true});n++;done++;
+      if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
+    }catch(e){console.error('import row',label,r,e);fail++;}
+  }
+  try{ if(n>0)await batch.commit(); }
+  catch(e){console.error('final batch',e);fail+=n;done-=n;}
+  msgEl.textContent=`Imported ${done} ${label}`+(fail?`, ${fail} failed (see console)`:'')+'.';
+  msgEl.className=fail?'msg err':'msg ok';
+  refreshStudentCounts();
+}
+
+window.migStudents=async function(){
+  const records=parseCSV($('migStudents').value.trim());
+  await importRows(records,(r)=>{
+    const id=String(r.ID||r['Student ID']||'').trim();
+    if(!id)return {ref:null};
+    return {ref:doc(db,'students',id),data:{
+      ID:id,Name:r.Name||'','Current Level':r['Current Level']||'',Country:r.Country||'',
+      Tutor:r.Tutor||'',Batch:r.Batch||'',Status:r.Status||'Active','Join Date':r['Join Date']||'',
+      Email:r.Email||'',parentEmails:splitEmails(r.Email),Contact:String(r.Contact||''),
+      School:r.School||'',Address:r.Address||'','Monthly Fee':r['Monthly Fee']||'',Photo:r.Photo||'',
+      'Payment Ref':r['Payment Ref']||'','Inactive Date':r['Inactive Date']||'','Inactive Reason':r['Inactive Reason']||'',
+      migratedAt:serverTimestamp()
+    }};
+  },$('migStudentsMsg'),'students');
+};
+window.migLevels=async function(){
+  const records=parseCSV($('migLevels').value.trim());
+  let i=0;
+  await importRows(records,(r)=>{
+    const name=String(r['Level Name']||'').trim();if(!name)return {ref:null};
+    i++;return {ref:doc(db,'levels',String(i).padStart(3,'0')),data:{...r,'Level Name':name,order:i,migratedAt:serverTimestamp()}};
+  },$('migLevelsMsg'),'levels');
+};
+window.migTopics=async function(){
+  const records=parseCSV($('migTopics').value.trim());
+  let i=0;
+  await importRows(records,(r)=>{
+    const lvl=String(r['Level Name']||'').trim(),topic=String(r.Topic||'').trim();
+    if(!lvl||!topic)return {ref:null};
+    i++;return {ref:doc(db,'topics',String(i).padStart(4,'0')),data:{'Level Name':lvl,Topic:topic,Description:r.Description||'',order:i,migratedAt:serverTimestamp()}};
+  },$('migTopicsMsg'),'topics');
+};
+window.migProgress=async function(){
+  const records=parseCSV($('migProgress').value.trim());
+  await importRows(records,(r)=>{
+    const sid=String(r['Student ID']||'').trim();if(!sid)return {ref:null};
+    // deterministic id: level|topic so re-imports update the same row
+    const key=(String(r['Level Name']||'')+'|'+String(r.Topic||'')).replace(/[\/#\.\[\]]/g,'_').slice(0,180)||('p'+Math.random().toString(36).slice(2));
+    return {ref:doc(db,'students',sid,'progress',key),data:{
+      'Level Name':r['Level Name']||'',Topic:r.Topic||'',Status:r.Status||'','Completion Date':r['Completion Date']||'',Notes:r.Notes||'',migratedAt:serverTimestamp()
+    }};
+  },$('migProgressMsg'),'progress rows');
+};
+window.migProjects=async function(){
+  const records=parseCSV($('migProjects').value.trim());
+  let i=0;
+  await importRows(records,(r)=>{
+    const sid=String(r['Student ID']||'').trim();if(!sid)return {ref:null};
+    i++;const key=(String(r['Level Name']||'')+'|'+String(r['Project Name']||'')).replace(/[\/#\.\[\]]/g,'_').slice(0,180)||('proj'+i);
+    return {ref:doc(db,'students',sid,'projects',key),data:{
+      'Level Name':r['Level Name']||'','Project Name':r['Project Name']||'',Description:r.Description||'','Video Link':r['Video Link']||'','Code Link':r['Code Link']||'',migratedAt:serverTimestamp()
+    }};
+  },$('migProjectsMsg'),'projects');
+};
+window.migCerts=async function(){
+  const records=parseCSV($('migCerts').value.trim());
+  await importRows(records,(r)=>{
+    const sid=String(r['Student ID']||'').trim();if(!sid)return {ref:null};
+    const key=String(r['Level Name']||'').replace(/[\/#\.\[\]]/g,'_').slice(0,180)||('cert'+Math.random().toString(36).slice(2));
+    return {ref:doc(db,'students',sid,'certificates',key),data:{
+      'Level Name':r['Level Name']||'','Completion Date':r['Completion Date']||'','Certificate URL':r['Certificate URL']||r['Certificate Template']||'',migratedAt:serverTimestamp()
+    }};
+  },$('migCertsMsg'),'certificates');
+};
+
+// Count verification — reads server-side counts (cheap, 1 read each).
+window.refreshStudentCounts=async function(){
+  const el=$('studentCounts');if(!el)return;
+  el.innerHTML='<span class="spinner"></span> Counting…';
+  try{
+    const cnt=async(path,q)=>{try{const s=await getCountFromServer(q||collection(db,path));return s.data().count;}catch(e){return '—';}}
+    const students=await cnt('students');
+    const levels=await cnt('levels');
+    const topics=await cnt('topics');
+    el.innerHTML=`Firestore now holds: <strong>${students}</strong> students · <strong>${levels}</strong> levels · <strong>${topics}</strong> topics. `+
+      `(Per-student progress/projects/certificates are stored under each student.) Compare these to your sheet row counts to confirm the import.`;
+  }catch(e){el.textContent='Could not read counts: '+(e.code||e.message);}
 };
 </script>
 </body>
