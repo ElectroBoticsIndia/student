@@ -302,7 +302,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .level-card.expanded .level-chevron{transform:rotate(180deg)}
 .level-card.na-level .level-chevron{opacity:.3}
 .projects-title{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
-.projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.projects-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:900px){.projects-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.projects-grid{grid-template-columns:1fr}}
 .project-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:all .25s}
 .project-card:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
 .project-thumb{width:100%;aspect-ratio:16/9;background:#000;position:relative;overflow:hidden}
@@ -321,6 +323,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .proj-wa-btn{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;font-weight:700;color:#fff;background:#25d366;border:none;border-radius:7px;padding:5px 10px;cursor:pointer;transition:filter .2s}
 .proj-wa-btn:hover{filter:brightness(.93)}
 .no-projects{font-size:13px;color:var(--text-light);font-style:italic;padding:12px 0}
+.level-links .link-cert{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--amber-light);color:#9a7200;display:inline-flex;align-items:center;gap:4px;flex:1;justify-content:center}
+.level-links .link-cert:hover{background:var(--amber);color:#fff}
+.cert-preview{background:var(--surface-alt);border-radius:10px;padding:12px;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center}
+.cert-preview .cert-img{max-width:100%;border-radius:8px;box-shadow:var(--shadow)}
+.cert-loading{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);display:inline-flex;align-items:center;gap:8px}
+.cert-err{font-family:var(--font-mono);font-size:12px;color:var(--red)}
+.cert-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
+.cert-btn{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:10px 8px;border-radius:9px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .2s}
+.cert-share{background:var(--accent);color:#fff}.cert-share:hover{background:var(--accent-dark)}
+.cert-copy{background:var(--surface-alt);color:var(--text-dim)}.cert-copy:hover{background:var(--border)}
+.cert-dl{background:var(--green);color:#fff}.cert-dl:hover{background:#7aa300}
+.cert-note{font-size:11px;color:var(--text-light);margin-top:12px;line-height:1.4}
+#certMsg{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:13px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
+#certMsg:focus{border-color:var(--accent)}
+@media(max-width:600px){.cert-actions{grid-template-columns:1fr}}
 .proj-item{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
 .proj-name{font-weight:700;font-size:14px;margin-bottom:2px}
 .proj-desc{font-size:12px;color:var(--text-dim);margin-bottom:6px}
@@ -496,6 +513,22 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 </div>
 
 <!-- Add/Edit Student modal (replicates production) -->
+<div class="modal-overlay" id="certModal">
+  <div class="modal-card" style="max-width:460px;">
+    <div class="modal-head"><h3 id="certModalTitle">Certificate</h3><button class="modal-close" onclick="closeCertModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="cert-preview" id="certPreview"><div class="cert-loading"><span class="spinner"></span> Preparing certificate…</div></div>
+      <div class="form-row" style="margin-top:14px;"><label>Message</label><textarea id="certMsg" rows="3" placeholder="Message to share with the certificate…"></textarea></div>
+      <div class="cert-actions">
+        <button class="cert-btn cert-share" id="certShareBtn" onclick="certShare('native')" style="display:none;"><span>↗</span> Share via apps</button>
+        <button class="cert-btn cert-copy" onclick="certShare('copy')"><span>⧉</span> <span id="certCopyLabel">Copy message</span></button>
+        <button class="cert-btn cert-dl" id="certDlBtn" onclick="certShare('download')"><span>⬇</span> Download</button>
+      </div>
+      <p class="cert-note">On a phone, “Share via apps” sends the certificate image to WhatsApp, Instagram, etc. On a computer, use Download and attach it to your post.</p>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="studentModal">
   <div class="modal-card">
     <div class="modal-head"><h3 id="studentModalTitle">Add Student</h3><button class="modal-close" onclick="closeStudentForm()">&times;</button></div>
@@ -1018,6 +1051,83 @@ window.shareProjectWhatsApp=function(url,studentName,projectName,description){
   lines.push('',`*Watch the demo:*`,url);
   window.open('https://wa.me/?text='+encodeURIComponent(lines.join('\n')),'_blank');
 };
+
+/* ── Certificate: canvas generation + share dialog (ported from production) ── */
+let certBlob=null, certFileName='certificate.png', certMsg='';
+function formatCertDate(dateStr){
+  const d=new Date(dateStr);if(isNaN(d))return String(dateStr||'');
+  return d.toLocaleDateString('en-IN',{year:'numeric',month:'long',day:'numeric'});
+}
+function generateCertificate(templateUrl,studentName,completionDate,level,onReady){
+  const img=new Image();img.crossOrigin='anonymous';
+  img.onload=function(){
+    const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;
+    const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);
+    // Name
+    const nameFont=Math.round(canvas.width*0.040);
+    ctx.fillStyle='#0a373a';ctx.font=`500 ${nameFont}px 'DM Sans',sans-serif`;ctx.textAlign='left';ctx.textBaseline='bottom';
+    ctx.fillText(studentName,canvas.width*0.10,canvas.height*0.45);
+    // Date
+    const dateFont=Math.round(canvas.width*0.016);
+    ctx.font=`600 ${dateFont}px 'DM Sans',sans-serif`;
+    ctx.fillText(completionDate?formatCertDate(completionDate):formatCertDate(new Date()),canvas.width*0.10,canvas.height*0.80);
+    // Certificate ID (top-right): EB-{ID}-L{num}-{year}
+    let certYear='';if(completionDate){const d=new Date(completionDate);if(!isNaN(d))certYear=d.getFullYear();}
+    if(!certYear){const m=String(completionDate||'').match(/(20\d{2})/);certYear=m?m[1]:new Date().getFullYear();}
+    const sid=currentStudentId||'';const certId='EB-'+sid+'-L'+(level.num||'')+'-'+certYear;
+    const idSize=Math.round(dateFont/2);
+    ctx.textAlign='right';ctx.font=`600 ${idSize}px 'DM Sans',sans-serif`;
+    ctx.fillText(certId,canvas.width*0.92+108,canvas.height*0.085-60);
+    ctx.textAlign='left';
+    onReady(canvas);
+  };
+  img.onerror=function(){onReady(null);};
+  img.src=templateUrl;
+}
+window.openCertModal=function(i){
+  const level=levelsData[i];if(!level||!level.certTemplate)return;
+  const s=studentsData.find(x=>x.ID===currentStudentId);
+  const name=s?(s.Name||''):'';
+  // completion date = latest topic completion for this level
+  const merged=topicsForLevel(level.name);
+  const dates=merged.map(t=>t.completionDate).filter(Boolean).sort();
+  const completionDate=dates.length?dates[dates.length-1]:'';
+  certMsg=`🎉 ${name} has successfully completed "${level.name}" at ElectroBotics! Proud of this milestone in robotics & coding. 🤖✨`;
+  certFileName=`${name.replace(/[^a-zA-Z0-9]/g,'_')}_${level.name.replace(/[^a-zA-Z0-9]/g,'_')}_Certificate.png`;
+  certBlob=null;
+  $('certModalTitle').textContent='Certificate · '+level.name;
+  $('certMsg').value=certMsg;
+  $('certPreview').innerHTML='<div class="cert-loading"><span class="spinner"></span> Preparing certificate…</div>';
+  $('certModal').classList.add('open');
+  generateCertificate(level.certTemplate,name,completionDate,level,(canvas)=>{
+    if(!canvas){$('certPreview').innerHTML='<div class="cert-err">Could not load the certificate template. Ensure the image is shared publicly on Google Drive.</div>';return;}
+    canvas.toBlob(b=>{
+      certBlob=b;
+      $('certPreview').innerHTML=`<img src="${URL.createObjectURL(b)}" alt="Certificate" class="cert-img">`;
+      // Show native share only if the browser can share files (mostly mobile)
+      let canFiles=false;try{canFiles=!!navigator.canShare&&navigator.canShare({files:[new File([new Blob(['x'],{type:'image/png'})],'x.png',{type:'image/png'})]});}catch(e){}
+      $('certShareBtn').style.display=canFiles?'':'none';
+    },'image/png');
+  });
+};
+window.closeCertModal=function(){$('certModal').classList.remove('open');};
+window.certShare=async function(platform){
+  certMsg=$('certMsg').value;
+  if(platform==='native'){
+    if(certBlob&&navigator.share){
+      try{await navigator.share({files:[new File([certBlob],certFileName,{type:'image/png'})],text:certMsg,title:'ElectroBotics Certificate'});}catch(e){}
+    }
+    return;
+  }
+  if(platform==='copy'){
+    navigator.clipboard.writeText(certMsg).then(()=>{$('certCopyLabel').textContent='Copied ✓';setTimeout(()=>{$('certCopyLabel').textContent='Copy message';},1500);});
+    return;
+  }
+  if(platform==='download'&&certBlob){
+    const a=document.createElement('a');a.href=URL.createObjectURL(certBlob);a.download=certFileName;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  }
+};
 let editStatusOnOpen='';
 
 const normLevel=(name)=>String(name||'').toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
@@ -1219,7 +1329,7 @@ function buildRoadmap(){
       <span class="topics-save-msg" id="saveMsg${i}"></span>
     </div>`:'';
 
-    const links=(status==='completed'&&level.certTemplate?`<a class="link-cert" href="${esc(level.certTemplate)}" target="_blank" onclick="event.stopPropagation()">🏆 Certificate</a>`:'')+(level.refDoc?`<a class="link-ref" href="${esc(level.refDoc)}" target="_blank" onclick="event.stopPropagation()">📄 Reference</a>`:'');
+    const links=(status==='completed'&&level.certTemplate?`<button class="link-cert" onclick="event.stopPropagation();openCertModal(${i})">🏆 Certificate</button>`:'')+(level.refDoc?`<a class="link-ref" href="${esc(level.refDoc)}" target="_blank" onclick="event.stopPropagation()">📄 Reference</a>`:'');
 
     return `<div class="level-card ${status}${isNA?' na-level':''}" data-idx="${i}">
       <div class="level-top" onclick="toggleLevel(${i})">
