@@ -327,6 +327,39 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .proj-wa-btn{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;font-weight:700;color:#fff;background:#25d366;border:none;border-radius:7px;padding:5px 10px;cursor:pointer;transition:filter .2s}
 .proj-wa-btn:hover{filter:brightness(.93)}
 .no-projects{font-size:13px;color:var(--text-light);font-style:italic;padding:12px 0}
+/* ── Payments ── */
+.pay-mini{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
+.pay-mini:focus{border-color:var(--accent)}
+.pay-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pay-chip{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s}
+.pay-chip.active.pay-chip-pending{background:#fdf1d6;color:#9a7200;border-color:#eab43a}
+.pay-chip.active.pay-chip-paid{background:#eef6d8;color:#5a7a00;border-color:#8ab600}
+.pay-chip.active.pay-chip-ignore{background:var(--surface-alt);color:var(--text);border-color:var(--text-light)}
+.pay-chip.active.pay-chip-kitdue,.pay-chip.active.pay-chip-compdue,.pay-chip.active.pay-chip-all{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent)}
+.pay-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
+.pay-badge.paid{background:#eef6d8;color:#5a7a00}
+.pay-badge.pending{background:#fdf1d6;color:#9a7200}
+.pay-badge.ignore{background:var(--surface-alt);color:var(--text-dim)}
+.pay-detail{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:3px}
+.pay-ref-input{width:100%;min-width:110px;font-family:var(--font-mono);font-size:11px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);outline:none;box-sizing:border-box;transition:border-color .2s,background .2s}
+.pay-ref-input:focus{border-color:var(--accent)}
+.pay-ref-input.saving{opacity:.6}.pay-ref-input.saved{border-color:#8ab600;background:#eef6d8}.pay-ref-input.error{border-color:var(--red);background:#fdeae5}
+.pay-act{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 11px;border-radius:7px;border:1px solid var(--border);background:#fff;cursor:pointer;transition:all .2s;white-space:nowrap}
+.pay-act-paid{background:var(--accent);color:#fff;border-color:var(--accent)}.pay-act-paid:hover{background:var(--accent-dark)}
+.pay-act-ignore{color:var(--text-dim)}.pay-act-ignore:hover{border-color:var(--text-light);color:var(--text)}
+.pay-act-undo{color:var(--red)}.pay-act-undo:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.pay-act-kit{color:var(--accent-dark);border-color:var(--accent-light);background:var(--accent-light)}.pay-act-kit:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pay-act-history:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pay-act-wa{color:#128c4b;border-color:#cde8d8;display:inline-flex;align-items:center;justify-content:center;padding:6px 9px}.pay-act-wa:hover{background:#25d366;color:#fff;border-color:#25d366}
+.pay-kit-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.pay-kit-actions{display:flex;gap:5px;flex-wrap:wrap}
+.pay-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pay-actions-main{display:inline-flex;align-items:center;gap:6px}
+.pay-actions-sub{display:inline-flex;align-items:center;gap:6px}
+.pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
+.pay-sid2{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+#pay_Amount,#pay_Date,#pay_Method,#pay_Note,#wa_Msg{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;outline:none}
+#wa_Msg{resize:vertical;font-size:13px}
 .level-links .link-cert{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--amber-light);color:#9a7200;display:inline-flex;align-items:center;gap:4px;flex:1;justify-content:center}
 .level-links .link-cert:hover{background:var(--amber);color:#fff}
 .cert-preview{background:var(--surface-alt);border-radius:10px;padding:12px;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center}
@@ -388,6 +421,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   <div class="dash-tabs" id="staffTabs" style="display:none;">
     <button class="dash-tab active" data-tab="students" onclick="setTab('students')">Students</button>
     <button class="dash-tab" data-tab="leads" onclick="setTab('leads')">Leads</button>
+    <button class="dash-tab" data-tab="payments" onclick="setTab('payments')">Payments</button>
   </div>
 
   <div id="leadsScreen" style="display:none;">
@@ -496,6 +530,85 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
       </div>
 
       <div class="note" style="margin-top:12px;margin-bottom:0;">Certificates aren't a separate sheet — the <strong>Certificate Template</strong> column travels with the Levels import (step 2), and each certificate is generated on the fly from that template plus the student's completion date. Nothing extra to import.</div>
+    </div>
+  </div>
+
+  <!-- ═══ PAYMENTS ═══ -->
+  <div id="paymentsScreen" style="display:none;">
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header">
+        <div class="stu-title-wrap">
+          <span class="table-title">Fee Payments</span>
+          <select id="payMonth" onchange="buildPayments()" class="pay-mini"></select>
+          <select id="payYear" onchange="loadPayments()" class="pay-mini"></select>
+          <input type="text" id="payFilterName" class="stu-search" placeholder="Search name, ref, note…" oninput="buildPayments()">
+        </div>
+        <div class="stu-actions">
+          <button class="btn-download" onclick="downloadPaymentsExcel()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Excel
+          </button>
+        </div>
+      </div>
+      <div class="stu-filter-bar">
+        <div class="filter-group"><label>Country</label><select id="payFilterCountry" onchange="buildPayments()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Level</label><select id="payFilterLevel" onchange="buildPayments()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Tutor</label><select id="payFilterTutor" onchange="buildPayments()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Batch</label><select id="payFilterBatch" onchange="buildPayments()"><option value="">All</option></select></div>
+        <button class="filter-clear" onclick="clearPayFilters()">Clear</button>
+      </div>
+      <div class="pay-summary" id="paySummary" style="padding:12px 20px 0;"></div>
+      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="paymentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+    </div>
+
+    <div class="chart-card" id="payMigCard" style="display:none;">
+      <div class="chart-title" style="margin-bottom:12px;">Payments Migration Helper (admin)</div>
+      <div class="note">Paste your Payments sheet CSV (columns: <strong>Student ID, Year, Month, Type, Status, Amount, Paid Date, Method, Note, MarkedBy</strong>). Type blank = Fee. Records are keyed by Student ID + Year + Month + Type, so re-imports update rather than duplicate. Your Google Sheet is untouched.</div>
+      <div class="mig-box">
+        <textarea id="migPayments" placeholder="Student ID,Year,Month,Type,Status,Amount,Paid Date,Method,Note&#10;EB001,2026,7,Fee,Paid,1500,2026-07-05,UPI,"></textarea>
+        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+          <button class="btn-primary" onclick="migPayments()">Import Payments</button>
+          <span class="msg" id="migPaymentsMsg" style="margin:0;text-align:left;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment modal (Fee / Kit / Components) -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal-card" style="max-width:420px;">
+      <div class="modal-head"><h3 id="paymentModalTitle">Add Payment</h3><button class="modal-close" onclick="closePaymentForm()">&times;</button></div>
+      <div class="modal-body">
+        <div class="pay-modal-sub" id="paymentModalSub"></div>
+        <div class="form-row"><label>Amount (₹)</label><input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500"></div>
+        <div class="form-row"><label>Paid Date</label><input type="date" id="pay_Date"></div>
+        <div class="form-row"><label>Method</label><input type="text" id="pay_Method" placeholder="UPI / Cash / Bank" list="payMethodList"><datalist id="payMethodList"><option value="UPI"><option value="Cash"><option value="Bank Transfer"><option value="Card"></datalist></div>
+        <div class="form-row"><label>Note</label><input type="text" id="pay_Note" placeholder="Optional"></div>
+        <div class="wa-actions">
+          <button class="wa-btn wa-cancel" onclick="closePaymentForm()">Cancel</button>
+          <button class="wa-btn pf-save" id="pay_SaveBtn" onclick="savePaymentForm()">Mark Paid</button>
+        </div>
+        <div class="msg" id="pay_Msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp reminder modal -->
+  <div class="modal-overlay" id="waModal">
+    <div class="modal-card" style="max-width:420px;">
+      <div class="modal-head"><h3 id="waModalTitle">WhatsApp Reminder</h3><button class="modal-close" onclick="closeWaModal()">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-row"><label>Message</label><textarea id="wa_Msg" rows="5"></textarea></div>
+        <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeWaModal()">Cancel</button><button class="wa-btn pf-save" onclick="sendWaModal()">Send on WhatsApp</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Component history modal -->
+  <div class="modal-overlay" id="compHistModal">
+    <div class="modal-card" style="max-width:460px;">
+      <div class="modal-head"><h3 id="compHistTitle">Components History</h3><button class="modal-close" onclick="closeComponentHistory()">&times;</button></div>
+      <div class="modal-body"><div class="hist-list" id="compHistList"></div><div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeComponentHistory()">Close</button></div></div>
     </div>
   </div>
 
@@ -770,13 +883,17 @@ function enterApp(){
   subscribeLeads();
 }
 window.setTab=function(tab){
-  ['leads','students'].forEach(t=>{
+  ['leads','students','payments'].forEach(t=>{
     const s=$(t+'Screen');if(s)s.style.display=(t===tab)?'':'none';
   });
   document.querySelectorAll('#staffTabs .dash-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tab')===tab));
   if(tab==='students'){
     if(userRole==='admin')$('stuMigToggleCard').style.display='';
     if(!studentsLoaded)loadStudentsList();
+  }
+  if(tab==='payments'){
+    if(userRole==='admin')$('payMigCard').style.display='';
+    initPayments();
   }
 };
 window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
@@ -1597,6 +1714,193 @@ window.saveStudent=async function(){
     if($('profileScreen').style.display!=='none'&&currentStudentId===id)openProfile(id);
   }catch(e){console.error('saveStudent',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='modal-msg err';btn.disabled=false;}
 };
+
+// ═══════════ PAYMENTS ═══════════
+let paymentsData=[], paymentsLoaded=false, payStatusFilter='pending', payLoading=false, waTargetPhone='';
+const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function payDocId(sid,year,month,type){return `${String(sid).trim()}_${year}_${month}_${type||'Fee'}`;}
+function payRecord(sid,year,month,type){
+  const t=type||'Fee';
+  return paymentsData.find(p=>String(p['Student ID']).trim()===String(sid).trim()&&String(p.Year).trim()===String(year).trim()&&String(p.Month).trim()===String(month).trim()&&((String(p.Type||'').trim()||'Fee')===t))||null;
+}
+function payFilterVal(id){const el=$(id);return el?el.value:'';}
+function parseJoinYM(raw){
+  const s=String(raw||'').trim();if(!s)return null;
+  let m=s.match(/^(\d{4})-(\d{1,2})/);if(m)return {y:+m[1],mo:+m[2]};
+  const d=new Date(s);if(!isNaN(d))return {y:d.getFullYear(),mo:d.getMonth()+1};
+  return null;
+}
+function initPayments(){
+  const mSel=$('payMonth'),ySel=$('payYear');
+  if(mSel&&!mSel.options.length){
+    const now=new Date();
+    mSel.innerHTML=PAY_MONTHS.map((m,i)=>`<option value="${i+1}"${i===now.getMonth()?' selected':''}>${m}</option>`).join('');
+    const y=now.getFullYear();const years=[];for(let yy=y-3;yy<=y;yy++)years.push(yy);
+    ySel.innerHTML=years.map(yy=>`<option value="${yy}"${yy===y?' selected':''}>${yy}</option>`).join('');
+  }
+  if(!paymentsLoaded)loadPayments(); else buildPayments();
+}
+async function loadPayments(){
+  const year=$('payYear').value;const list=$('paymentsList');
+  payLoading=true;list.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
+  if(!studentsLoaded){try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}catch(e){console.error(e);}}
+  try{
+    const snap=await getDocs(query(collection(db,'payments'),where('Year','==',String(year))));
+    paymentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));paymentsLoaded=true;
+  }catch(e){console.error('loadPayments',e);paymentsData=[];}
+  payLoading=false;buildPayments();
+}
+function payUpsertLocal(sid,year,month,type,fields){
+  const t=type||'Fee';let rec=payRecord(sid,year,month,t);
+  if(rec){Object.assign(rec,fields);}else{paymentsData.push(Object.assign({'Student ID':String(sid),'Year':String(year),'Month':String(month),'Type':t},fields));}
+}
+function payRemoveLocal(sid,year,month,type){
+  const t=type||'Fee';
+  paymentsData=paymentsData.filter(p=>!(String(p['Student ID']).trim()===String(sid).trim()&&String(p.Year).trim()===String(year).trim()&&String(p.Month).trim()===String(month).trim()&&((String(p.Type||'').trim()||'Fee')===t)));
+}
+function payBtnBusy(btn){if(!btn)return null;const prev=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';return ()=>{try{btn.innerHTML=prev;btn.disabled=false;}catch(e){}};}
+window.setPayStatus=function(key){if(payLoading)return;payStatusFilter=key;buildPayments();};
+window.clearPayFilters=function(){['payFilterCountry','payFilterLevel','payFilterTutor','payFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});$('payFilterName').value='';payStatusFilter='pending';buildPayments();};
+async function payWrite(body){
+  const {action,type,studentId,year,month}=body;const id=payDocId(studentId,year,month,type||'Fee');
+  try{
+    if(action==='deletePayment'){await deleteDoc(doc(db,'payments',id));return true;}
+    const data={'Student ID':String(studentId),Year:String(year),Month:String(month),Type:type||'Fee',Status:body.status||'Paid',Amount:body.amount||'','Paid Date':body.paidDate||'',Method:body.method||'',Note:body.note||'',MarkedBy:(currentUser&&currentUser.email)||'',updatedAt:serverTimestamp()};
+    await setDoc(doc(db,'payments',id),data,{merge:true});return true;
+  }catch(e){console.error('payWrite',e);return false;}
+}
+function buildPayments(){
+  const list=$('paymentsList'),summary=$('paySummary');
+  const year=$('payYear').value,month=$('payMonth').value;const selY=+year,selM=+month;
+  const joinedBy=(s)=>{const j=parseJoinYM(s['Join Date']);if(!j)return true;return (j.y<selY)||(j.y===selY&&j.mo<=selM);};
+  const base=studentsData.filter(s=>(s.Status||'Active').toLowerCase()==='active'&&joinedBy(s));
+  const fCountry=payFilterVal('payFilterCountry'),fLevel=payFilterVal('payFilterLevel'),fTutor=payFilterVal('payFilterTutor'),fBatch=payFilterVal('payFilterBatch');
+  const catMatch=(s,skip)=>{if(skip!=='country'&&fCountry&&(s.Country||'')!==fCountry)return false;if(skip!=='level'&&fLevel&&(s['Current Level']||'')!==fLevel)return false;if(skip!=='tutor'&&fTutor&&(s.Tutor||'')!==fTutor)return false;if(skip!=='batch'&&fBatch&&(s.Batch||'')!==fBatch)return false;return true;};
+  const uniq=(skip,key)=>[...new Set(base.filter(s=>catMatch(s,skip)).map(s=>s[key]||'').filter(Boolean))].sort();
+  fillPaySelect('payFilterCountry','All',uniq('country','Country'),fCountry);
+  fillPaySelect('payFilterLevel','All',uniq('level','Current Level'),fLevel);
+  fillPaySelect('payFilterTutor','All',uniq('tutor','Tutor'),fTutor);
+  fillPaySelect('payFilterBatch','All',uniq('batch','Batch'),fBatch);
+  const nameQ=(payFilterVal('payFilterName')||'').trim().toLowerCase();
+  const payMatch=(s)=>{if(!nameQ)return true;if(String(s.Name||'').toLowerCase().includes(nameQ))return true;if(String(s.ID||'').toLowerCase().includes(nameQ))return true;if(String(s['Payment Ref']||'').toLowerCase().includes(nameQ))return true;for(const t of ['Fee','Kit','Components']){const r=payRecord(s.ID,year,month,t);if(r&&String(r.Note||'').toLowerCase().includes(nameQ))return true;}return false;};
+  let students=base.filter(s=>(!fCountry||(s.Country||'')===fCountry)&&(!fLevel||(s['Current Level']||'')===fLevel)&&(!fTutor||(s.Tutor||'')===fTutor)&&(!fBatch||(s.Batch||'')===fBatch)&&payMatch(s));
+  let paid=0,ignore=0,pending=0,kitdue=0,compdue=0;
+  let rows=students.map(s=>{
+    const rec=payRecord(s.ID,year,month,'Fee');const st=rec?String(rec.Status||'').toLowerCase():'pending';
+    if(st==='paid')paid++;else if(st==='ignore')ignore++;else pending++;
+    const kitRec=payRecord(s.ID,year,month,'Kit');const kitSt=kitRec?String(kitRec.Status||'').toLowerCase():'';if(kitSt&&kitSt!=='paid')kitdue++;
+    const compRec=payRecord(s.ID,year,month,'Components');const compSt=compRec?String(compRec.Status||'').toLowerCase():'';if(compSt&&compSt!=='paid')compdue++;
+    return {s,rec,st,kitRec,kitSt,compRec,compSt};
+  });
+  const groupTotal=rows.length;const fStatus=payStatusFilter;
+  if(fStatus==='kitdue')rows=rows.filter(r=>r.kitSt&&r.kitSt!=='paid');
+  else if(fStatus==='compdue')rows=rows.filter(r=>r.compSt&&r.compSt!=='paid');
+  else if(fStatus)rows=rows.filter(r=>r.st===fStatus);
+  const chip=(k,l,n)=>`<button class="pay-chip pay-chip-${k} ${payStatusFilter===k?'active':''}" onclick="setPayStatus('${k}')">${l} ${n}</button>`;
+  const chipsHtml=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
+  if(summary.innerHTML!==chipsHtml)summary.innerHTML=chipsHtml;
+  if(!rows.length){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
+  const waIco='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg>';
+  list.innerHTML=`<table class="pay-table"><thead><tr>
+    <th>Student</th><th>Batch</th><th>Fee</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Components</th><th>Action</th>
+    </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,compRec,compSt})=>{
+      const fee=s['Monthly Fee']||'';
+      const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
+      const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?('₹'+esc(String(rec.Amount))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
+      const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,compRec,compSt);
+      let action='';
+      if(st==='pending'){
+        const wa=`<button class="pay-act pay-act-wa" title="WhatsApp reminder" onclick="payWhatsApp('${esc(s.ID)}')">${waIco}</button>`;
+        action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}',this)">Ignore</button></div></div>`;
+      }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${esc(s.ID)}',this)">Undo</button>`;}
+      return `<tr><td><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${esc(s.ID)}</span></td><td>${esc(s.Batch||'—')}</td><td>${fee?('₹'+esc(String(fee))):'—'}</td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${esc(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${action}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+function fillPaySelect(id,allLabel,items,current){
+  const sel=$(id);if(!sel)return;const cur=current||'';
+  let html=`<option value="">${allLabel}</option>`+items.map(i=>`<option value="${esc(i)}"${cur===i?' selected':''}>${esc(i)}</option>`).join('');
+  if(cur&&!items.includes(cur))html+=`<option value="${esc(cur)}" selected>${esc(cur)}</option>`;
+  if(sel.innerHTML!==html)sel.innerHTML=html;sel.value=cur;
+}
+let payCurrentCtx=null;
+window.openPaymentForm=function(sid,name,fee){
+  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Fee'};
+  $('paymentModalTitle').textContent='Add Payment';$('paymentModalSub').textContent=`${name} · Fee · ${PAY_MONTHS[month-1]} ${year}`;
+  $('pay_Amount').value=fee||'';const t=new Date();$('pay_Date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  $('pay_Method').value='';$('pay_Note').value='';$('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
+};
+window.closePaymentForm=function(){$('paymentModal').classList.remove('open');};
+window.savePaymentForm=async function(){
+  const msg=$('pay_Msg'),btn=$('pay_SaveBtn');btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  const c=payCurrentCtx;
+  const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Paid',amount:$('pay_Amount').value.trim(),paidDate:$('pay_Date').value,method:$('pay_Method').value.trim(),note:$('pay_Note').value.trim()});
+  if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:$('pay_Amount').value.trim(),'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:$('pay_Note').value.trim()});closePaymentForm();buildPayments();}
+  else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
+};
+window.markPaymentIgnore=async function(sid,btn){
+  const year=$('payYear').value,month=$('payMonth').value;const done=payBtnBusy(btn);
+  const ok=await payWrite({action:'savePayment',studentId:sid,year,month,status:'Ignore'});
+  if(ok){payUpsertLocal(sid,year,month,'Fee',{Status:'Ignore'});buildPayments();}else{if(done)done();alert('Could not update.');}
+};
+window.revertPayment=async function(sid,btn){
+  const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Revert this to Pending?'))return;const done=payBtnBusy(btn);
+  const ok=await payWrite({action:'deletePayment',studentId:sid,year,month});
+  if(ok){payRemoveLocal(sid,year,month,'Fee');buildPayments();}else{if(done)done();alert('Could not update.');}
+};
+window.savePaymentRef=async function(sid,inp){
+  const val=inp.value.trim();inp.classList.remove('saved','error');inp.classList.add('saving');
+  try{await setDoc(doc(db,'students',sid),{'Payment Ref':val,updatedAt:serverTimestamp()},{merge:true});const s=studentsData.find(x=>x.ID===sid);if(s)s['Payment Ref']=val;inp.classList.remove('saving');inp.classList.add('saved');setTimeout(()=>inp.classList.remove('saved'),1200);}
+  catch(e){console.error(e);inp.classList.remove('saving');inp.classList.add('error');}
+};
+window.payWhatsApp=function(sid){
+  const s=studentsData.find(x=>x.ID===sid);if(!s)return;const month=PAY_MONTHS[$('payMonth').value-1],year=$('payYear').value;
+  const fee=s['Monthly Fee']?('₹'+s['Monthly Fee']):'the monthly fee';
+  const msg=`Dear Parent, this is a gentle reminder that ${fee} for ${s.Name} (${month} ${year}) at *ElectroBotics* is pending. ${s['Payment Ref']?('Payment ref: '+s['Payment Ref']+'. '):''}Kindly arrange the payment. Thank you!`;
+  waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
+  $('waModalTitle').textContent='Reminder · '+s.Name;$('wa_Msg').value=msg;$('waModal').classList.add('open');
+};
+window.closeWaModal=function(){$('waModal').classList.remove('open');};
+window.sendWaModal=function(){const text=encodeURIComponent($('wa_Msg').value);const base=waTargetPhone?('https://wa.me/'+waTargetPhone+'?text='):'https://wa.me/?text=';window.open(base+text,'_blank');closeWaModal();};
+window.downloadPaymentsExcel=function(){
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
+  const year=$('payYear').value,month=$('payMonth').value;
+  const rows=studentsData.filter(s=>(s.Status||'Active').toLowerCase()==='active').map(s=>{
+    const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
+    return {'ID':s.ID,'Name':s.Name,'Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:''};
+  });
+  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Payments');
+  XLSX.writeFile(wb,`ElectroBotics_Payments_${PAY_MONTHS[month-1]}_${year}.xlsx`);
+};
+function renderKitCell(s,kitRec,kitSt){
+  if(!kitRec)return `<button class="pay-act pay-act-kit" onclick="flagKit('${esc(s.ID)}',this)" title="Flag kit payment">+ Kit</button>`;
+  if(kitSt==='paid'){const kd=`${kitRec.Amount?('₹'+esc(String(kitRec.Amount))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${esc(s.ID)}',this)">Undo</button></div>`;}
+  return `<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openKitForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${esc(s.ID)}',this)">Remove</button></div></div>`;
+}
+function renderCompCell(s,compRec,compSt){
+  if(!compRec)return `<button class="pay-act pay-act-kit" onclick="flagComponents('${esc(s.ID)}',this)" title="Flag components payment">+ Components</button>`;
+  if(compSt==='paid'){const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${esc(s.ID)}','${esc(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${esc(s.ID)}','${esc(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}',this)">Undo</button></div></div>`;}
+  return `<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${esc(s.ID)}','${esc(s.Name)}')">History</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}',this)">Remove</button></div></div>`;
+}
+window.migPayments=async function(){
+  const records=parseCSV($('migPayments').value.trim());const msg=$('migPaymentsMsg');
+  if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
+  msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
+  let done=0,fail=0,batch=writeBatch(db),n=0;
+  for(const r of records){
+    try{
+      const sid=String(r['Student ID']||'').trim();if(!sid){fail++;continue;}
+      const type=String(r.Type||'Fee').trim()||'Fee';const year=String(r.Year||'').trim();const month=String(r.Month||'').trim();
+      if(!year||!month){fail++;continue;}
+      batch.set(doc(db,'payments',payDocId(sid,year,month,type)),{'Student ID':sid,Year:year,Month:month,Type:type,Status:r.Status||'Paid',Amount:r.Amount||'','Paid Date':r['Paid Date']||'',Method:r.Method||'',Note:r.Note||'',MarkedBy:r.MarkedBy||'',migratedAt:serverTimestamp()},{merge:true});
+      n++;done++;if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
+    }catch(e){console.error('mig pay row',r,e);fail++;}
+  }
+  try{if(n>0)await batch.commit();}catch(e){fail+=n;done-=n;}
+  msg.textContent=`Imported ${done} payment(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
+  paymentsLoaded=false;loadPayments();
+};
+// Kit/Components action stubs (full flow in Sub-step B)
+window.flagKit=window.flagComponents=window.openKitForm=window.revertKit=window.openComponentsForm=window.revertComponents=window.newComponentPurchase=window.openComponentHistory=window.closeComponentHistory=function(){alert('Kit & Components actions arrive in the next update.');};
 </script>
 </body>
 </html>
