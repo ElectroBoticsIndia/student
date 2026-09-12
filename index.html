@@ -234,6 +234,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   .topic-status-sel,.topic-notes-input{width:100%}
   .student-header{flex-direction:column;text-align:center;gap:12px}
   .roadmap-controls{flex-wrap:wrap}
+  /* 1 · Summary stat cards: 2 per row */
+  .stats-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .stat-card{padding:14px}
+  .stat-value{font-size:22px}
+  .charts-grid{grid-template-columns:1fr}
+  /* 2 · Header: stack title/search above the action buttons so they don't overlap */
+  .stu-header{flex-direction:column;align-items:stretch;gap:10px}
+  .stu-title-wrap{width:100%}
+  .stu-search{max-width:none;width:100%}
+  .stu-actions{width:100%;flex-wrap:wrap}
+  .stu-actions .btn-add,.stu-actions .btn-download{flex:1 1 auto;justify-content:center}
+  .stu-actions .trend-toggle{flex:1 1 100%}
+  .stu-actions .pay-mini{flex:1 1 100%}
+  /* 3 · Payments trend: toggle + year wrap below the heading */
+  .trend-toggle{flex-wrap:wrap}
+  .trend-tab{flex:1 1 auto}
+  #trendYear{width:100%}
+  /* filter bar spacing on mobile */
+  .stu-filter-bar{gap:8px}
+  .filter-group{flex:1 1 40%}
+  .filter-group select{min-width:0;width:100%}
 }
 
 /* ── Student profile + roadmap (ported from production) ── */
@@ -568,7 +589,6 @@ table.avail td.occ{border:1px solid transparent}
         <div class="filter-group"><label>Batch</label><select id="stuFilterBatch" onchange="renderStudents()"><option value="">All</option></select></div>
         <div class="filter-group"><label>Status</label><select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All</option><option value="inactive">Inactive</option></select></div>
         <button class="filter-clear" onclick="clearStudentFilters()">Clear</button>
-        <span class="stu-shown" id="stuCountLine"></span>
       </div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="studentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
@@ -1497,7 +1517,7 @@ window.renderStudents=function(){
   if(q)rows=rows.filter(s=>String(s.Name||'').toLowerCase().includes(q)||String(s.ID||'').toLowerCase().includes(q));
   rows.sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
   filteredStudents=rows;
-  $('stuCountLine').innerHTML=`<strong>${rows.length}</strong> shown`;
+  const cl=$('stuCountLine');if(cl)cl.innerHTML=`<strong>${rows.length}</strong> shown`;
   const hc=$('stuHeadCount');if(hc)hc.textContent='('+rows.length+')';
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match.</div>';return;}
   const editIco='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
