@@ -66,7 +66,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:24px}
 .chart-title{font-family:var(--font-mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dark);margin-bottom:0}
-#stuHeadCount{color:var(--accent)}
+#stuHeadCount,#leadHeadCount{color:var(--accent)}
 .pay-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .pay-controls{display:flex;gap:8px}
 .pay-controls select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
@@ -472,21 +472,26 @@ table.avail td.occ{border:1px solid transparent}
   </div>
 
   <div id="leadsScreen" style="display:none;">
-    <div class="chart-card">
-      <div class="pay-head">
-        <div class="chart-title">Leads</div>
-        <div class="pay-controls">
-          <input type="text" id="leadSearch" class="pay-search" placeholder="Search name, ref, note…" oninput="renderLeads()">
-          <select id="statusFilter" onchange="renderLeads()">
-            <option value="">All statuses</option>
-            <option>Enquiry</option><option>Trial Pending</option><option>Waiting for a batch</option>
-            <option>Converted</option><option>Dropped</option>
-          </select>
-          <button class="btn-primary" onclick="openLeadForm()">+ Add Lead</button>
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header">
+        <div class="stu-title-wrap">
+          <span class="table-title">Leads <span id="leadHeadCount"></span></span>
+          <input type="text" id="leadSearch" class="stu-search" placeholder="Search name, ref, note…" oninput="renderLeads()">
+        </div>
+        <div class="stu-actions">
+          <button class="btn-add" onclick="openLeadForm()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add Lead</button>
         </div>
       </div>
-      <div class="pay-summary" id="leadSummary"></div>
-      <div class="avail-scroll"><div id="leadsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="stu-filter-bar">
+        <div class="filter-group"><label>Status</label><select id="statusFilter" onchange="renderLeads()">
+          <option value="">All statuses</option>
+          <option>Enquiry</option><option>Trial Pending</option><option>Waiting for a batch</option>
+          <option>Converted</option><option>Dropped</option>
+        </select></div>
+        <button class="filter-clear" onclick="clearLeadFilters()">Clear</button>
+      </div>
+      <div class="pay-summary" id="leadSummary" style="padding:12px 20px 0;"></div>
+      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="leadsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
     <div class="chart-card" id="migCard" style="display:none;">
@@ -734,7 +739,6 @@ table.avail td.occ{border:1px solid transparent}
         <div class="student-meta" id="profMeta"></div>
       </div>
       <div class="roadmap-controls">
-        <button class="lvl-btn lvl-btn-markall" id="profEditBtn" onclick="openStudentForm(currentStudentId)" style="display:none;">Edit</button>
         <button class="btn-logout" id="profBackBtn" onclick="backFromProfile()"><span class="back-arrow">←</span> Back</button>
       </div>
     </div>
@@ -1032,6 +1036,7 @@ function fillDatalists(){
   $('batchList').innerHTML=b.map(x=>`<option value="${esc(x)}">`).join('');
 }
 window.setStatusFilter=function(s){statusFilter=s;$('statusFilter').value=s;renderLeads();};
+window.clearLeadFilters=function(){$('leadSearch').value='';$('statusFilter').value='';statusFilter='';renderLeads();};
 
 window.renderLeads=function(){
   const list=$('leadsList'),summary=$('leadSummary');
@@ -1040,6 +1045,7 @@ window.renderLeads=function(){
   let rows=leadsData.slice();
   if(fStatus)rows=rows.filter(l=>String(l.Status||'')===fStatus);
   if(q)rows=rows.filter(l=>['Name','Country','Contact','Preferred Batch','Source','Status','Notes','Lead ID'].some(k=>String(l[k]||'').toLowerCase().includes(q)));
+  const hc=$('leadHeadCount');if(hc)hc.textContent='('+rows.length+')';
   const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
   leadsData.forEach(l=>{const s=String(l.Status||'Enquiry');if(counts[s]!==undefined)counts[s]++;});
   summary.innerHTML=`<button class="lead-stat lead-stat-btn${fStatus===''?' active':''}" onclick="setStatusFilter('')">${leadsData.length} All</button>`+
@@ -1359,8 +1365,16 @@ window.certShare=async function(platform){
     return;
   }
   if(platform==='whatsapp'){
-    // WhatsApp web can't attach an image from a link, so we send the message text
-    // and (if generated) trigger the image download so it's ready to attach.
+    // Best path: native share sends the certificate IMAGE + message together to
+    // WhatsApp (works on mobile). If unavailable (desktop), fall back to sharing
+    // via any app, else download the image + open WhatsApp with the text.
+    if(certBlob&&navigator.canShare){
+      const file=new File([certBlob],certFileName,{type:'image/png'});
+      if(navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file],text:certMsg,title:'ElectroBotics Certificate'});return;}catch(e){if(e&&e.name==='AbortError')return;}
+      }
+    }
+    // Fallback: download image so it can be attached, then open WhatsApp with the message.
     if(certBlob){const a=document.createElement('a');a.href=URL.createObjectURL(certBlob);a.download=certFileName;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}
     window.open('https://wa.me/?text='+encodeURIComponent(certMsg),'_blank');
     return;
@@ -1438,7 +1452,7 @@ window.renderStudents=function(){
   if(fCountry)rows=rows.filter(s=>(s.Country||'')===fCountry);
   if(fBatch)rows=rows.filter(s=>(s.Batch||'')===fBatch);
   if(q)rows=rows.filter(s=>String(s.Name||'').toLowerCase().includes(q)||String(s.ID||'').toLowerCase().includes(q));
-  rows.sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||'')));
+  rows.sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
   filteredStudents=rows;
   $('stuCountLine').innerHTML=`<strong>${rows.length}</strong> shown`;
   const hc=$('stuHeadCount');if(hc)hc.textContent='('+rows.length+')';
@@ -1497,7 +1511,6 @@ window.openProfile=async function(id){
   if(s.Tutor)meta.push(`<span>${ic.tutor}${esc(s.Tutor)}</span>`);
   if(s.Country)meta.push(`<span>${ic.country}${esc(s.Country)}</span>`);
   $('profMeta').innerHTML=meta.join('');
-  $('profEditBtn').style.display=canEdit()?'':'none';
   $('profBackBtn').style.display=(userRole==='parent'&&studentsData.length<=1)?'none':'';
   $('profSummary').innerHTML='';
   $('roadmap').innerHTML='<div class="roadmap-loading"><div class="spinner"></div>Loading progress…</div>';
