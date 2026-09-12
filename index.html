@@ -116,18 +116,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .btn-save{font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 22px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer}
 .btn-save:hover{background:var(--accent-dark)}
 .btn-save:disabled{opacity:.6;cursor:wait}
-.stu-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.stu-actions{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+.stu-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border)}
+.stu-title-wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:1;min-width:0}
+.table-title{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.stu-search{font-family:var(--font-body);font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none;min-width:180px;flex:1;max-width:300px}
+.stu-search:focus{border-color:var(--accent)}
+.stu-actions{display:flex;gap:10px;flex-wrap:wrap}
 .btn-add{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 16px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer;transition:all .2s}
 .btn-add:hover{background:var(--accent-dark)}
-.btn-download{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:13px;font-weight:700;padding:9px 16px;border:none;border-radius:9px;background:var(--green);color:#fff;cursor:pointer;transition:all .2s}
-.btn-download:hover{background:#7aa300}
-.stu-filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.stu-filter-bar .pay-search{min-width:170px}
-.stu-filter-bar select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
-.stu-filter-bar select:focus{border-color:var(--accent)}
-.filter-clear{font-family:var(--font-mono);font-size:12px;font-weight:600;padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.btn-download{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:700;padding:8px 14px;border:none;border-radius:8px;background:var(--green);color:#fff;cursor:pointer;transition:all .2s}
+.btn-download:hover{background:#7aa300;transform:translateY(-1px)}
+.stu-filter-bar{display:flex;align-items:flex-end;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface-alt);flex-wrap:wrap}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-group label{font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+.filter-group select{font-family:var(--font-body);font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none;cursor:pointer;min-width:130px}
+.filter-group select:focus{border-color:var(--accent)}
+.filter-clear{font-family:var(--font-mono);font-size:11px;font-weight:600;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .filter-clear:hover{border-color:var(--red);color:var(--red)}
+.stu-shown{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-left:auto;align-self:center}
+.stu-shown strong{color:var(--accent)}
+.photo-preview{margin-top:10px}
+.photo-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+.photo-preview-err{font-family:var(--font-mono);font-size:11px;color:var(--red)}
 .pay-sid{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
 .lead-tel{color:var(--accent-dark);text-decoration:none;border-bottom:1px dashed var(--accent)}
 .lead-tel:hover{color:var(--accent)}
@@ -359,31 +369,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 
   <!-- ═══ STUDENTS (sub-step 1: migration + verification) ═══ -->
   <div id="studentsScreen" style="display:none;">
-    <div class="chart-card">
+    <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header">
-        <div class="chart-title">Students <span id="stuHeadCount"></span></div>
+        <div class="stu-title-wrap">
+          <span class="table-title">Students <span id="stuHeadCount"></span></span>
+          <input type="text" id="stuSearch" class="stu-search" placeholder="Search name or ID…" oninput="renderStudents()">
+        </div>
         <div class="stu-actions">
           <button class="btn-add" onclick="openStudentForm()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Student
           </button>
           <button class="btn-download" onclick="downloadStudentsExcel()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download Excel
           </button>
         </div>
       </div>
       <div class="stu-filter-bar">
-        <input type="text" id="stuSearch" class="pay-search" placeholder="Search name or ID…" oninput="renderStudents()">
-        <select id="stuFilterCountry" onchange="renderStudents()"><option value="">All countries</option></select>
-        <select id="stuFilterLevel" onchange="renderStudents()"><option value="">All levels</option></select>
-        <select id="stuFilterTutor" onchange="renderStudents()"><option value="">All tutors</option></select>
-        <select id="stuFilterBatch" onchange="renderStudents()"><option value="">All batches</option></select>
-        <select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All statuses</option><option value="inactive">Inactive</option></select>
+        <div class="filter-group"><label>Country</label><select id="stuFilterCountry" onchange="renderStudents()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Level</label><select id="stuFilterLevel" onchange="renderStudents()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Tutor</label><select id="stuFilterTutor" onchange="renderStudents()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Batch</label><select id="stuFilterBatch" onchange="renderStudents()"><option value="">All</option></select></div>
+        <div class="filter-group"><label>Status</label><select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All</option><option value="inactive">Inactive</option></select></div>
         <button class="filter-clear" onclick="clearStudentFilters()">Clear</button>
+        <span class="stu-shown" id="stuCountLine"></span>
       </div>
-      <div class="note" id="stuCountLine" style="margin-bottom:12px;"></div>
-      <div class="avail-scroll"><div id="studentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="studentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
     <!-- Admin migration (collapsible) -->
@@ -518,7 +530,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
       <div class="form-row"><label>Address</label><textarea id="s_Address" rows="2" placeholder="Home address (optional)"></textarea></div>
       <div class="form-row"><label>Monthly Fee</label><input type="text" id="s_Fee" placeholder="e.g. 1500" inputmode="decimal"></div>
       <div class="form-row"><label>Payment Ref</label><input type="text" id="s_PayRef" placeholder="acct / UPI ref (optional)"></div>
-      <div class="form-row"><label>Photo URL</label><input type="text" id="s_Photo" placeholder="Google Drive share link or image URL (optional)"></div>
+      <div class="form-row"><label>Photo URL</label><input type="text" id="s_Photo" placeholder="Google Drive share link or image URL (optional)" oninput="updatePhotoPreview()"><div id="photoPreview" class="photo-preview" style="display:none;"></div></div>
     </div>
     <div class="modal-msg" id="s_Msg"></div>
     <div class="modal-foot">
@@ -972,8 +984,8 @@ window.renderStudents=function(){
   if(q)rows=rows.filter(s=>String(s.Name||'').toLowerCase().includes(q)||String(s.ID||'').toLowerCase().includes(q));
   rows.sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||'')));
   filteredStudents=rows;
-  $('stuCountLine').innerHTML=`<strong>${rows.length}</strong> student${rows.length!==1?'s':''} shown · ${studentsData.length} total`;
-  const hc=$('stuHeadCount');if(hc)hc.textContent=rows.length;
+  $('stuCountLine').innerHTML=`<strong>${rows.length}</strong> shown`;
+  const hc=$('stuHeadCount');if(hc)hc.textContent='('+rows.length+')';
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match.</div>';return;}
   const editIco='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
@@ -1205,6 +1217,20 @@ function toDateInputValue(raw){
   const d=new Date(s);if(!isNaN(d))return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   return '';
 }
+// Convert a Google Drive share link to a viewable image URL (matches production).
+function driveToImageUrl(url){
+  const v=String(url||'').trim();if(!v)return '';
+  if(/lh3\.googleusercontent\.com/.test(v))return v;
+  if(!/drive\.google\.com|docs\.google\.com/.test(v))return v;
+  const m=v.match(/\/d\/([a-zA-Z0-9_-]+)/)||v.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return m?('https://lh3.googleusercontent.com/d/'+m[1]):v;
+}
+window.updatePhotoPreview=function(){
+  const raw=$('s_Photo').value;const box=$('photoPreview');const url=driveToImageUrl(raw);
+  if(!url){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='block';
+  box.innerHTML=`<img src="${esc(url)}" alt="preview" onerror="this.parentElement.innerHTML='<span class=&quot;photo-preview-err&quot;>Preview unavailable — check the link is shared \\'Anyone with the link\\'</span>';">`;
+};
 // Next EB### id from existing students (matches production logic).
 function nextStudentId(){
   let max=0,prefix='EB',pad=3;
@@ -1247,7 +1273,7 @@ window.openStudentForm=function(id){
     $('s_PayRef').value='';$('s_Photo').value='';$('s_InactiveReason').value='';$('s_InactiveReasonOther').value='';
     editStatusOnOpen='Active';
   }
-  onStuStatusChange();onStuReasonChange();
+  onStuStatusChange();onStuReasonChange();updatePhotoPreview();
   $('s_Msg').textContent='';$('s_Msg').className='modal-msg';$('s_SaveBtn').disabled=false;
   $('studentModal').classList.add('open');
 };
@@ -1297,7 +1323,7 @@ window.saveStudent=async function(){
     Tutor:$('s_Tutor').value.trim(),Batch:$('s_Batch').value.trim(),Status:status,
     'Join Date':$('s_JoinDate').value,Email:email,parentEmails:splitEmailsClient(email),
     Contact:$('s_Contact').value.trim(),School:$('s_School').value.trim(),Address:$('s_Address').value.trim(),
-    'Monthly Fee':$('s_Fee').value.trim(),'Payment Ref':$('s_PayRef').value.trim(),Photo:$('s_Photo').value.trim(),
+    'Monthly Fee':$('s_Fee').value.trim(),'Payment Ref':$('s_PayRef').value.trim(),Photo:driveToImageUrl($('s_Photo').value.trim()),
     'Inactive Reason':inactiveReason,updatedAt:serverTimestamp(),updatedBy:currentUser.email
   };
   if(status==='Inactive'&&editStatusOnOpen==='Active')data['Inactive Date']=new Date().toISOString().slice(0,10);
