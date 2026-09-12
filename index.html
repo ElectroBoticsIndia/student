@@ -237,7 +237,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
       <div class="note" id="studentCounts">Loading counts…</div>
       <div style="font-size:13px;color:var(--text-dim);">
         Sub-step 1 imports and verifies your data. The staff list, add/edit, roadmap and the parent view come in the next sub-steps.
-        Migrated collections: <strong>students</strong>, and per-student <strong>progress</strong>, <strong>projects</strong>, <strong>certificates</strong>; plus shared <strong>levels</strong> and <strong>topics</strong>.
+        Migrated collections: <strong>students</strong>, and per-student <strong>progress</strong> and <strong>projects</strong>; plus shared <strong>levels</strong> (with the Certificate Template column) and <strong>topics</strong>.
       </div>
     </div>
 
@@ -276,11 +276,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
         <div class="stu-mig-actions"><button class="btn-primary" onclick="migProjects()">Import Projects</button><span class="msg" id="migProjectsMsg"></span></div>
       </div>
 
-      <div class="stu-mig">
-        <label class="stu-mig-label">6 · Certificates sheet CSV <span class="stu-mig-hint">(Student ID, Level Name, Completion Date, Certificate URL, …)</span></label>
-        <textarea id="migCerts" placeholder="Paste Certificates CSV…"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migCerts()">Import Certificates</button><span class="msg" id="migCertsMsg"></span></div>
-      </div>
+      <div class="note" style="margin-top:12px;margin-bottom:0;">Certificates aren't a separate sheet — the <strong>Certificate Template</strong> column travels with the Levels import (step 2), and each certificate is generated on the fly from that template plus the student's completion date. Nothing extra to import.</div>
     </div>
   </div>
 </div>
@@ -650,16 +646,6 @@ window.migProjects=async function(){
       'Level Name':r['Level Name']||'','Project Name':r['Project Name']||'',Description:r.Description||'','Video Link':r['Video Link']||'','Code Link':r['Code Link']||'',migratedAt:serverTimestamp()
     }};
   },$('migProjectsMsg'),'projects');
-};
-window.migCerts=async function(){
-  const records=parseCSV($('migCerts').value.trim());
-  await importRows(records,(r)=>{
-    const sid=String(r['Student ID']||'').trim();if(!sid)return {ref:null};
-    const key=String(r['Level Name']||'').replace(/[\/#\.\[\]]/g,'_').slice(0,180)||('cert'+Math.random().toString(36).slice(2));
-    return {ref:doc(db,'students',sid,'certificates',key),data:{
-      'Level Name':r['Level Name']||'','Completion Date':r['Completion Date']||'','Certificate URL':r['Certificate URL']||r['Certificate Template']||'',migratedAt:serverTimestamp()
-    }};
-  },$('migCertsMsg'),'certificates');
 };
 
 // Count verification — reads server-side counts (cheap, 1 read each).
