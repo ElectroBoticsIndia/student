@@ -93,6 +93,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
 .pay-table tbody tr:hover{background:var(--accent-light)}
 .student-row{cursor:pointer}
+.student-row.row-flash{animation:rowFlash 1.6s ease-out}
+@keyframes rowFlash{0%,30%{background:var(--amber-light,#fdf6e3)}100%{background:transparent}}
 .btn-edit{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .btn-edit:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .form-row small{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
@@ -148,6 +150,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .photo-preview img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
 .photo-preview-err{font-family:var(--font-mono);font-size:11px;color:var(--red)}
 .pay-sid{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.stu-id-bold{font-family:var(--font-mono);font-size:12px;color:var(--text);font-weight:700}
 .lead-tel{color:var(--accent-dark);text-decoration:none;border-bottom:1px dashed var(--accent)}
 .lead-tel:hover{color:var(--accent)}
 .lead-notes-cell{max-width:220px;white-space:normal;font-size:12px;color:var(--text-dim)}
@@ -1210,9 +1213,9 @@ window.renderStudents=function(){
   const editIco='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th>${canEdit()?'<th></th>':''}
-    </tr></thead><tbody>${rows.map(s=>`<tr class="student-row" onclick="openProfile('${esc(s.ID)}')">
-      <td><span class="pay-sid">${esc(s.ID)}</span></td>
-      <td><strong>${esc(s.Name||'—')}</strong></td>
+    </tr></thead><tbody>${rows.map(s=>`<tr class="student-row" data-sid="${esc(s.ID)}" onclick="openProfile('${esc(s.ID)}')">
+      <td><strong class="stu-id-bold">${esc(s.ID)}</strong></td>
+      <td>${esc(s.Name||'—')}</td>
       <td>${esc(s['Current Level']||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
       <td>${esc(s.Country||'—')}</td>
@@ -1280,11 +1283,15 @@ window.backFromProfile=function(){
   $('profileScreen').style.display='none';
   if(userRole==='parent'){
     if(studentsData.length>1)showChildPicker(studentsData);
-    else{ // single child — nothing to go back to; sign-out is via account menu
-      $('profileScreen').style.display='';
-    }
+    else{ $('profileScreen').style.display=''; }
   }else{
     $('staffTabs').style.display='';setTab('students');
+    // Return to the same row: scroll it into view and briefly highlight it.
+    const sid=currentStudentId;
+    setTimeout(()=>{
+      const row=document.querySelector(`#studentsList tr[data-sid="${(window.CSS&&CSS.escape)?CSS.escape(sid):sid}"]`);
+      if(row){row.scrollIntoView({behavior:'smooth',block:'center'});row.classList.add('row-flash');setTimeout(()=>row.classList.remove('row-flash'),1600);}
+    },60);
   }
 };
 
