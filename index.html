@@ -64,6 +64,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 
 .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:24px}
 .chart-title{font-family:var(--font-mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dark);margin-bottom:0}
+#stuHeadCount{color:var(--accent)}
 .pay-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .pay-controls{display:flex;gap:8px}
 .pay-controls select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
@@ -95,6 +96,38 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .btn-edit{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .btn-edit:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .form-row small{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.form-divider{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:1px;margin:18px 0 12px;padding-top:14px;border-top:1px solid var(--border)}
+.combo{display:flex;gap:6px;align-items:stretch}
+.combo .combo-select{flex:1;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+.combo .combo-select:focus{border-color:var(--accent)}
+.combo .combo-new{flex:1;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+.combo .combo-new:focus{border-color:var(--accent)}
+.combo .combo-back{flex:none;width:40px;border:1px solid var(--border);border-radius:8px;background:var(--surface-alt);color:var(--text-dim);font-size:16px;cursor:pointer;transition:all .2s}
+.combo .combo-back:hover{border-color:var(--accent);color:var(--accent)}
+.combo.invalid .combo-select,.combo.invalid .combo-new{border-color:var(--red);background:var(--red-light)}
+.form-row input.invalid,.form-row select.invalid,.form-row textarea.invalid{border-color:var(--red);background:var(--red-light)}
+.form-row input:disabled{background:var(--surface-alt);color:var(--text-light);cursor:not-allowed}
+.modal-msg{padding:0 22px;font-family:var(--font-mono);font-size:12px;min-height:0}
+.modal-msg.err{color:var(--red);padding-bottom:8px}
+.modal-msg.ok{color:var(--accent);padding-bottom:8px}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 22px;border-top:1px solid var(--border)}
+.btn-cancel{font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 18px;border:1px solid var(--border);border-radius:9px;background:#fff;color:var(--text-dim);cursor:pointer}
+.btn-cancel:hover{border-color:var(--text-dim)}
+.btn-save{font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 22px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer}
+.btn-save:hover{background:var(--accent-dark)}
+.btn-save:disabled{opacity:.6;cursor:wait}
+.stu-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.stu-actions{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto}
+.btn-add{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-mono);font-size:13px;font-weight:600;padding:9px 16px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer;transition:all .2s}
+.btn-add:hover{background:var(--accent-dark)}
+.btn-download{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:13px;font-weight:700;padding:9px 16px;border:none;border-radius:9px;background:var(--green);color:#fff;cursor:pointer;transition:all .2s}
+.btn-download:hover{background:#7aa300}
+.stu-filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.stu-filter-bar .pay-search{min-width:170px}
+.stu-filter-bar select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
+.stu-filter-bar select:focus{border-color:var(--accent)}
+.filter-clear{font-family:var(--font-mono);font-size:12px;font-weight:600;padding:7px 14px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--text-dim);cursor:pointer;transition:all .2s}
+.filter-clear:hover{border-color:var(--red);color:var(--red)}
 .pay-sid{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
 .lead-tel{color:var(--accent-dark);text-decoration:none;border-bottom:1px dashed var(--accent)}
 .lead-tel:hover{color:var(--accent)}
@@ -327,18 +360,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   <!-- ═══ STUDENTS (sub-step 1: migration + verification) ═══ -->
   <div id="studentsScreen" style="display:none;">
     <div class="chart-card">
-      <div class="pay-head">
-        <div class="chart-title">Students</div>
-        <div class="pay-controls">
-          <input type="text" id="stuSearch" class="pay-search" placeholder="Search name or ID…" oninput="renderStudents()">
-          <select id="stuFilterCountry" onchange="renderStudents()"><option value="">All countries</option></select>
-          <select id="stuFilterLevel" onchange="renderStudents()"><option value="">All levels</option></select>
-          <select id="stuFilterTutor" onchange="renderStudents()"><option value="">All tutors</option></select>
-          <select id="stuFilterBatch" onchange="renderStudents()"><option value="">All batches</option></select>
-          <select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All statuses</option><option value="inactive">Inactive</option></select>
-          <button class="btn-primary" onclick="downloadStudentsExcel()">↓ Excel</button>
-          <button class="btn-primary" onclick="openStudentForm()">+ Add Student</button>
+      <div class="stu-header">
+        <div class="chart-title">Students <span id="stuHeadCount"></span></div>
+        <div class="stu-actions">
+          <button class="btn-add" onclick="openStudentForm()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Student
+          </button>
+          <button class="btn-download" onclick="downloadStudentsExcel()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Excel
+          </button>
         </div>
+      </div>
+      <div class="stu-filter-bar">
+        <input type="text" id="stuSearch" class="pay-search" placeholder="Search name or ID…" oninput="renderStudents()">
+        <select id="stuFilterCountry" onchange="renderStudents()"><option value="">All countries</option></select>
+        <select id="stuFilterLevel" onchange="renderStudents()"><option value="">All levels</option></select>
+        <select id="stuFilterTutor" onchange="renderStudents()"><option value="">All tutors</option></select>
+        <select id="stuFilterBatch" onchange="renderStudents()"><option value="">All batches</option></select>
+        <select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All statuses</option><option value="inactive">Inactive</option></select>
+        <button class="filter-clear" onclick="clearStudentFilters()">Clear</button>
       </div>
       <div class="note" id="stuCountLine" style="margin-bottom:12px;"></div>
       <div class="avail-scroll"><div id="studentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
@@ -409,41 +451,79 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   </div>
 </div>
 
-<!-- Add/Edit Student modal -->
+<!-- Add/Edit Student modal (replicates production) -->
 <div class="modal-overlay" id="studentModal">
   <div class="modal-card">
     <div class="modal-head"><h3 id="studentModalTitle">Add Student</h3><button class="modal-close" onclick="closeStudentForm()">&times;</button></div>
     <div class="modal-body">
-      <div class="form-row"><label>Student ID <span class="req">*</span></label><input type="text" id="s_ID" placeholder="e.g. EB001"><small id="s_ID_note"></small></div>
-      <div class="form-row"><label>Name <span class="req">*</span></label><input type="text" id="s_Name"></div>
-      <div class="form-row"><label>Current Level</label><input type="text" id="s_Level" list="levelList"><datalist id="levelList"></datalist></div>
-      <div class="form-row"><label>Country</label><input type="text" id="s_Country" list="stuCountryList"><datalist id="stuCountryList"></datalist></div>
-      <div class="form-row"><label>Tutor</label><input type="text" id="s_Tutor" list="tutorList"><datalist id="tutorList"></datalist></div>
-      <div class="form-row"><label>Batch</label><input type="text" id="s_Batch" list="stuBatchList"><datalist id="stuBatchList"></datalist></div>
-      <div class="form-row"><label>Status</label>
-        <select id="s_Status" onchange="onStuStatusChange()"><option>Active</option><option>Inactive</option></select>
+      <div class="form-row"><label>Student ID</label><input type="text" id="s_ID" placeholder="e.g. EB077"><small id="s_ID_note"></small></div>
+      <div class="form-row"><label>Name <span class="req">*</span></label><input type="text" id="s_Name" placeholder="Full name"></div>
+      <div class="form-row"><label>Current Level <span class="req">*</span></label>
+        <div class="combo" data-field="s_Level">
+          <select class="combo-select" onchange="onComboSelect('s_Level')"></select>
+          <input type="text" class="combo-new" id="s_Level" placeholder="Type a new level" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('s_Level')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
+      <div class="form-row"><label>Tutor <span class="req">*</span></label>
+        <div class="combo" data-field="s_Tutor">
+          <select class="combo-select" onchange="onComboSelect('s_Tutor')"></select>
+          <input type="text" class="combo-new" id="s_Tutor" placeholder="Type a new tutor" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('s_Tutor')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
+      <div class="form-row"><label>Country <span class="req">*</span></label>
+        <div class="combo" data-field="s_Country">
+          <select class="combo-select" onchange="onComboSelect('s_Country')"></select>
+          <input type="text" class="combo-new" id="s_Country" placeholder="Type a new country" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('s_Country')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
+      <div class="form-row"><label>Batch <span class="req">*</span></label>
+        <div class="combo" data-field="s_Batch">
+          <select class="combo-select" onchange="onComboSelect('s_Batch')"></select>
+          <input type="text" class="combo-new" id="s_Batch" placeholder="Type a new batch (e.g. Sun - 9:30 am)" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('s_Batch')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
+      <div class="form-row"><label>Status <span class="req">*</span></label>
+        <select id="s_Status" onchange="onStuStatusChange()"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
       </div>
       <div class="form-row" id="inactiveReasonRow" style="display:none;"><label>Inactive Reason <span class="req">*</span></label>
         <select id="s_InactiveReason" onchange="onStuReasonChange()">
           <option value="">— Select a reason —</option>
-          <option>Waiting for batch</option><option>Academics / higher grade</option>
-          <option>Lost interest</option><option>Re-location</option><option>Other</option>
+          <option value="Waiting for batch">Waiting for batch</option>
+          <option value="Academics / higher grade">Academics / higher grade</option>
+          <option value="Lost interest">Lost interest</option>
+          <option value="Re-location">Re-location</option>
+          <option value="Other">Other</option>
         </select>
-        <input type="text" id="s_InactiveReasonOther" placeholder="Please specify" style="display:none;margin-top:8px;">
+        <input type="text" id="s_InactiveReasonOther" placeholder="Please specify the reason" style="display:none;margin-top:8px;">
       </div>
-      <div class="form-row"><label>Join Date</label><input type="date" id="s_JoinDate"></div>
-      <div class="form-row"><label>Parent / Student Email <small>(comma-separate multiple)</small></label><input type="text" id="s_Email" placeholder="mom@gmail.com, dad@gmail.com"></div>
-      <div class="form-row"><label>Contact</label><input type="text" id="s_Contact"></div>
-      <div class="form-row"><label>School</label><input type="text" id="s_School"></div>
-      <div class="form-row"><label>Address</label><input type="text" id="s_Address"></div>
-      <div class="form-row"><label>Monthly Fee</label><input type="text" id="s_Fee"></div>
-      <div class="form-row"><label>Payment Ref</label><input type="text" id="s_PayRef" placeholder="acct / UPI ref"></div>
-      <div class="form-row"><label>Photo (Drive link or URL)</label><input type="text" id="s_Photo"></div>
-      <div class="wa-actions">
-        <button class="wa-btn wa-cancel" onclick="closeStudentForm()">Cancel</button>
-        <button class="wa-btn pf-save" id="s_SaveBtn" onclick="saveStudent()">Save</button>
+      <div class="form-row"><label>Join Date <span class="req">*</span></label><input type="date" id="s_JoinDate"></div>
+      <div class="form-row"><label>Parent / Student Email <span class="req">*</span></label>
+        <input type="text" id="s_Email" placeholder="parent@gmail.com (comma-separate for multiple)">
+        <small>Used for login. Separate multiple emails with commas.</small>
       </div>
-      <div class="msg" id="s_Msg"></div>
+      <div class="form-row"><label>Contact Number <span class="req">*</span></label><input type="text" id="s_Contact" placeholder="e.g. +91 98765 43210"></div>
+
+      <div class="form-divider">Optional</div>
+      <div class="form-row"><label>School</label>
+        <div class="combo" data-field="s_School">
+          <select class="combo-select" onchange="onComboSelect('s_School')"></select>
+          <input type="text" class="combo-new" id="s_School" placeholder="Type a new school" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('s_School')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
+      <div class="form-row"><label>Address</label><textarea id="s_Address" rows="2" placeholder="Home address (optional)"></textarea></div>
+      <div class="form-row"><label>Monthly Fee</label><input type="text" id="s_Fee" placeholder="e.g. 1500" inputmode="decimal"></div>
+      <div class="form-row"><label>Payment Ref</label><input type="text" id="s_PayRef" placeholder="acct / UPI ref (optional)"></div>
+      <div class="form-row"><label>Photo URL</label><input type="text" id="s_Photo" placeholder="Google Drive share link or image URL (optional)"></div>
+    </div>
+    <div class="modal-msg" id="s_Msg"></div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeStudentForm()">Cancel</button>
+      <button class="btn-save" id="s_SaveBtn" onclick="saveStudent()">Save</button>
     </div>
   </div>
 </div>
@@ -868,13 +948,15 @@ function fillStudentFilters(){
   setSel('stuFilterTutor','All tutors',tutors);
   setSel('stuFilterCountry','All countries',countries);
   setSel('stuFilterBatch','All batches',batches);
-  $('levelList').innerHTML=levelsData.map(l=>`<option value="${esc(l.name)}">`).join('');
-  $('stuCountryList').innerHTML=countries.map(c=>`<option value="${esc(c)}">`).join('');
-  $('tutorList').innerHTML=tutors.map(t=>`<option value="${esc(t)}">`).join('');
-  $('stuBatchList').innerHTML=batches.map(b=>`<option value="${esc(b)}">`).join('');
 }
 
 let filteredStudents=[];
+window.clearStudentFilters=function(){
+  ['stuSearch'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  ['stuFilterCountry','stuFilterLevel','stuFilterTutor','stuFilterBatch'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  $('stuFilterStatus').value=''; // back to Active default
+  renderStudents();
+};
 window.renderStudents=function(){
   const list=$('studentsList');
   const q=($('stuSearch').value||'').trim().toLowerCase();
@@ -891,6 +973,7 @@ window.renderStudents=function(){
   rows.sort((a,b)=>String(a.Name||'').localeCompare(String(b.Name||'')));
   filteredStudents=rows;
   $('stuCountLine').innerHTML=`<strong>${rows.length}</strong> student${rows.length!==1?'s':''} shown · ${studentsData.length} total`;
+  const hc=$('stuHeadCount');if(hc)hc.textContent=rows.length;
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match.</div>';return;}
   const editIco='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
@@ -1090,6 +1173,38 @@ window.onStuStatusChange=function(){
 };
 window.onStuReasonChange=function(){const o=$('s_InactiveReason').value==='Other';$('s_InactiveReasonOther').style.display=o?'':'none';if(!o)$('s_InactiveReasonOther').value='';};
 let editingStudentId=null;
+/* ── Combo control (select existing OR add new), ported from production ── */
+const COMBO_ADD='__add_new__';
+function fillCombo(fid,values){
+  const input=$(fid);const combo=input.closest('.combo');const sel=combo.querySelector('.combo-select');
+  const opts=[...new Set(values.filter(v=>v))].sort();
+  sel.innerHTML='<option value="">— Select —</option>'+opts.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('')+`<option value="${COMBO_ADD}">+ Add new…</option>`;
+}
+function setComboValue(fid,value){
+  const input=$(fid);const combo=input.closest('.combo');const sel=combo.querySelector('.combo-select');const back=combo.querySelector('.combo-back');
+  combo.classList.remove('invalid');input.value=value||'';
+  const has=[...sel.options].some(o=>o.value===value&&value!=='');
+  if(value&&!has){sel.style.display='none';input.style.display='';back.style.display='';}
+  else{sel.value=value||'';input.style.display='none';back.style.display='none';sel.style.display='';}
+}
+window.onComboSelect=function(fid){
+  const input=$(fid);const combo=input.closest('.combo');const sel=combo.querySelector('.combo-select');const back=combo.querySelector('.combo-back');
+  combo.classList.remove('invalid');
+  if(sel.value===COMBO_ADD){input.value='';sel.style.display='none';input.style.display='';back.style.display='';input.focus();}
+  else{input.value=sel.value;}
+};
+window.comboBack=function(fid){
+  const input=$(fid);const combo=input.closest('.combo');const sel=combo.querySelector('.combo-select');const back=combo.querySelector('.combo-back');
+  input.value='';input.style.display='none';back.style.display='none';sel.value='';sel.style.display='';sel.focus();
+};
+document.addEventListener('input',function(e){if(e.target.classList&&e.target.classList.contains('combo-new')){const c=e.target.closest('.combo');if(c)c.classList.remove('invalid');}});
+function toDateInputValue(raw){
+  const s=String(raw||'').trim();if(!s)return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  const ym=s.match(/^(\d{4})-(\d{1,2})$/);if(ym)return ym[1]+'-'+String(ym[2]).padStart(2,'0')+'-01';
+  const d=new Date(s);if(!isNaN(d))return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  return '';
+}
 // Next EB### id from existing students (matches production logic).
 function nextStudentId(){
   let max=0,prefix='EB',pad=3;
@@ -1100,61 +1215,101 @@ window.openStudentForm=function(id){
   editingStudentId=id||null;
   const s=id?studentsData.find(x=>x.ID===id):null;
   $('studentModalTitle').textContent=s?'Edit Student':'Add Student';
+  // Populate combos from existing student data
+  fillCombo('s_Level',studentsData.map(x=>x['Current Level']).concat(levelsData.map(l=>l.name)));
+  fillCombo('s_Tutor',studentsData.map(x=>x.Tutor));
+  fillCombo('s_Country',studentsData.map(x=>x.Country));
+  fillCombo('s_Batch',studentsData.map(x=>x.Batch));
+  fillCombo('s_School',studentsData.map(x=>x.School));
   const idInput=$('s_ID'),note=$('s_ID_note');
-  if(s){idInput.value=s.ID;idInput.disabled=true;note.textContent='ID cannot be changed';}
-  else{idInput.value=nextStudentId();idInput.disabled=false;note.textContent='Auto-generated (edit if needed)';}
-  $('s_Name').value=s?(s.Name||''):'';$('s_Level').value=s?(s['Current Level']||''):'';
-  $('s_Country').value=s?(s.Country||''):'';$('s_Tutor').value=s?(s.Tutor||''):'';
-  $('s_Batch').value=s?(s.Batch||''):'';$('s_Status').value=s?(s.Status||'Active'):'Active';
-  $('s_JoinDate').value=s?(s['Join Date']||''):(new Date().toISOString().slice(0,10));
-  $('s_Email').value=s?(s.Email||''):'';
-  $('s_Contact').value=s?(s.Contact||''):'';$('s_School').value=s?(s.School||''):'';
-  $('s_Address').value=s?(s.Address||''):'';$('s_Fee').value=s?(s['Monthly Fee']||''):'';
-  $('s_PayRef').value=s?(s['Payment Ref']||''):'';$('s_Photo').value=s?(s.Photo||''):'';
-  const reason=s?(s['Inactive Reason']||''):'';
-  const presets=['Waiting for batch','Academics / higher grade','Lost interest','Re-location'];
-  if(reason&&!presets.includes(reason)){$('s_InactiveReason').value='Other';$('s_InactiveReasonOther').value=reason;}
-  else{$('s_InactiveReason').value=reason;$('s_InactiveReasonOther').value='';}
+  if(s){
+    idInput.value=s.ID;idInput.disabled=true;note.textContent='ID cannot be changed';
+    $('s_Name').value=s.Name||'';
+    setComboValue('s_Level',s['Current Level']||'');setComboValue('s_Tutor',s.Tutor||'');
+    setComboValue('s_Country',s.Country||'');setComboValue('s_Batch',s.Batch||'');setComboValue('s_School',s.School||'');
+    $('s_Status').value=s.Status||'Active';
+    $('s_JoinDate').value=toDateInputValue(s['Join Date']);
+    $('s_Email').value=s.Email||'';$('s_Contact').value=s.Contact||'';
+    $('s_Address').value=s.Address||'';$('s_Fee').value=s['Monthly Fee']||'';
+    $('s_PayRef').value=s['Payment Ref']||'';$('s_Photo').value=s.Photo||'';
+    const reason=s['Inactive Reason']||'';
+    const presets=['Waiting for batch','Academics / higher grade','Lost interest','Re-location'];
+    if(reason&&!presets.includes(reason)){$('s_InactiveReason').value='Other';$('s_InactiveReasonOther').value=reason;}
+    else{$('s_InactiveReason').value=reason;$('s_InactiveReasonOther').value='';}
+    editStatusOnOpen=s.Status||'Active';
+  }else{
+    idInput.value=nextStudentId();idInput.disabled=false;note.textContent='Auto-generated (edit if needed)';
+    $('s_Name').value='';
+    ['s_Level','s_Tutor','s_Country','s_Batch','s_School'].forEach(f=>setComboValue(f,''));
+    $('s_Status').value='Active';
+    const t=new Date();$('s_JoinDate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+    $('s_Email').value='';$('s_Contact').value='';$('s_Address').value='';$('s_Fee').value='';
+    $('s_PayRef').value='';$('s_Photo').value='';$('s_InactiveReason').value='';$('s_InactiveReasonOther').value='';
+    editStatusOnOpen='Active';
+  }
   onStuStatusChange();onStuReasonChange();
-  editStatusOnOpen=s?(s.Status||'Active'):'Active';
-  $('s_Msg').textContent='';$('s_SaveBtn').disabled=false;
+  $('s_Msg').textContent='';$('s_Msg').className='modal-msg';$('s_SaveBtn').disabled=false;
   $('studentModal').classList.add('open');
 };
 window.closeStudentForm=function(){$('studentModal').classList.remove('open');editingStudentId=null;};
 function splitEmailsClient(raw){return String(raw||'').toLowerCase().split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);}
 window.saveStudent=async function(){
   const msg=$('s_Msg'),btn=$('s_SaveBtn');
-  const id=$('s_ID').value.trim();const name=$('s_Name').value.trim();
-  if(!id){msg.textContent='Student ID is required.';msg.className='msg err';return;}
-  if(!name){msg.textContent='Name is required.';msg.className='msg err';return;}
+  const id=$('s_ID').value.trim();
+  // Required fields (match production): Name, Level, Tutor, Country, Batch, Status, Join Date, Email, Contact
+  const req=[
+    {id:'s_Name',label:'Name',combo:false},
+    {id:'s_Level',label:'Current Level',combo:true},
+    {id:'s_Tutor',label:'Tutor',combo:true},
+    {id:'s_Country',label:'Country',combo:true},
+    {id:'s_Batch',label:'Batch',combo:true},
+    {id:'s_JoinDate',label:'Join Date',combo:false},
+    {id:'s_Email',label:'Parent / Student Email',combo:false},
+    {id:'s_Contact',label:'Contact Number',combo:false}
+  ];
+  // clear previous invalid marks
+  document.querySelectorAll('#studentModal .invalid').forEach(el=>el.classList.remove('invalid'));
+  const missing=[];
+  req.forEach(f=>{
+    const val=$(f.id).value.trim();
+    if(!val){missing.push(f.label);
+      if(f.combo){$(f.id).closest('.combo').classList.add('invalid');}
+      else{$(f.id).classList.add('invalid');}
+    }
+  });
+  if(!id){missing.unshift('Student ID');$('s_ID').classList.add('invalid');}
+  if(missing.length){
+    msg.innerHTML='Please fill the required field'+(missing.length>1?'s':'')+': <strong>'+missing.map(esc).join(', ')+'</strong>';
+    msg.className='modal-msg err';return;
+  }
   const status=$('s_Status').value;
   let inactiveReason='';
   if(status==='Inactive'){
     inactiveReason=$('s_InactiveReason').value==='Other'?$('s_InactiveReasonOther').value.trim():$('s_InactiveReason').value;
-    if(!inactiveReason){msg.textContent='Please provide the Inactive Reason.';msg.className='msg err';return;}
+    if(!inactiveReason){
+      ($('s_InactiveReason').value==='Other'?$('s_InactiveReasonOther'):$('s_InactiveReason')).classList.add('invalid');
+      msg.innerHTML='Please provide the <strong>Inactive Reason</strong>.';msg.className='modal-msg err';return;
+    }
   }
   const email=$('s_Email').value.trim();
   const data={
-    ID:id,Name:name,'Current Level':$('s_Level').value.trim(),Country:$('s_Country').value.trim(),
+    ID:id,Name:$('s_Name').value.trim(),'Current Level':$('s_Level').value.trim(),Country:$('s_Country').value.trim(),
     Tutor:$('s_Tutor').value.trim(),Batch:$('s_Batch').value.trim(),Status:status,
     'Join Date':$('s_JoinDate').value,Email:email,parentEmails:splitEmailsClient(email),
     Contact:$('s_Contact').value.trim(),School:$('s_School').value.trim(),Address:$('s_Address').value.trim(),
     'Monthly Fee':$('s_Fee').value.trim(),'Payment Ref':$('s_PayRef').value.trim(),Photo:$('s_Photo').value.trim(),
     'Inactive Reason':inactiveReason,updatedAt:serverTimestamp(),updatedBy:currentUser.email
   };
-  // Stamp Inactive Date when moving to Inactive; clear when back to Active
   if(status==='Inactive'&&editStatusOnOpen==='Active')data['Inactive Date']=new Date().toISOString().slice(0,10);
   if(status==='Active')data['Inactive Date']='';
-  btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='modal-msg';
   try{
     await setDoc(doc(db,'students',id),data,{merge:true});
-    // update local cache
     const idx=studentsData.findIndex(s=>s.ID===id);
-    if(idx>=0)studentsData[idx]={...studentsData[idx],...data};
-    else studentsData.push({_id:id,...data});
+    if(idx>=0)studentsData[idx]={...studentsData[idx],...data};else studentsData.push({_id:id,...data});
     closeStudentForm();fillStudentFilters();renderStudents();
     if($('profileScreen').style.display!=='none'&&currentStudentId===id)openProfile(id);
-  }catch(e){console.error('saveStudent',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
+  }catch(e){console.error('saveStudent',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='modal-msg err';btn.disabled=false;}
 };
 </script>
 </body>
