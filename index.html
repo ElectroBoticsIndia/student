@@ -379,6 +379,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .risk-colfilter select{font-family:var(--font-mono);font-size:11px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);outline:none;width:100%}
 .rate-pct{font-family:var(--font-mono);font-weight:700}
 .rate-good{color:#5a7a00}.rate-watch{color:#9a7200}.rate-bad{color:#c0472a}.rate-na{color:var(--text-light)}
+.ts-table th,.ts-table td{white-space:nowrap;text-align:center}
+.ts-table td:first-child,.ts-table th:first-child{text-align:left}
+.ts-pct{font-family:var(--font-mono);font-weight:700;font-size:12px;padding:3px 9px;border-radius:20px;display:inline-block}
+.ts-pct.ts-good{background:#eef6d8;color:#5a7a00}.ts-pct.ts-watch{background:#fdf1d6;color:#9a7200}.ts-pct.ts-bad{background:#fdeae5;color:#c0472a}.ts-pct.ts-na{background:var(--surface-alt);color:var(--text-light)}
+.ts-count{font-family:var(--font-mono);font-weight:700;font-size:12px;display:inline-block;min-width:22px}
+.ts-count.ts-green{color:#5a7a00}.ts-count.ts-yellow{color:#9a7200}.ts-count.ts-red{color:#c0472a}.ts-count.ts-nodata{color:var(--text-light)}
+.ts-cell{display:inline-flex;align-items:center;gap:6px}
+.ts-note-btn{display:inline-flex;align-items:center;justify-content:center;padding:3px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
+.ts-note-btn:hover{border-color:var(--accent);color:var(--accent)}
+.avail-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim)}
+.avail-legend .lg{display:inline-flex;align-items:center;gap:6px}
+.avail-legend .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+table.avail{border-collapse:separate;border-spacing:4px;width:100%;min-width:680px}
+table.avail th{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;padding:6px 4px;text-align:center}
+table.avail th.slot-h{text-align:right;white-space:nowrap;color:var(--text-light);font-weight:600}
+table.avail td{border-radius:7px;padding:6px;vertical-align:top;min-width:72px;height:46px;background:var(--bg);border:1px dashed var(--border)}
+table.avail td.occ{border:1px solid transparent}
+.avail-chip{display:flex;align-items:center;justify-content:space-between;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;border-radius:4px;padding:2px 5px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.avail-count{flex:none;background:rgba(255,255,255,.28);border-radius:8px;padding:0 5px;font-weight:700;font-size:9px}
+.avail-free-txt{font-family:var(--font-mono);font-size:9px;color:var(--text-light);opacity:.6}
+.tn-list{max-height:280px;overflow-y:auto;margin-bottom:14px}
+.tn-item{padding:10px 0;border-bottom:1px solid var(--border)}.tn-item:last-child{border-bottom:none}
+.tn-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:3px}
+.tn-text{font-size:13px;color:var(--text);white-space:pre-wrap}
+.tn-empty{padding:20px;text-align:center;font-family:var(--font-mono);font-size:12px;color:var(--text-light)}
+#tn_Input{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:13px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;outline:none;resize:vertical}
 .level-links .link-cert{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--amber-light);color:#9a7200;display:inline-flex;align-items:center;gap:4px;flex:1;justify-content:center}
 .level-links .link-cert:hover{background:var(--amber);color:#fff}
 .cert-preview{background:var(--surface-alt);border-radius:10px;padding:12px;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center}
@@ -440,6 +466,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   <div class="dash-tabs" id="staffTabs" style="display:none;">
     <button class="dash-tab active" data-tab="students" onclick="setTab('students')">Students</button>
     <button class="dash-tab" data-tab="risk" onclick="setTab('risk')">At-Risk</button>
+    <button class="dash-tab" data-tab="tutor" onclick="setTab('tutor')">Tutor</button>
     <button class="dash-tab" data-tab="payments" onclick="setTab('payments')">Payments</button>
     <button class="dash-tab" data-tab="leads" onclick="setTab('leads')">Leads</button>
   </div>
@@ -655,6 +682,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
     <div class="modal-card" style="max-width:460px;">
       <div class="modal-head"><h3 id="compHistTitle">Components History</h3><button class="modal-close" onclick="closeComponentHistory()">&times;</button></div>
       <div class="modal-body"><div class="hist-list" id="compHistList"></div><div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeComponentHistory()">Close</button></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ TUTOR ═══ -->
+  <div id="tutorScreen" style="display:none;">
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Performance <span id="tutorStatsNote" class="trend-summary"></span></span></div></div>
+      <div class="risk-criteria">Aggregated per tutor from the same rolling 4-week window as At-Risk. Click a note icon to log/view notes.</div>
+      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="tutorStatsTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+    </div>
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Availability by Day &amp; Time Slot</span></div></div>
+      <div style="padding:0 20px 8px;"><div id="availabilityLegend" class="avail-legend"></div></div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="availabilityGrid"></div></div>
+    </div>
+  </div>
+
+  <!-- Tutor notes modal -->
+  <div class="modal-overlay" id="tutorNotesModal">
+    <div class="modal-card" style="max-width:460px;">
+      <div class="modal-head"><h3 id="tutorNotesTitle">Notes</h3><button class="modal-close" onclick="closeTutorNotes()">&times;</button></div>
+      <div class="modal-body">
+        <div class="tn-list" id="tutorNotesList"></div>
+        <div class="form-row"><label>Add a note</label><textarea id="tn_Input" rows="3" placeholder="Type a note…"></textarea></div>
+        <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeTutorNotes()">Close</button><button class="wa-btn pf-save" id="tn_SaveBtn" onclick="saveTutorNote()">Add note</button></div>
+        <div class="msg" id="tn_Msg"></div>
+      </div>
     </div>
   </div>
 
@@ -942,7 +996,7 @@ function enterApp(){
   subscribeLeads();
 }
 window.setTab=function(tab){
-  ['leads','students','payments','risk'].forEach(t=>{
+  ['leads','students','payments','risk','tutor'].forEach(t=>{
     const s=$(t+'Screen');if(s)s.style.display=(t===tab)?'':'none';
   });
   document.querySelectorAll('#staffTabs .dash-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tab')===tab));
@@ -951,6 +1005,7 @@ window.setTab=function(tab){
     if(!studentsLoaded)loadStudentsList();
   }
   if(tab==='risk')loadRisk();
+  if(tab==='tutor')loadTutor();
   if(tab==='payments'){
     if(userRole==='admin')$('payMigCard').style.display='';
     initPayments();
@@ -2247,6 +2302,98 @@ window.downloadRiskExcel=function(){
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'At-Risk');
   XLSX.writeFile(wb,`ElectroBotics_AtRisk_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
+
+// ═══════════ TUTOR ═══════════
+let tutorNotesData=[], tutorNotesLoaded=false, tutorNotesCtx={tutor:'',category:''};
+async function loadTutor(){
+  // needs risk data (for performance) + students (for availability) + notes
+  if(!riskData){await loadRisk();}
+  if(!tutorNotesLoaded){try{const snap=await getDocs(collection(db,'tutorNotes'));tutorNotesData=snap.docs.map(d=>d.data());tutorNotesLoaded=true;}catch(e){tutorNotesData=[];}}
+  renderTutorStats();buildAvailabilityGrid();
+}
+function latestTutorNote(tutor,category){
+  const notes=tutorNotesData.filter(n=>String(n.Tutor||'').trim()===tutor&&String(n.Category||'').trim()===category)
+    .sort((a,b)=>{const ta=a.at&&a.at.toDate?a.at.toDate().getTime():0,tb=b.at&&b.at.toDate?b.at.toDate().getTime():0;return tb-ta;});
+  return notes.length?notes[0]:null;
+}
+function noteWhen(n){return n.at&&n.at.toDate?n.at.toDate().toLocaleString():'';}
+window.renderTutorStats=function(){
+  const el=$('tutorStatsTable');if(!el)return;
+  if(!riskData||!Array.isArray(riskData.students)){el.innerHTML='<div class="pay-empty">Load At-Risk data first (import Attendance & Assignments).</div>';return;}
+  $('tutorStatsNote').textContent='· rolling 4 weeks';
+  const map={};
+  riskData.students.forEach(s=>{
+    const t=s.tutor||'Unassigned';if(!map[t])map[t]={total:0,attSum:0,attN:0,subSum:0,subN:0,green:0,yellow:0,red:0,nodata:0};
+    const g=map[t];g.total++;
+    if(s.att_rate!==null&&s.att_rate!==undefined){g.attSum+=s.att_rate;g.attN++;}
+    if(s.sub_rate!==null&&s.sub_rate!==undefined){g.subSum+=s.sub_rate;g.subN++;}
+    if(s.risk==='green')g.green++;else if(s.risk==='yellow')g.yellow++;else if(s.risk==='red')g.red++;else g.nodata++;
+  });
+  const tutors=Object.keys(map).sort();
+  if(!tutors.length){el.innerHTML='<div class="pay-empty">No tutor data.</div>';return;}
+  const pctBadge=(v,n)=>{if(!n)return '<span class="ts-pct ts-na">—</span>';const p=Math.round((v/n)*100);const cls=p>=60?'ts-good':p>=50?'ts-watch':'ts-bad';return `<span class="ts-pct ${cls}">${p}%</span>`;};
+  el.innerHTML=`<table class="pay-table ts-table"><thead><tr><th>Tutor</th><th>Students</th><th>Attendance</th><th>Submissions</th><th>On track</th><th>Watch</th><th>At risk</th><th>No data</th></tr></thead><tbody>${tutors.map(t=>{
+    const g=map[t];
+    const noteBtn=(cat)=>{const latest=latestTutorNote(t,cat);const tip=latest?`${latest.Author||'Note'} (${noteWhen(latest)}):\n${latest.Note||''}`:`${cat} notes — none yet`;return `<button class="ts-note-btn" title="${esc(tip)}" onclick="openTutorNotes('${esc(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;};
+    return `<tr><td><strong>${esc(t)}</strong></td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.attSum,g.attN)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.subSum,g.subN)}${noteBtn('Submission')}</span></td><td><span class="ts-count ts-green">${g.green}</span></td><td><span class="ts-count ts-yellow">${g.yellow}</span></td><td><span class="ts-count ts-red">${g.red}</span></td><td><span class="ts-count ts-nodata">${g.nodata}</span></td></tr>`;
+  }).join('')}</tbody></table>`;
+};
+window.openTutorNotes=function(tutor,category){
+  tutorNotesCtx={tutor,category};$('tutorNotesTitle').textContent=`${category} notes · ${tutor}`;
+  $('tn_Input').value='';$('tn_Msg').textContent='';$('tn_SaveBtn').disabled=false;
+  renderTutorNotesList();$('tutorNotesModal').classList.add('open');
+};
+window.closeTutorNotes=function(){$('tutorNotesModal').classList.remove('open');};
+function renderTutorNotesList(){
+  const box=$('tutorNotesList');const {tutor,category}=tutorNotesCtx;
+  const notes=tutorNotesData.filter(n=>String(n.Tutor||'').trim()===tutor&&String(n.Category||'').trim()===category)
+    .sort((a,b)=>{const ta=a.at&&a.at.toDate?a.at.toDate().getTime():0,tb=b.at&&b.at.toDate?b.at.toDate().getTime():0;return tb-ta;});
+  if(!notes.length){box.innerHTML='<div class="tn-empty">No notes yet.</div>';return;}
+  box.innerHTML=notes.map(n=>`<div class="tn-item"><div class="tn-meta">${esc(noteWhen(n))}${n.Author?(' · '+esc(String(n.Author))):''}</div><div class="tn-text">${esc(String(n.Note||''))}</div></div>`).join('');
+}
+window.saveTutorNote=async function(){
+  const note=$('tn_Input').value.trim();const msg=$('tn_Msg'),btn=$('tn_SaveBtn');
+  if(!note){msg.textContent='Please type a note.';msg.className='msg err';return;}
+  btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  try{
+    await addDoc(collection(db,'tutorNotes'),{Tutor:tutorNotesCtx.tutor,Category:tutorNotesCtx.category,Note:note,Author:(currentUser&&currentUser.email)||'',at:serverTimestamp()});
+    $('tn_Input').value='';msg.textContent='';btn.disabled=false;
+    const snap=await getDocs(collection(db,'tutorNotes'));tutorNotesData=snap.docs.map(d=>d.data());
+    renderTutorNotesList();renderTutorStats();
+  }catch(e){console.error('saveTutorNote',e);msg.textContent='Could not save.';msg.className='msg err';btn.disabled=false;}
+};
+
+// Tutor availability grid
+function buildAvailabilityGrid(){
+  const grid=$('availabilityGrid'),legend=$('availabilityLegend');if(!grid)return;
+  const DAY_ORDER=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const DAY_ALIAS={mon:'Mon',monday:'Mon',tue:'Tue',tues:'Tue',tuesday:'Tue',wed:'Wed',weds:'Wed',wednesday:'Wed',thu:'Thu',thur:'Thu',thurs:'Thu',thursday:'Thu',fri:'Fri',friday:'Fri',sat:'Sat',saturday:'Sat',sun:'Sun',sunday:'Sun'};
+  const PALETTE=['#008fa0','#c77d00','#7048a8','#2e8b57','#b03060','#3a6ea5','#9a6324','#d4496a','#46887f','#8a5a00'];
+  function parseBatch(raw){const s=String(raw||'').trim();if(!s)return null;const dm=s.match(/^([A-Za-z]+)/);if(!dm)return null;const day=DAY_ALIAS[dm[1].toLowerCase()];if(!day)return null;const tm=s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);if(!tm)return null;let h=parseInt(tm[1]),min=tm[2]?parseInt(tm[2]):0;const ap=tm[3].toLowerCase();if(ap==='pm'&&h!==12)h+=12;if(ap==='am'&&h===12)h=0;const mins=h*60+min;const slot=(((h%12)||12))+':'+String(min).padStart(2,'0')+' '+ap;return{day,slot,mins};}
+  const occupancy={},slotMins={},tutorsSet=new Set();
+  studentsData.filter(s=>(s.Status||'Active').toLowerCase()==='active').forEach(s=>{
+    const tutor=(s.Tutor||'').trim();const p=parseBatch(s.Batch);if(!tutor||!p)return;
+    tutorsSet.add(tutor);slotMins[p.mins]=p.slot;(occupancy[p.mins]=occupancy[p.mins]||{});const cell=(occupancy[p.mins][p.day]=occupancy[p.mins][p.day]||{});cell[tutor]=(cell[tutor]||0)+1;
+  });
+  const tutors=[...tutorsSet].sort();const slots=Object.keys(slotMins).map(Number).sort((a,b)=>a-b);
+  if(!slots.length){legend.innerHTML='';grid.innerHTML='<p style="font-family:var(--font-mono);font-size:12px;color:var(--text-light);">No batch/time data found. Add values like <strong>Sun - 9:30 am</strong> in the Batch field.</p>';return;}
+  const colorOf={};tutors.forEach((t,i)=>colorOf[t]=PALETTE[i%PALETTE.length]);
+  legend.innerHTML=tutors.map(t=>`<span class="lg"><span class="sw" style="background:${colorOf[t]}"></span>${esc(t)}</span>`).join('')+`<span class="lg"><span class="sw" style="background:var(--bg);border:1px dashed var(--border)"></span>Free</span>`;
+  let html='<table class="avail"><thead><tr><th class="slot-h">Time</th>'+DAY_ORDER.map(d=>`<th>${d}</th>`).join('')+'</tr></thead><tbody>';
+  slots.forEach(mins=>{
+    html+=`<tr><th class="slot-h">${esc(slotMins[mins])}</th>`;
+    DAY_ORDER.forEach(day=>{
+      const cell=occupancy[mins]&&occupancy[mins][day]?occupancy[mins][day]:null;const here=cell?Object.keys(cell).sort():[];
+      if(here.length){
+        const chips=here.map(t=>`<span class="avail-chip" style="background:${colorOf[t]}" title="${esc(t)} — ${cell[t]} student${cell[t]===1?'':'s'}">${esc(t)} <span class="avail-count">${cell[t]}</span></span>`).join('');
+        const free=tutors.filter(t=>!here.includes(t));
+        html+=`<td class="occ">${chips}${free.length?`<span class="avail-free-txt" title="Free: ${esc(free.join(', '))}">+${free.length} free</span>`:''}</td>`;
+      }else{html+=`<td class="free"><span class="avail-free-txt">All free</span></td>`;}
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';grid.innerHTML=html;
+}
 </script>
 </body>
 </html>
