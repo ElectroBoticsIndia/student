@@ -368,6 +368,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .trend-tab:last-child{border-right:none}
 .trend-tab.active{background:var(--accent);color:#fff}
 .trend-note{font-family:var(--font-body);font-size:12px;color:var(--text-light);padding:0 20px 12px}
+.risk-criteria{font-family:var(--font-body);font-size:12px;color:var(--text-light);padding:4px 20px 12px;line-height:1.5}
+.risk-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;display:inline-block}
+.risk-dot.red{background:var(--red)}.risk-dot.yellow{background:var(--amber)}.risk-dot.green{background:var(--green)}.risk-dot.nodata{background:var(--text-light)}
+.risk-stat-btn{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:6px 13px;border-radius:20px;border:1px solid var(--border);background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+.risk-stat-btn:hover{border-color:var(--text-light)}
+.risk-stat-btn.active{background:var(--accent-light);color:var(--accent-dark);border-color:var(--accent)}
+.risk-badge{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:5px}
+.risk-badge.red{background:#fdeae5;color:#c0472a}.risk-badge.yellow{background:#fdf1d6;color:#9a7200}.risk-badge.green{background:#eef6d8;color:#5a7a00}.risk-badge.nodata{background:var(--surface-alt);color:var(--text-light)}
+.risk-colfilter select{font-family:var(--font-mono);font-size:11px;padding:5px 6px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text);outline:none;width:100%}
+.rate-pct{font-family:var(--font-mono);font-weight:700}
+.rate-good{color:#5a7a00}.rate-watch{color:#9a7200}.rate-bad{color:#c0472a}.rate-na{color:var(--text-light)}
 .level-links .link-cert{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:var(--amber-light);color:#9a7200;display:inline-flex;align-items:center;gap:4px;flex:1;justify-content:center}
 .level-links .link-cert:hover{background:var(--amber);color:#fff}
 .cert-preview{background:var(--surface-alt);border-radius:10px;padding:12px;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center}
@@ -428,8 +439,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
   <!-- Staff tabs (shown only for staff after login) -->
   <div class="dash-tabs" id="staffTabs" style="display:none;">
     <button class="dash-tab active" data-tab="students" onclick="setTab('students')">Students</button>
-    <button class="dash-tab" data-tab="leads" onclick="setTab('leads')">Leads</button>
+    <button class="dash-tab" data-tab="risk" onclick="setTab('risk')">At-Risk</button>
     <button class="dash-tab" data-tab="payments" onclick="setTab('payments')">Payments</button>
+    <button class="dash-tab" data-tab="leads" onclick="setTab('leads')">Leads</button>
   </div>
 
   <div id="leadsScreen" style="display:none;">
@@ -600,6 +612,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
         <textarea id="migAttendance" placeholder="StudentID,Date,Status,Count&#10;EB001,2026-07-06,present,1"></textarea>
         <div class="stu-mig-actions"><button class="btn-primary" onclick="migAttendance()">Import Attendance</button><span class="msg" id="migAttendanceMsg"></span></div>
       </div>
+      <div class="stu-mig">
+        <label class="stu-mig-label">Assignments CSV <span class="stu-mig-hint">(StudentID, Date, Status, Count) — Status "submitted" counts</span></label>
+        <textarea id="migAssignments" placeholder="StudentID,Date,Status,Count&#10;EB001,2026-07-06,submitted,1"></textarea>
+        <div class="stu-mig-actions"><button class="btn-primary" onclick="migAssignments()">Import Assignments</button><span class="msg" id="migAssignmentsMsg"></span></div>
+      </div>
     </div>
   </div>
 
@@ -638,6 +655,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
     <div class="modal-card" style="max-width:460px;">
       <div class="modal-head"><h3 id="compHistTitle">Components History</h3><button class="modal-close" onclick="closeComponentHistory()">&times;</button></div>
       <div class="modal-body"><div class="hist-list" id="compHistList"></div><div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeComponentHistory()">Close</button></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ AT-RISK ═══ -->
+  <div id="riskScreen" style="display:none;">
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header">
+        <div class="stu-title-wrap"><span class="table-title">At-Risk Students <span id="riskWindow" class="trend-summary"></span></span></div>
+        <div class="stu-actions"><button class="btn-download" onclick="downloadRiskExcel()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download Excel</button></div>
+      </div>
+      <div class="pay-summary" id="riskSummary" style="padding:12px 20px 0;"></div>
+      <div class="risk-criteria">Risk = attendance &lt; 50% or submissions &lt; 40% · Watch = attendance 50–60% or submissions 40–50% · On track = above both · No data = nothing recorded (rolling 4 weeks).</div>
+      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="riskTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
   </div>
 
@@ -912,7 +942,7 @@ function enterApp(){
   subscribeLeads();
 }
 window.setTab=function(tab){
-  ['leads','students','payments'].forEach(t=>{
+  ['leads','students','payments','risk'].forEach(t=>{
     const s=$(t+'Screen');if(s)s.style.display=(t===tab)?'':'none';
   });
   document.querySelectorAll('#staffTabs .dash-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tab')===tab));
@@ -920,6 +950,7 @@ window.setTab=function(tab){
     if(userRole==='admin')$('stuMigToggleCard').style.display='';
     if(!studentsLoaded)loadStudentsList();
   }
+  if(tab==='risk')loadRisk();
   if(tab==='payments'){
     if(userRole==='admin')$('payMigCard').style.display='';
     initPayments();
@@ -2116,6 +2147,105 @@ window.migAttendance=async function(){
   try{if(n>0)await batch.commit();}catch(e){fail+=n;done-=n;}
   msg.textContent=`Imported ${done} attendance row(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
   attendanceLoaded=false;
+};
+window.migAssignments=async function(){
+  const records=parseCSV($('migAssignments').value.trim());const msg=$('migAssignmentsMsg');
+  if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
+  msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
+  let done=0,fail=0,batch=writeBatch(db),n=0;
+  for(const r of records){
+    try{
+      const sid=String(r.StudentID||r['Student ID']||'').trim();const date=String(r.Date||'').trim();
+      if(!sid||!date){fail++;continue;}
+      const id=(sid+'_'+date+'_'+(r.Status||'')).replace(/[\/#\.\[\]]/g,'_');
+      batch.set(doc(db,'assignments',id),{StudentID:sid,Date:date,Status:r.Status||'',Count:r.Count||'1',migratedAt:serverTimestamp()},{merge:true});
+      n++;done++;if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
+    }catch(e){console.error('mig asg',r,e);fail++;}
+  }
+  try{if(n>0)await batch.commit();}catch(e){fail+=n;done-=n;}
+  msg.textContent=`Imported ${done} assignment row(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
+  assignmentsLoaded=false;
+};
+
+// ═══════════ AT-RISK ═══════════
+let assignmentsData=[], assignmentsLoaded=false, riskData=null;
+let riskCol={country:'',tutor:'',batch:'',risk:'',att:'',sub:''};
+const ATT_RED=0.50,ATT_YELLOW=0.60,SUB_RED=0.40,SUB_YELLOW=0.50,RISK_WINDOW_WEEKS=4,EXPECTED_PER_WEEK=1;
+function riskBand(a,s){if(a===null&&s===null)return 'nodata';const aa=a===null?1:a,ss=s===null?1:s;if(aa<ATT_RED||ss<SUB_RED)return 'red';if(aa<ATT_YELLOW||ss<SUB_YELLOW)return 'yellow';return 'green';}
+window.setRiskCol=function(k,v){riskCol[k]=v;renderRisk();};
+async function loadRisk(){
+  const t=$('riskTable');t.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
+  if(!studentsLoaded){try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}catch(e){}}
+  if(!attendanceLoaded){try{const snap=await getDocs(collection(db,'attendance'));attendanceData=snap.docs.map(d=>d.data());attendanceLoaded=true;}catch(e){attendanceData=[];}}
+  if(!assignmentsLoaded){try{const snap=await getDocs(collection(db,'assignments'));assignmentsData=snap.docs.map(d=>d.data());assignmentsLoaded=true;}catch(e){assignmentsData=[];}}
+  computeRisk();renderRisk();
+}
+function computeRisk(){
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-RISK_WINDOW_WEEKS*7);
+  const expected=RISK_WINDOW_WEEKS*EXPECTED_PER_WEEK;
+  const active=studentsData.filter(s=>{const st=String(s.Status||'Active').toLowerCase();return st==='active'||st==='';});
+  const att={};
+  attendanceData.forEach(r=>{const d=parseD(r.Date);if(!d||d<cutoff)return;const id=String(r.StudentID||'').trim();if(!id)return;let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;const st=String(r.Status||'').toLowerCase();if(!att[id])att[id]={present:0,total:0};att[id].total+=c;if(st==='present')att[id].present+=c;});
+  const sub={};
+  assignmentsData.forEach(r=>{const d=parseD(r.Date);if(!d||d<cutoff)return;const id=String(r.StudentID||'').trim();if(!id)return;if(String(r.Status||'').toLowerCase()!=='submitted')return;let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;sub[id]=(sub[id]||0)+c;});
+  let rows=active.map(s=>{
+    const id=String(s.ID||'').trim();const a=att[id]||{present:0,total:0};
+    const attRate=a.total>0?a.present/a.total:null;
+    let subRate=expected>0?(sub[id]||0)/expected:null;if(subRate!==null&&subRate>1)subRate=1;
+    return {id,name:s.Name||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
+  });
+  const order={red:0,yellow:1,green:2,nodata:3};
+  const comb=r=>(r.att_rate===null?1:r.att_rate)+(r.sub_rate===null?1:r.sub_rate);
+  rows.sort((x,y)=>order[x.risk]!==order[y.risk]?order[x.risk]-order[y.risk]:comb(x)-comb(y));
+  riskData={students:rows,counts:{red:rows.filter(r=>r.risk==='red').length,yellow:rows.filter(r=>r.risk==='yellow').length,green:rows.filter(r=>r.risk==='green').length,nodata:rows.filter(r=>r.risk==='nodata').length}};
+}
+const rateLabel=(r)=>(r===null||r===undefined)?'No data':Math.round(r*100)+'%';
+function rateCls(r){if(r===null||r===undefined)return 'rate-na';const p=r*100;return p>=60?'rate-good':p>=50?'rate-watch':'rate-bad';}
+window.renderRisk=function(){
+  if(!riskData)return;const c=riskData.counts;
+  $('riskWindow').textContent='· rolling 4 weeks';
+  const rc=(band,label,n)=>`<button class="risk-stat-btn${riskCol.risk===band?' active':''}" onclick="setRiskCol('risk','${band}')"><span class="risk-dot ${band}"></span>${n} ${label}</button>`;
+  $('riskSummary').innerHTML=rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','no data',c.nodata)+`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`;
+  const all=riskData.students;
+  let rows=all.slice();
+  if(riskCol.country)rows=rows.filter(s=>(s.country||'')===riskCol.country);
+  if(riskCol.tutor)rows=rows.filter(s=>(s.tutor||'')===riskCol.tutor);
+  if(riskCol.batch)rows=rows.filter(s=>(s.batch||'')===riskCol.batch);
+  if(riskCol.risk)rows=rows.filter(s=>s.risk===riskCol.risk);
+  if(riskCol.att)rows=rows.filter(s=>rateLabel(s.att_rate)===riskCol.att);
+  if(riskCol.sub)rows=rows.filter(s=>rateLabel(s.sub_rate)===riskCol.sub);
+  window.riskVisibleRows=rows;
+  const matchR=(s,skip)=>{if(skip!=='country'&&riskCol.country&&(s.country||'')!==riskCol.country)return false;if(skip!=='tutor'&&riskCol.tutor&&(s.tutor||'')!==riskCol.tutor)return false;if(skip!=='batch'&&riskCol.batch&&(s.batch||'')!==riskCol.batch)return false;if(skip!=='risk'&&riskCol.risk&&s.risk!==riskCol.risk)return false;if(skip!=='att'&&riskCol.att&&rateLabel(s.att_rate)!==riskCol.att)return false;if(skip!=='sub'&&riskCol.sub&&rateLabel(s.sub_rate)!==riskCol.sub)return false;return true;};
+  const uniqR=(skip,key)=>[...new Set(all.filter(s=>matchR(s,skip)).map(s=>s[key]).filter(Boolean))].sort();
+  const uniqRate=(skip,rk)=>[...new Set(all.filter(s=>matchR(s,skip)).map(s=>rateLabel(s[rk])))].sort((a,b)=>{if(a==='No data')return 1;if(b==='No data')return -1;return parseInt(a)-parseInt(b);});
+  const opt=(vals,sel)=>['<option value="">All</option>'].concat(vals.map(v=>`<option value="${esc(v)}"${sel===v?' selected':''}>${esc(v)}</option>`)).join('');
+  const riskBandsAvail=[...new Set(all.filter(s=>matchR(s,'risk')).map(s=>s.risk))];
+  const riskOpts=`<option value="">All</option>`+['red','yellow','green','nodata'].filter(b=>riskBandsAvail.includes(b)||riskCol.risk===b).map(b=>`<option value="${b}"${riskCol.risk===b?' selected':''}>${({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[b]}</option>`).join('');
+  const bandLabel={red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'};
+  const t=$('riskTable');
+  if(!rows.length){t.innerHTML='<div class="pay-empty">No students match. (If everything is empty, import Attendance & Assignments first.)</div>';return;}
+  t.innerHTML=`<table class="pay-table"><thead>
+    <tr><th>Student</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th></tr>
+    <tr class="risk-colfilter"><th></th>
+      <th><select onchange="setRiskCol('tutor',this.value)">${opt(uniqR('tutor','tutor'),riskCol.tutor)}</select></th>
+      <th><select onchange="setRiskCol('country',this.value)">${opt(uniqR('country','country'),riskCol.country)}</select></th>
+      <th><select onchange="setRiskCol('batch',this.value)">${opt(uniqR('batch','batch'),riskCol.batch)}</select></th>
+      <th><select onchange="setRiskCol('att',this.value)">${opt(uniqRate('att','att_rate'),riskCol.att)}</select></th>
+      <th><select onchange="setRiskCol('sub',this.value)">${opt(uniqRate('sub','sub_rate'),riskCol.sub)}</select></th>
+      <th><select onchange="setRiskCol('risk',this.value)">${riskOpts}</select></th></tr>
+    </thead><tbody>${rows.map(s=>`<tr>
+      <td><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span></td>
+      <td>${esc(s.tutor||'—')}</td><td>${esc(s.country||'—')}</td><td>${esc(s.batch||'—')}</td>
+      <td><span class="rate-pct ${rateCls(s.att_rate)}">${rateLabel(s.att_rate)}</span></td>
+      <td><span class="rate-pct ${rateCls(s.sub_rate)}">${rateLabel(s.sub_rate)}</span></td>
+      <td><span class="risk-badge ${s.risk}"><span class="risk-dot ${s.risk}"></span>${bandLabel[s.risk]}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+};
+window.downloadRiskExcel=function(){
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
+  const rows=(window.riskVisibleRows||[]).map(s=>({'ID':s.id,'Name':s.name,'Tutor':s.tutor,'Country':s.country,'Batch':s.batch,'Attendance':rateLabel(s.att_rate),'Submissions':rateLabel(s.sub_rate),'Risk':({red:'At risk',yellow:'Watch',green:'On track',nodata:'No data'})[s.risk]}));
+  const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'At-Risk');
+  XLSX.writeFile(wb,`ElectroBotics_AtRisk_${new Date().toISOString().slice(0,10)}.xlsx`);
 };
 </script>
 </body>
