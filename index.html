@@ -1048,6 +1048,7 @@ window.setTab=function(tab){
   if(tab==='students'){
     if(userRole==='admin')$('stuMigToggleCard').style.display='';
     if(!studentsLoaded)loadStudentsList();
+    else{fillStudentFilters();renderStudents();}
   }
   if(tab==='risk')loadRisk();
   if(tab==='tutor')loadTutor();
