@@ -400,6 +400,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-actions-sub{display:inline-flex;align-items:center;gap:6px}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
 .pay-sid2{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+/* Payments: Classes + Pending columns */
+.pay-cls{display:flex;flex-direction:column;gap:4px;min-width:120px}
+.pay-cls-n{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--accent-dark)}
+.pay-cls-none{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--text-light)}
+.pay-cls-dates{max-width:190px;line-height:1.8}
+.pay-due{display:flex;flex-direction:column;gap:3px;min-width:110px}
+.pay-due-amt{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--red)}
+.pay-due-detail{font-family:var(--font-mono);font-size:10px;color:var(--text-light);line-height:1.5;max-width:170px}
+@media(max-width:640px){.pay-cls-dates,.pay-due-detail{max-width:130px}}
 #pay_Amount,#pay_Date,#pay_Method,#pay_Note,#wa_Msg{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;outline:none}
 #wa_Msg{resize:vertical;font-size:13px}
 .trend-summary{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-light);text-transform:none;letter-spacing:0}
@@ -706,7 +715,7 @@ table.avail td.occ{border:1px solid transparent}
         <div class="stu-title-wrap">
           <span class="table-title">Fee Payments</span>
           <select id="payMonth" onchange="buildPayments()" class="pay-mini"></select>
-          <select id="payYear" onchange="loadPayments()" class="pay-mini"></select>
+          <select id="payYear" onchange="buildPayments()" class="pay-mini"></select>
           <input type="text" id="payFilterName" class="stu-search" placeholder="Search name, ref, note…" oninput="buildPayments()">
         </div>
         <div class="stu-actions">
@@ -2069,10 +2078,28 @@ window.saveStudent=async function(){
 let paymentsData=[], paymentsLoaded=false, payStatusFilter='pending', payLoading=false, waTargetPhone='';
 let payVisibleRows=[];   // rows currently shown in the Payments table (filters + chip applied)
 const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-function payDocId(sid,year,month,type){return `${String(sid).trim()}_${year}_${month}_${type||'Fee'}`;}
+// Month is normalised to a plain integer everywhere, so a sheet exporting "09" and the
+// month dropdown's "9" resolve to the SAME document instead of two rival rows.
+const payM=(m)=>{const n=parseInt(String(m||'').trim(),10);return isNaN(n)?'':String(n);};
+const payY=(y)=>{const n=parseInt(String(y||'').trim(),10);return isNaN(n)?'':String(n);};
+function payDocId(sid,year,month,type){return `${String(sid).trim()}_${payY(year)}_${payM(month)}_${type||'Fee'}`;}
+// Lookups used to be a linear scan of every payment, run several times per student per
+// render. Indexed once instead, so holding every year in memory stays cheap.
+let payIndex=null, payByStudent=null, payDataStart=null;
+const payKey=(sid,year,month,type)=>`${String(sid).trim()}|${payY(year)}|${payM(month)}|${(String(type||'').trim()||'Fee')}`;
+function buildPayIndex(){
+  payIndex={};payByStudent={};payDataStart=null;
+  paymentsData.forEach(p=>{
+    payIndex[payKey(p['Student ID'],p.Year,p.Month,p.Type)]=p;
+    const sid=String(p['Student ID']||'').trim();
+    (payByStudent[sid]=payByStudent[sid]||[]).push(p);
+    const y=parseInt(payY(p.Year),10),m=parseInt(payM(p.Month),10);
+    if(y&&m&&(!payDataStart||y<payDataStart.y||(y===payDataStart.y&&m<payDataStart.mo)))payDataStart={y,mo:m};
+  });
+}
 function payRecord(sid,year,month,type){
-  const t=type||'Fee';
-  return paymentsData.find(p=>String(p['Student ID']).trim()===String(sid).trim()&&String(p.Year).trim()===String(year).trim()&&String(p.Month).trim()===String(month).trim()&&((String(p.Type||'').trim()||'Fee')===t))||null;
+  if(!payIndex)buildPayIndex();
+  return payIndex[payKey(sid,year,month,type)]||null;
 }
 function payFilterVal(id){const el=$(id);return el?el.value:'';}
 function parseJoinYM(raw){
@@ -2092,22 +2119,98 @@ window.initPayments=function(){
   if(!paymentsLoaded)loadPayments(); else buildPayments();
 }
 window.loadPayments=async function(){
-  const year=$('payYear').value;const list=$('paymentsList');
+  const list=$('paymentsList');
   payLoading=true;list.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
   if(!studentsLoaded){try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}catch(e){console.error(e);}}
   try{
-    const snap=await getDocs(query(collection(db,'payments'),where('Year','==',String(year))));
-    paymentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));paymentsLoaded=true;
-  }catch(e){console.error('loadPayments',e);paymentsData=[];}
+    // Every year, not just the selected one — the Pending column has to see arrears
+    // carried over from earlier months, and switching year no longer refetches.
+    const snap=await getDocs(collection(db,'payments'));
+    paymentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));paymentsLoaded=true;payIndex=null;
+  }catch(e){console.error('loadPayments',e);paymentsData=[];payIndex=null;}
+  // Attendance feeds the Classes column.
+  if(!attendanceLoaded){try{const snap=await getDocs(collection(db,'attendance'));attendanceData=snap.docs.map(d=>d.data());attendanceLoaded=true;}catch(e){console.warn('attendance',e);attendanceData=[];}}
   payLoading=false;buildPayments();
+}
+// One pass over attendance per render: StudentID -> {count, dates[]} for the selected month.
+function buildPayAttIndex(year,month){
+  const idx={},y=payY(year),m=payM(month);
+  attendanceData.forEach(r=>{
+    if(String(r.Status||'').toLowerCase()!=='present')return;
+    const d=String(r.Date||'').trim();if(d.length<7)return;
+    if(d.slice(0,4)!==y||String(parseInt(d.slice(5,7),10))!==m)return;
+    const sid=String(r.StudentID||'').trim();if(!sid)return;
+    let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;
+    const e=(idx[sid]=idx[sid]||{count:0,dates:[]});
+    e.count+=c;e.dates.push({date:d,count:c});
+  });
+  Object.values(idx).forEach(e=>e.dates.sort((a,b)=>a.date.localeCompare(b.date)));
+  return idx;
+}
+function renderClassesCell(e){
+  if(!e||!e.count)return '<span class="pay-cls-none">0</span>';
+  const chips=e.dates.map(d=>{
+    const dt=new Date(d.date+'T00:00:00');
+    const lbl=isNaN(dt)?d.date:dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    return `<span class="aa-chip">${esc(lbl)}${d.count>1?' ×'+d.count:''}</span>`;
+  }).join(' ');
+  return `<div class="pay-cls"><span class="pay-cls-n">${e.count}</span><div class="pay-cls-dates">${chips}</div></div>`;
+}
+const payAmt=(v)=>{const n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,''));return isNaN(n)?null:n;};
+const payMoney=(n)=>'₹'+Math.round(n).toLocaleString('en-IN');
+// Everything still owed up to and including the selected month: unpaid monthly fees from
+// earlier months, plus any Kit / Components entry that was flagged and never marked paid.
+function payDues(s,selY,selM){
+  if(!payIndex)buildPayIndex();
+  const sid=String(s.ID||'').trim();
+  const monthly=payAmt(s['Monthly Fee']);
+  const feeMonths=[];let total=0,unknown=false;
+  const jm=parseJoinYM(s['Join Date']);
+  // Never look further back than the oldest payment on file — otherwise a student who
+  // joined years before the migrated data starts shows invented arrears.
+  let y=jm?jm.y:selY,m=jm?jm.mo:1;
+  if(payDataStart&&(y<payDataStart.y||(y===payDataStart.y&&m<payDataStart.mo))){y=payDataStart.y;m=payDataStart.mo;}
+  let guard=0;
+  while((y<selY||(y===selY&&m<=selM))&&guard++<300){
+    const rec=payRecord(sid,y,m,'Fee');
+    const st=rec?String(rec.Status||'').toLowerCase():'';
+    if(st!=='paid'&&st!=='ignore'){
+      const amt=(rec&&payAmt(rec.Amount)!==null)?payAmt(rec.Amount):monthly;
+      if(amt===null)unknown=true;else total+=amt;
+      feeMonths.push(PAY_MONTHS[m-1].slice(0,3)+' '+String(y).slice(2));
+    }
+    m++;if(m>12){m=1;y++;}
+  }
+  const extras=[];
+  ((payByStudent&&payByStudent[sid])||[]).forEach(p=>{
+    const t=(String(p.Type||'').trim()||'Fee');if(t==='Fee')return;
+    const st=String(p.Status||'').toLowerCase();if(st==='paid'||st==='ignore')return;
+    const py=parseInt(payY(p.Year),10),pm=parseInt(payM(p.Month),10);
+    if(!py||!pm||py>selY||(py===selY&&pm>selM))return;
+    const amt=payAmt(p.Amount);if(amt===null)unknown=true;else total+=amt;
+    extras.push(t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+String(py).slice(2));
+  });
+  return {total,unknown,feeMonths,extras,count:feeMonths.length+extras.length};
+}
+function renderDueCell(s,selY,selM){
+  const d=payDues(s,selY,selM);
+  if(!d.count)return '<span class="pay-badge paid">Clear</span>';
+  const bits=[];
+  if(d.feeMonths.length)bits.push('Fee: '+d.feeMonths.join(', '));
+  if(d.extras.length)bits.push(d.extras.join(', '));
+  const detail=bits.join(' · ');
+  const amt=d.total>0?payMoney(d.total)+(d.unknown?' +':''):(d.unknown?'—':'₹0');
+  return `<div class="pay-due" title="${esc(detail)}"><span class="pay-due-amt">${amt}</span><div class="pay-due-detail">${esc(detail)}</div></div>`;
 }
 function payUpsertLocal(sid,year,month,type,fields){
   const t=type||'Fee';let rec=payRecord(sid,year,month,t);
-  if(rec){Object.assign(rec,fields);}else{paymentsData.push(Object.assign({'Student ID':String(sid),'Year':String(year),'Month':String(month),'Type':t},fields));}
+  if(rec){Object.assign(rec,fields);}
+  else{paymentsData.push(Object.assign({'Student ID':String(sid),'Year':payY(year),'Month':payM(month),'Type':t},fields));payIndex=null;}
 }
 function payRemoveLocal(sid,year,month,type){
-  const t=type||'Fee';
-  paymentsData=paymentsData.filter(p=>!(String(p['Student ID']).trim()===String(sid).trim()&&String(p.Year).trim()===String(year).trim()&&String(p.Month).trim()===String(month).trim()&&((String(p.Type||'').trim()||'Fee')===t)));
+  const t=type||'Fee',k=payKey(sid,year,month,t);
+  paymentsData=paymentsData.filter(p=>payKey(p['Student ID'],p.Year,p.Month,p.Type)!==k);
+  payIndex=null;
 }
 function payBtnBusy(btn){if(!btn)return null;const prev=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';return ()=>{try{btn.innerHTML=prev;btn.disabled=false;}catch(e){}};}
 window.setPayStatus=function(key){if(payLoading)return;payStatusFilter=key;buildPayments();};
@@ -2123,6 +2226,7 @@ async function payWrite(body){
 window.buildPayments=function(){
   const list=$('paymentsList'),summary=$('paySummary');
   const year=$('payYear').value,month=$('payMonth').value;const selY=+year,selM=+month;
+  const attIdx=buildPayAttIndex(year,month);
   const joinedBy=(s)=>{const j=parseJoinYM(s['Join Date']);if(!j)return true;return (j.y<selY)||(j.y===selY&&j.mo<=selM);};
   const base=studentsData.filter(s=>(s.Status||'Active').toLowerCase()==='active'&&joinedBy(s));
   const fCountry=payFilterVal('payFilterCountry'),fLevel=payFilterVal('payFilterLevel'),fTutor=payFilterVal('payFilterTutor'),fBatch=payFilterVal('payFilterBatch');
@@ -2154,7 +2258,7 @@ window.buildPayments=function(){
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
   const waIco='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>Student</th><th>Batch</th><th>Fee</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Components</th><th>Action</th>
+    <th>Student</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Components</th><th>Classes</th><th>Pending</th><th>Action</th>
     </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,compRec,compSt})=>{
       const fee=s['Monthly Fee']||'';
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
@@ -2165,7 +2269,9 @@ window.buildPayments=function(){
         const wa=`<button class="pay-act pay-act-wa" title="WhatsApp reminder" onclick="payWhatsApp('${jsq(s.ID)}')">${waIco}</button>`;
         action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${jsq(s.ID)}','${jsq(s.Name)}','${jsq(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${jsq(s.ID)}',this)">Ignore</button></div></div>`;
       }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
-      return `<tr><td><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${esc(s.ID)}</span></td><td>${esc(s.Batch||'—')}</td><td>${fee?('₹'+esc(String(fee))):'—'}</td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${action}</td></tr>`;
+      // Batch + monthly fee now ride along under the name, like the student ID.
+      const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',fee?('₹'+esc(String(fee))):''].filter(Boolean).join(' · ');
+      return `<tr><td><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function fillPaySelect(id,allLabel,items,current){
@@ -2205,9 +2311,9 @@ window.savePaymentRef=async function(sid,inp){
   catch(e){console.error(e);inp.classList.remove('saving');inp.classList.add('error');}
 };
 window.payWhatsApp=function(sid){
-  const s=studentsData.find(x=>x.ID===sid);if(!s)return;const month=PAY_MONTHS[$('payMonth').value-1],year=$('payYear').value;
-  const fee=s['Monthly Fee']?('₹'+s['Monthly Fee']):'the monthly fee';
-  const msg=`Dear Parent, this is a gentle reminder that ${fee} for ${s.Name} (${month} ${year}) at *ElectroBotics* is pending. ${s['Payment Ref']?('Payment ref: '+s['Payment Ref']+'. '):''}Kindly arrange the payment. Thank you!`;
+  const s=studentsData.find(x=>x.ID===sid);if(!s)return;
+  const month=PAY_MONTHS[$('payMonth').value-1],year=$('payYear').value;
+  const msg=`Dear Parent,\n\nGentle reminder to make the fees payment for the month of ${month.slice(0,3)} ${year}.\n\nKindly share the screenshot of your transfer if done already.\n\nThank you,\nTeam ElectroBotics`;
   waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
   $('waModalTitle').textContent='Reminder · '+s.Name;$('wa_Msg').value=msg;$('waModal').classList.add('open');
 };
@@ -2219,9 +2325,16 @@ window.downloadPaymentsExcel=function(){
   // Export exactly what's on screen — same filters, same chip, same "joined by this month"
   // exclusion — so the file matches the table instead of listing every active student.
   if(!payVisibleRows.length){alert('Nothing to export for the current filters.');return;}
+  const attIdx=buildPayAttIndex(year,month);
+  const selY=+year,selM=+month;
   const rows=payVisibleRows.map(({s})=>{
     const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
-    return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:''};
+    const att=attIdx[String(s.ID).trim()],due=payDues(s,selY,selM);
+    const dueBits=[];if(due.feeMonths.length)dueBits.push('Fee: '+due.feeMonths.join(', '));if(due.extras.length)dueBits.push(due.extras.join(', '));
+    return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:'',
+      'Classes Attended':att?att.count:0,
+      'Days Attended':att?att.dates.map(d=>d.date+(d.count>1?' x'+d.count:'')).join(', '):'',
+      'Pending Amount':due.total||0,'Pending Details':dueBits.join(' · ')};
   });
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Payments');
   XLSX.writeFile(wb,`ElectroBotics_Payments_${PAY_MONTHS[month-1]}_${year}.xlsx`);
@@ -2753,7 +2866,10 @@ function buildAaScreen(mod){
 
   <div id="${p}_markView">
     <div class="chart-card" style="padding:0;overflow:hidden;">
-      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">${esc(c.markHeading)}</span></div></div>
+      <div class="stu-header"><div class="stu-title-wrap">
+        <span class="table-title">${esc(c.markHeading)} <span id="${p}_markCount"></span></span>
+        <input type="text" id="${p}_mSearch" class="stu-search" placeholder="Search name, ID, tutor, batch…" oninput="aaRenderRosterNow('${mod}')">
+      </div></div>
       <div class="aa-sub">${esc(c.markSub)}</div>
       <div class="stu-filter-bar">
         <div class="filter-group"><label>Country</label><select id="${p}_mCountry" onchange="aaMarkFilter('${mod}')"><option value="">All countries</option></select></div>
@@ -2773,7 +2889,10 @@ function buildAaScreen(mod){
   <div id="${p}_trendView" style="display:none;">
     <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header">
-        <div class="stu-title-wrap"><span class="table-title">${esc(c.trendHeading)} <span id="${p}_tMeta" class="trend-summary"></span></span></div>
+        <div class="stu-title-wrap">
+          <span class="table-title">${esc(c.trendHeading)} <span id="${p}_tMeta" class="trend-summary"></span></span>
+          <input type="text" id="${p}_tSearch" class="stu-search" placeholder="Search name, ID, tutor, batch…" oninput="aaRenderTrend('${mod}')">
+        </div>
         <div class="stu-actions"><button class="aa-head-btn" onclick="aaShareAll('${mod}')">${aaWaIcon()} Share list</button></div>
       </div>
       <div class="aa-sub">Defaults to this month. Widen the filters (e.g. Month = All) for a longer trend. Expected is 4 ${esc(c.unit)} per month.</div>
@@ -2980,7 +3099,7 @@ function aaFillTrendFilters(mod){aaNarrow(mod,'t');aaFillTrendStudents(mod);}
 window.aaMarkFilter=function(mod){aaNarrow(mod,'m');aaLoadRoster(mod);};
 window.aaClearMarkFilters=function(mod){
   const p=AA[mod].p;
-  ['mCountry','mBatch','mTutor'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
+  ['mCountry','mBatch','mTutor','mSearch'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
   aaNarrow(mod,'m');aaLoadRoster(mod);
 };
 function aaRosterLoading(mod,on,err){
@@ -3038,11 +3157,23 @@ window.aaLoadRoster=async function(mod){
   st.prefillKey=key;st.prefill=marked;
   aaApplyPrefill(mod);
 };
+// Free-text search shared by the Mark and Trends views — same fields the Students tab covers.
+function aaSearchHit(s,q){
+  if(!q)return true;
+  return ['Name','ID','Tutor','Batch','Country','Current Level'].some(k=>String(s[k]||'').toLowerCase().includes(q));
+}
+const aaQuery=(mod,which)=>String((aEl(mod,which)||{}).value||'').trim().toLowerCase();
+// Typing in the Mark search must not refetch saved marks — just re-render the roster.
+window.aaRenderRosterNow=function(mod){aaRenderRoster(mod);};
 function aaRenderRoster(mod){
   const c=AA[mod],st=aaState[mod],box=aEl(mod,'roster');
+  const q=aaQuery(mod,'mSearch');
+  const rows=st.roster.filter(s=>aaSearchHit(s,q));
+  const cnt=aEl(mod,'markCount');if(cnt)cnt.textContent=st.roster.length?('('+rows.length+')'):'';
   if(!st.roster.length){box.innerHTML='<div class="pay-empty">No students for this selection.</div>';aEl(mod,'saveBar').style.display='none';return;}
+  if(!rows.length){box.innerHTML='<div class="pay-empty">No students match your search.</div>';aEl(mod,'saveBar').style.display='';return;}
   box.innerHTML=`<table class="pay-table"><thead><tr><th>Student</th><th>Tutor</th><th>Batch</th><th>Status</th></tr></thead><tbody>${
-    st.roster.map(s=>{
+    rows.map(s=>{
       const m=st.mark[s.ID]||{status:null,count:1};const n=m.count||1;
       const sid=esc(s.ID);
       const count=`<div class="aa-count" style="${m.status===c.pos?'':'visibility:hidden'}">
@@ -3114,7 +3245,7 @@ window.aaTrendFilter=function(mod){aaNarrow(mod,'t');aaFillTrendStudents(mod);aa
 window.aaPeriodChange=function(mod){aaFillTrendStudents(mod);aaRenderTrend(mod);};
 window.aaClearTrendFilters=function(mod){
   const p=AA[mod].p;
-  ['tCountry','tBatch','tTutor','tStudent'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
+  ['tCountry','tBatch','tTutor','tStudent','tSearch'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
   aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);
 };
 function aaFillTrendStudents(mod){
@@ -3166,6 +3297,7 @@ window.aaRenderTrend=function(mod){
     if(tv&&(s.Tutor||'')!==tv)return false;
     if(sv&&String(s.ID)!==sv)return false;
     if(!aaJoinedBy(s,end))return false;   // hadn't joined by the end of this period
+    if(!aaSearchHit(s,aaQuery(mod,'tSearch')))return false;
     return true;
   }).sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
   const records=(mod==='attendance'?attendanceData:assignmentsData);
