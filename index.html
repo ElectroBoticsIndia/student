@@ -187,7 +187,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(6,31,34,.55);z-index:1000;align-items:flex-start;justify-content:center;padding:30px 16px;overflow-y:auto;backdrop-filter:blur(2px)}
 .modal-overlay.open{display:flex}
-.modal-card{background:var(--surface);border-radius:16px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(6,31,34,.35);overflow:hidden;animation:modalIn .2s ease}
+.modal-card{background:var(--surface);border-radius:16px;width:100%;max-width:480px;margin:auto 0;box-shadow:0 20px 60px rgba(6,31,34,.35);overflow:hidden;animation:modalIn .2s ease}
 @keyframes modalIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
 .modal-head h3{font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--text);margin:0}
@@ -196,12 +196,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .icon-btn.copied{border-color:var(--green);color:var(--green);background:var(--green-light)}
-/* WhatsApp composer: roomier and vertically centred */
-.wa-overlay.open{align-items:center}
+/* WhatsApp composer: roomier */
 .wa-card{max-width:620px}
 .wa-card .modal-body{max-height:72vh;overflow-y:auto}
 #wa_Msg{min-height:300px;line-height:1.6}
-@media(max-width:640px){.wa-overlay.open{align-items:flex-start}.wa-card .modal-body{max-height:none}#wa_Msg{min-height:230px}}
+@media(max-width:640px){.wa-card .modal-body{max-height:none}#wa_Msg{min-height:230px}}
 .modal-close:hover{color:var(--text)}
 .modal-body{padding:18px 22px;max-height:70vh;overflow-y:auto}
 .form-row{margin-bottom:14px;display:flex;flex-direction:column;gap:5px}
@@ -210,13 +209,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .form-row input,.form-row select,.form-row textarea{font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
 .form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--accent)}
 .form-row textarea{resize:vertical;min-height:48px;box-sizing:border-box}
-.wa-actions{display:flex;align-items:center;gap:10px;margin-top:16px}
+.wa-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:16px}
 .wa-btn{font-family:var(--font-body);font-size:14px;font-weight:600;padding:10px 20px;border-radius:8px;cursor:pointer;border:1px solid var(--border);transition:all .2s;background:#fff;color:var(--text-dim)}
 .wa-btn:hover{border-color:var(--text-light)}
 .wa-cancel{color:var(--text-dim)}
-.pf-save{background:var(--accent);color:#fff;border-color:var(--accent);margin-left:auto}
+.pf-save{background:var(--accent);color:#fff;border-color:var(--accent)}
 .pf-save:hover{background:var(--accent-dark)}
-.trash-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
+.trash-btn{margin-right:auto;display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
 .trash-btn:hover{border-color:var(--red);color:var(--red);background:#fff5f2}
 .msg{font-family:var(--font-mono);font-size:12px;margin-top:10px;text-align:right;min-height:16px}
 .msg.err{color:var(--red)}.msg.ok{color:var(--green)}.msg.busy{color:var(--text-light)}
@@ -851,7 +850,7 @@ table.avail td.occ{border:1px solid transparent}
       <div class="modal-body">
         <div class="tn-list" id="tutorNotesList"></div>
         <div class="form-row"><label>Add a note</label><textarea id="tn_Input" rows="3" placeholder="Type a note…"></textarea></div>
-        <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeTutorNotes()">Close</button><button class="wa-btn pf-save" id="tn_SaveBtn" onclick="saveTutorNote()">Add note</button></div>
+        <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeTutorNotes()">Cancel</button><button class="wa-btn pf-save" id="tn_SaveBtn" onclick="saveTutorNote()">Add note</button></div>
         <div class="msg" id="tn_Msg"></div>
       </div>
     </div>
@@ -1035,7 +1034,7 @@ table.avail td.occ{border:1px solid transparent}
         </select>
       </div>
       <div class="form-row"><label>Note (what happened)</label><textarea id="h_Note" rows="2" placeholder="e.g. Called, discussed weekend batch…"></textarea></div>
-      <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeHist()">Close</button><button class="wa-btn pf-save" id="h_SaveBtn" onclick="saveHist()">Add update</button></div>
+      <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeHist()">Cancel</button><button class="wa-btn pf-save" id="h_SaveBtn" onclick="saveHist()">Add update</button></div>
       <div class="msg" id="h_Msg"></div>
     </div>
   </div>
