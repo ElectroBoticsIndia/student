@@ -1038,7 +1038,17 @@ let currentUser=null, userRole='', leadsData=[], editingLeadId=null, histLeadId=
 const LEAD_STATUSES=['Enquiry','Trial Pending','Waiting for a batch','Converted','Dropped'];
 const PRESET_SOURCES=['Google','Website','Reference','WhatsApp','Instagram','AI Agent','Summer Camp','Apartment Outreach','Stalls'];
 
-const esc=(t)=>{if(t===null||t===undefined)return '';const d=document.createElement('div');d.textContent=String(t);return d.innerHTML;};
+const esc=(t)=>{if(t===null||t===undefined)return '';const d=document.createElement('div');d.textContent=String(t);
+  // innerHTML escapes & < >, but NOT quotes — so attributes built with esc() (title=, value=, data-*)
+  // would break on a name like O"Brien. Escape both quote characters too.
+  return d.innerHTML.replace(/"/g,'&quot;').replace(/'/g,'&#39;');};
+// For values interpolated into an INLINE HANDLER's JS string literal, e.g. onclick="f('${jsq(name)}')".
+// The HTML parser decodes entities BEFORE the JS is parsed, so &#39; does not protect a JS string —
+// the value must be JS-escaped first, then attribute-escaped. Names like D'Souza need this.
+const jsq=(t)=>{
+  const js=String(t===null||t===undefined?'':t).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,'\\n');
+  return js.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+};
 const $=(id)=>document.getElementById(id);
 function statusClass(st){const s=String(st||'').toLowerCase();
   if(s==='converted')return 'lead-badge-converted';if(s==='dropped')return 'lead-badge-lost';
@@ -1098,7 +1108,7 @@ function showChildPicker(kids){
       const lvl=s['Current Level']||'Not started';
       const initial=(s.Name||'?').charAt(0).toUpperCase();
       const photo=s.Photo?`<img src="${esc(s.Photo)}" alt="" onerror="this.parentElement.textContent='${initial}'">`:initial;
-      return `<button class="picker-card" onclick="openProfile('${esc(s.ID)}')">
+      return `<button class="picker-card" onclick="openProfile('${jsq(s.ID)}')">
         <div class="picker-avatar">${photo}</div>
         <div class="picker-info"><div class="picker-name">${esc(s.Name)}</div><div class="picker-level">${esc(lvl)}</div></div>
         <svg class="picker-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1202,7 +1212,7 @@ window.renderLeads=function(){
   const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
   leadsData.forEach(l=>{const s=String(l.Status||'Enquiry');if(counts[s]!==undefined)counts[s]++;});
   summary.innerHTML=`<button class="lead-stat lead-stat-btn${fStatus===''?' active':''}" onclick="setStatusFilter('')">${leadsData.length} All</button>`+
-    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${esc(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
+    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${jsq(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
   if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
@@ -1214,7 +1224,7 @@ window.renderLeads=function(){
       <td>${esc(l.Source||'—')}</td>
       <td><span class="lead-badge ${statusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
       <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
-      <td><div class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${esc(l._id)}')">Edit</button><button class="pay-act pay-act-history" onclick="openHist('${esc(l._id)}')">History</button></div></td>
+      <td><div class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${jsq(l._id)}')">Edit</button><button class="pay-act pay-act-history" onclick="openHist('${jsq(l._id)}')">History</button></div></td>
     </tr>`).join('')}</tbody></table>`;
 };
 
@@ -1351,7 +1361,14 @@ async function importRows(records, mapFn, msgEl, label){
       const {ref,data}=mapFn(r);
       if(!ref){fail++;continue;}
       batch.set(ref,data,{merge:true});n++;done++;
-      if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
+      if(n>=400){
+        // A failed commit must not poison the rest: a committed/failed batch throws on
+        // every later .set(), which used to turn one bad chunk into a total wipeout
+        // reported as a single failure.
+        try{await batch.commit();}
+        catch(ce){console.error('batch commit',label,ce);fail+=n;done-=n;}
+        batch=writeBatch(db);n=0;
+      }
     }catch(e){console.error('import row',label,r,e);fail++;}
   }
   try{ if(n>0)await batch.commit(); }
@@ -1370,7 +1387,9 @@ window.migStudents=async function(){
       ID:id,Name:r.Name||'','Current Level':r['Current Level']||'',Country:r.Country||'',
       Tutor:r.Tutor||'',Batch:r.Batch||'',Status:r.Status||'Active','Join Date':r['Join Date']||'',
       Email:r.Email||'',parentEmails:splitEmails(r.Email),Contact:String(r.Contact||''),
-      School:r.School||'',Address:r.Address||'','Monthly Fee':r['Monthly Fee']||'',Photo:r.Photo||'',
+      School:r.School||'',Address:r.Address||'','Monthly Fee':r['Monthly Fee']||'',
+      // Same Drive-link conversion the Add/Edit form applies, so migrated photos render too.
+      Photo:driveToImageUrl(r.Photo||''),
       'Payment Ref':r['Payment Ref']||'','Inactive Date':r['Inactive Date']||'','Inactive Reason':r['Inactive Reason']||'',
       migratedAt:serverTimestamp()
     }};
@@ -1616,7 +1635,7 @@ window.renderStudents=function(){
   const editIco='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th>${canManageStudents()?'<th></th>':''}
-    </tr></thead><tbody>${rows.map(s=>`<tr class="student-row${String(s.ID)===String(selectedStudentId)?' row-selected':''}" data-sid="${esc(s.ID)}" onclick="openProfile('${esc(s.ID)}')">
+    </tr></thead><tbody>${rows.map(s=>`<tr class="student-row${String(s.ID)===String(selectedStudentId)?' row-selected':''}" data-sid="${esc(s.ID)}" onclick="openProfile('${jsq(s.ID)}')">
       <td><strong class="stu-id-bold">${esc(s.ID)}</strong></td>
       <td>${esc(s.Name||'—')}</td>
       <td>${esc(s['Current Level']||'—')}</td>
@@ -1624,7 +1643,7 @@ window.renderStudents=function(){
       <td>${esc(s.Country||'—')}</td>
       <td>${esc(s.Batch||'—')}</td>
       <td>${(s.Status||'Active').toLowerCase()==='active'?'<span class="lead-badge lead-badge-converted">Active</span>':'<span class="lead-badge lead-badge-lost">Inactive</span>'}</td>
-      ${canManageStudents()?`<td><button class="btn-edit" title="Edit student" onclick="event.stopPropagation();openStudentForm('${esc(s.ID)}')">${editIco}</button></td>`:''}
+      ${canManageStudents()?`<td><button class="btn-edit" title="Edit student" onclick="event.stopPropagation();openStudentForm('${jsq(s.ID)}')">${editIco}</button></td>`:''}
     </tr>`).join('')}</tbody></table>`;
 };
 
@@ -1749,7 +1768,7 @@ function buildRoadmap(){
       const v=videoEmbed(p);const cl=p['Code Link']||'';
       const thumb=(v&&v.embed)?v.embed:'<div class="project-thumb-placeholder">No video</div>';
       const videoLink=(v&&v.watchUrl)?`<a href="${esc(v.watchUrl)}" target="_blank" class="project-link link-video" onclick="event.stopPropagation()">▶ Video</a>`:'';
-      const waShare=(v&&v.watchUrl)?`<button class="proj-wa-btn" title="Share on WhatsApp" onclick="event.stopPropagation();shareProjectWhatsApp('${esc(v.watchUrl)}','${esc((currentStudentName||'').replace(/'/g,''))}','${esc((p['Project Name']||'').replace(/'/g,''))}','${esc((p.Description||'').replace(/\n/g,' ').replace(/'/g,''))}')"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg><span>Share</span></button>`:'';
+      const waShare=(v&&v.watchUrl)?`<button class="proj-wa-btn" title="Share on WhatsApp" onclick="event.stopPropagation();shareProjectWhatsApp('${jsq(v.watchUrl)}','${jsq(currentStudentName||'')}','${jsq(p['Project Name']||'')}','${jsq((p.Description||'').replace(/\n/g,' '))}')"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg><span>Share</span></button>`:'';
       const dlBit=(v&&v.driveId)?`<a href="https://drive.google.com/uc?export=download&id=${esc(v.driveId)}" class="project-link link-download" onclick="event.stopPropagation()" title="Download the video file">⬇ Download</a>`:'';
       const codeBit=cl?`<a href="${esc(cl)}" target="_blank" class="project-link link-code" onclick="event.stopPropagation()">⟨/⟩ Code</a>`:'';
       return `<div class="project-card"><div class="project-thumb">${thumb}</div><div class="project-body"><div class="project-name-row"><div class="project-name">${esc(p['Project Name']||'')}</div>${waShare}</div><div class="project-desc">${esc(p.Description||'')}</div><div class="project-links">${videoLink} ${codeBit} ${dlBit}</div></div></div>`;
@@ -1942,7 +1961,23 @@ window.openStudentForm=function(id){
   $('s_Msg').textContent='';$('s_Msg').className='modal-msg';$('s_SaveBtn').disabled=false;
   $('studentModal').classList.add('open');
 };
-window.closeStudentForm=function(){$('studentModal').classList.remove('open');editingStudentId=null;};
+window.closeStudentForm=function(){
+  const id=editingStudentId;
+  $('studentModal').classList.remove('open');editingStudentId=null;
+  highlightStudentRow(id);   // keep the row you were just editing marked, same as returning from a profile
+};
+// Mark a student's row as the current selection, scroll it into view and flash it.
+function highlightStudentRow(id){
+  if(!id)return;
+  selectedStudentId=id;
+  const scr=$('studentsScreen');
+  if(!scr||scr.style.display==='none')return;
+  if(studentsLoaded)renderStudents();
+  setTimeout(()=>{
+    const row=document.querySelector(`#studentsList tr[data-sid="${(window.CSS&&CSS.escape)?CSS.escape(id):id}"]`);
+    if(row){row.scrollIntoView({behavior:'smooth',block:'center'});row.classList.add('row-flash');setTimeout(()=>row.classList.remove('row-flash'),1600);}
+  },60);
+}
 function splitEmailsClient(raw){return String(raw||'').toLowerCase().split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);}
 window.saveStudent=async function(){
   const msg=$('s_Msg'),btn=$('s_SaveBtn');
@@ -1998,7 +2033,7 @@ window.saveStudent=async function(){
     await setDoc(doc(db,'students',id),data,{merge:true});
     const idx=studentsData.findIndex(s=>s.ID===id);
     if(idx>=0)studentsData[idx]={...studentsData[idx],...data};else studentsData.push({_id:id,...data});
-    closeStudentForm();fillStudentFilters();renderStudents();
+    closeStudentForm();fillStudentFilters();highlightStudentRow(id);
     if($('profileScreen').style.display!=='none'&&currentStudentId===id)openProfile(id);
   }catch(e){console.error('saveStudent',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='modal-msg err';btn.disabled=false;}
 };
@@ -2098,10 +2133,10 @@ window.buildPayments=function(){
       const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,compRec,compSt);
       let action='';
       if(st==='pending'){
-        const wa=`<button class="pay-act pay-act-wa" title="WhatsApp reminder" onclick="payWhatsApp('${esc(s.ID)}')">${waIco}</button>`;
-        action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${esc(s.ID)}','${esc(s.Name)}','${esc(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${esc(s.ID)}',this)">Ignore</button></div></div>`;
-      }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${esc(s.ID)}',this)">Undo</button>`;}
-      return `<tr><td><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${esc(s.ID)}</span></td><td>${esc(s.Batch||'—')}</td><td>${fee?('₹'+esc(String(fee))):'—'}</td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${esc(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${action}</td></tr>`;
+        const wa=`<button class="pay-act pay-act-wa" title="WhatsApp reminder" onclick="payWhatsApp('${jsq(s.ID)}')">${waIco}</button>`;
+        action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${jsq(s.ID)}','${jsq(s.Name)}','${jsq(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${jsq(s.ID)}',this)">Ignore</button></div></div>`;
+      }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
+      return `<tr><td><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${esc(s.ID)}</span></td><td>${esc(s.Batch||'—')}</td><td>${fee?('₹'+esc(String(fee))):'—'}</td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function fillPaySelect(id,allLabel,items,current){
@@ -2160,14 +2195,14 @@ window.downloadPaymentsExcel=function(){
   XLSX.writeFile(wb,`ElectroBotics_Payments_${PAY_MONTHS[month-1]}_${year}.xlsx`);
 };
 function renderKitCell(s,kitRec,kitSt){
-  if(!kitRec)return `<button class="pay-act pay-act-kit" onclick="flagKit('${esc(s.ID)}',this)" title="Flag kit payment">+ Kit</button>`;
-  if(kitSt==='paid'){const kd=`${kitRec.Amount?('₹'+esc(String(kitRec.Amount))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${esc(s.ID)}',this)">Undo</button></div>`;}
-  return `<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openKitForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${esc(s.ID)}',this)">Remove</button></div></div>`;
+  if(!kitRec)return `<button class="pay-act pay-act-kit" onclick="flagKit('${jsq(s.ID)}',this)" title="Flag kit payment">+ Kit</button>`;
+  if(kitSt==='paid'){const kd=`${kitRec.Amount?('₹'+esc(String(kitRec.Amount))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${jsq(s.ID)}',this)">Undo</button></div>`;}
+  return `<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openKitForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${jsq(s.ID)}',this)">Remove</button></div></div>`;
 }
 function renderCompCell(s,compRec,compSt){
-  if(!compRec)return `<button class="pay-act pay-act-kit" onclick="flagComponents('${esc(s.ID)}',this)" title="Flag components payment">+ Components</button>`;
-  if(compSt==='paid'){const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${esc(s.ID)}','${esc(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${esc(s.ID)}','${esc(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${esc(s.ID)}',this)">Undo</button></div></div>`;}
-  return `<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${esc(s.ID)}','${esc(s.Name)}')">Mark paid</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${esc(s.ID)}','${esc(s.Name)}')">History</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${esc(s.ID)}',this)">Remove</button></div></div>`;
+  if(!compRec)return `<button class="pay-act pay-act-kit" onclick="flagComponents('${jsq(s.ID)}',this)" title="Flag components payment">+ Components</button>`;
+  if(compSt==='paid'){const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${jsq(s.ID)}','${jsq(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
+  return `<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${jsq(s.ID)}',this)">Remove</button></div></div>`;
 }
 window.migPayments=async function(){
   const records=parseCSV($('migPayments').value.trim());const msg=$('migPaymentsMsg');
@@ -2464,7 +2499,7 @@ window.renderTutorStats=function(){
   const pctBadge=(v,n)=>{if(!n)return '<span class="ts-pct ts-na">—</span>';const p=Math.round((v/n)*100);const cls=p>=60?'ts-good':p>=50?'ts-watch':'ts-bad';return `<span class="ts-pct ${cls}">${p}%</span>`;};
   el.innerHTML=`<table class="pay-table ts-table"><thead><tr><th>Tutor</th><th>Students</th><th>Attendance</th><th>Submissions</th><th>On track</th><th>Watch</th><th>At risk</th><th>No data</th></tr></thead><tbody>${tutors.map(t=>{
     const g=map[t];
-    const noteBtn=(cat)=>{const latest=latestTutorNote(t,cat);const tip=latest?`${latest.Author||'Note'} (${noteWhen(latest)}):\n${latest.Note||''}`:`${cat} notes — none yet`;return `<button class="ts-note-btn" title="${esc(tip)}" onclick="openTutorNotes('${esc(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;};
+    const noteBtn=(cat)=>{const latest=latestTutorNote(t,cat);const tip=latest?`${latest.Author||'Note'} (${noteWhen(latest)}):\n${latest.Note||''}`:`${cat} notes — none yet`;return `<button class="ts-note-btn" title="${esc(tip)}" onclick="openTutorNotes('${jsq(t)}','${cat}')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>`;};
     return `<tr><td><strong>${esc(t)}</strong></td><td>${g.total}</td><td><span class="ts-cell">${pctBadge(g.attSum,g.attN)}${noteBtn('Attendance')}</span></td><td><span class="ts-cell">${pctBadge(g.subSum,g.subN)}${noteBtn('Submission')}</span></td><td><span class="ts-count ts-green">${g.green}</span></td><td><span class="ts-count ts-yellow">${g.yellow}</span></td><td><span class="ts-count ts-red">${g.red}</span></td><td><span class="ts-count ts-nodata">${g.nodata}</span></td></tr>`;
   }).join('')}</tbody></table>`;
 };
@@ -2608,12 +2643,22 @@ window.buildEnrollmentChart=function(){
 };
 function goStudentsFiltered(type,value){
   setTab('students');
-  setTimeout(()=>{
-    if(type==='level'&&$('stuFilterLevel'))$('stuFilterLevel').value=value;
-    if(type==='country'&&$('stuFilterCountry'))$('stuFilterCountry').value=value;
-    if(type==='tutor'&&$('stuFilterTutor'))$('stuFilterTutor').value=value;
+  // Apply once the list is actually loaded — a 200ms guess lost the filter whenever
+  // loadStudentsList() returned late and re-rendered over it.
+  const apply=()=>{
+    ['stuFilterCountry','stuFilterLevel','stuFilterTutor','stuFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});
+    const s=$('stuSearch');if(s)s.value='';
+    const map={level:'stuFilterLevel',country:'stuFilterCountry',tutor:'stuFilterTutor'};
+    const sel=$(map[type]);
+    // Charts label a blank field "Unknown"; there is no such filter value, so fall back to All.
+    if(sel&&value&&value!=='Unknown'&&[...sel.options].some(o=>o.value===value))sel.value=value;
     renderStudents();
-  },200);
+  };
+  let tries=0;
+  (function wait(){
+    if(studentsLoaded||tries++>40)return apply();
+    setTimeout(wait,100);
+  })();
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
