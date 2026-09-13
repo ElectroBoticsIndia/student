@@ -434,7 +434,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .aa-subtab{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:8px 16px;border:none;background:#fff;color:var(--text-dim);cursor:pointer;border-right:1px solid var(--border);transition:all .18s}
 .aa-subtab:last-child{border-right:none}
 .aa-subtab.active{background:var(--accent);color:#fff}
-.aa-sub{font-family:var(--font-body);font-size:12px;color:var(--text-light);padding:0 20px 12px;line-height:1.5}
+.aa-sub{font-family:var(--font-body);font-size:12px;color:var(--text-light);padding:16px 20px 12px;line-height:1.5}
 .aa-roster-top{display:flex;justify-content:flex-end;padding:8px 20px 0;min-height:22px}
 .aa-load{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .aa-load.err{color:var(--red)}
@@ -787,8 +787,8 @@ table.avail td.occ{border:1px solid transparent}
       <div class="modal-body">
         <div class="pay-modal-sub" id="paymentModalSub"></div>
         <div class="form-row"><label>Amount (₹)</label><input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500"></div>
-        <div class="form-row"><label>Paid Date</label><input type="date" id="pay_Date"></div>
-        <div class="form-row"><label>Method</label><input type="text" id="pay_Method" placeholder="UPI / Cash / Bank" list="payMethodList"><datalist id="payMethodList"><option value="UPI"><option value="Cash"><option value="Bank Transfer"><option value="Card"></datalist></div>
+        <div class="form-row" id="pay_DateRow"><label>Paid Date</label><input type="date" id="pay_Date"></div>
+        <div class="form-row" id="pay_MethodRow"><label>Method</label><input type="text" id="pay_Method" placeholder="UPI / Cash / Bank" list="payMethodList"><datalist id="payMethodList"><option value="UPI"><option value="Cash"><option value="Bank Transfer"><option value="Card"></datalist></div>
         <div class="form-row"><label>Note</label><input type="text" id="pay_Note" placeholder="Optional"></div>
         <div class="wa-actions">
           <button class="wa-btn wa-cancel" onclick="closePaymentForm()">Cancel</button>
@@ -1244,7 +1244,7 @@ window.renderLeads=function(){
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
     </tr></thead><tbody>${rows.map(l=>`<tr>
-      <td><strong>${esc(l.Name||'—')}</strong>${l['Lead ID']?`<br><span class="pay-sid">${esc(l['Lead ID'])}</span>`:''}</td>
+      <td><strong>${esc(l.Name||'—')}</strong></td>
       <td>${esc(l.Country||'—')}</td>
       <td>${l.Contact?`<a href="tel:${esc(String(l.Contact).replace(/[^0-9+]/g,''))}" class="lead-tel">${esc(l.Contact)}</a>`:'—'}</td>
       <td>${esc(l['Preferred Batch']||'—')}</td>
@@ -2233,7 +2233,16 @@ function payRemoveLocal(sid,year,month,type){
 }
 function payBtnBusy(btn){if(!btn)return null;const prev=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';return ()=>{try{btn.innerHTML=prev;btn.disabled=false;}catch(e){}};}
 window.setPayStatus=function(key){if(payLoading)return;payStatusFilter=key;buildPayments();};
-window.clearPayFilters=function(){['payFilterCountry','payFilterLevel','payFilterTutor','payFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});$('payFilterName').value='';payStatusFilter='pending';buildPayments();};
+window.clearPayFilters=function(){
+  ['payFilterCountry','payFilterLevel','payFilterTutor','payFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});
+  $('payFilterName').value='';payStatusFilter='pending';
+  // Back to the page default: this month, this year.
+  const now=new Date(),mSel=$('payMonth'),ySel=$('payYear');
+  if(mSel)mSel.value=String(now.getMonth()+1);
+  const yNow=String(now.getFullYear()),changedYear=ySel&&ySel.value!==yNow&&[...ySel.options].some(o=>o.value===yNow);
+  if(changedYear){ySel.value=yNow;loadPayments();return;}
+  buildPayments();
+};
 async function payWrite(body){
   const {action,type,studentId,year,month}=body;const id=payDocId(studentId,year,month,type||'Fee');
   try{
@@ -2301,17 +2310,34 @@ function fillPaySelect(id,allLabel,items,current){
 }
 let payCurrentCtx=null;
 window.openPaymentForm=function(sid,name,fee){
-  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Fee'};
+  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Fee',mode:'paid'};
+  $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
+  $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
   $('paymentModalTitle').textContent='Add Payment';$('paymentModalSub').textContent=`${name} · Fee · ${PAY_MONTHS[month-1]} ${year}`;
   $('pay_Amount').value=fee||'';const t=new Date();$('pay_Date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
   $('pay_Method').value='';$('pay_Note').value='';$('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
 };
 window.closePaymentForm=function(){$('paymentModal').classList.remove('open');};
 window.savePaymentForm=async function(){
-  const msg=$('pay_Msg'),btn=$('pay_SaveBtn');btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
-  const c=payCurrentCtx;
-  const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Paid',amount:$('pay_Amount').value.trim(),paidDate:$('pay_Date').value,method:$('pay_Method').value.trim(),note:$('pay_Note').value.trim()});
-  if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:$('pay_Amount').value.trim(),'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:$('pay_Note').value.trim()});closePaymentForm();buildPayments();}
+  const msg=$('pay_Msg'),btn=$('pay_SaveBtn');
+  const c=payCurrentCtx;const amount=$('pay_Amount').value.trim(),note=$('pay_Note').value.trim();
+  if(c.mode==='due'){
+    // Flagging a due: the amount is what makes it countable in Pending, so require it.
+    const n=parseFloat(amount.replace(/[^0-9.]/g,''));
+    if(!amount||isNaN(n)||n<=0){
+      $('pay_Amount').classList.add('invalid');
+      msg.textContent='Please enter the amount due.';msg.className='msg err';return;
+    }
+    $('pay_Amount').classList.remove('invalid');
+    btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+    const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Pending',amount,paidDate:'',method:'',note});
+    if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Pending',Amount:amount,'Paid Date':'',Method:'',Note:note});closePaymentForm();buildPayments();}
+    else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
+    return;
+  }
+  btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Paid',amount,paidDate:$('pay_Date').value,method:$('pay_Method').value.trim(),note});
+  if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:amount,'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:note});closePaymentForm();buildPayments();}
   else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
 };
 window.markPaymentIgnore=async function(sid,btn){
@@ -2335,11 +2361,7 @@ window.payWhatsApp=function(sid){
   const d=payDues(s,+year,+$('payMonth').value);
   // List every outstanding item — arrear fee months plus any unpaid Kit / Components.
   let dues='';
-  if(d.count){
-    const lines=d.items.map(it=>`• ${it.label}${it.amount!==null?': ₹'+Math.round(it.amount).toLocaleString('en-IN'):''}`);
-    dues=`\nPending:\n${lines.join('\n')}\n`;
-    if(d.total>0)dues+=`Total: ₹${Math.round(d.total).toLocaleString('en-IN')}${d.unknown?' (plus items yet to be priced)':''}\n`;
-  }
+  if(d.count)dues=`\nPending:\n${d.items.map(it=>'• '+it.label).join('\n')}\n`;
   const msg=`Dear Parent,\n\nGentle reminder to make the fees payment for the month of ${month.slice(0,3)} ${year}.\n${dues}\nKindly share the screenshot of your transfer if done already.\n\nThank you,\nTeam ElectroBotics`;
   waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
   $('waModalTitle').textContent='Reminder · '+s.Name;$('wa_Msg').value=msg;$('waModal').classList.add('open');
@@ -2395,15 +2417,26 @@ window.migPayments=async function(){
   paymentsLoaded=false;loadPayments();
 };
 // ── Kit flow ──
-window.flagKit=async function(sid,btn){
-  if(!confirm('Flag a kit payment as due for this student this month?'))return;
-  const year=$('payYear').value,month=$('payMonth').value;const done=payBtnBusy(btn);
-  const ok=await payWrite({action:'savePayment',type:'Kit',studentId:sid,year,month,status:'Pending'});
-  if(ok){payUpsertLocal(sid,year,month,'Kit',{Status:'Pending'});buildPayments();}else{if(done)done();alert('Could not flag kit.');}
-};
+// "+ Kit" / "+ Components" now ask for the amount, so the Pending column and the
+// reminder message can account for them instead of showing an unpriced due.
+function openDueForm(sid,type){
+  const s=studentsData.find(x=>x.ID===sid);
+  const year=$('payYear').value,month=$('payMonth').value;
+  payCurrentCtx={studentId:sid,year,month,type,mode:'due'};
+  $('paymentModalTitle').textContent=type+' Due';
+  $('paymentModalSub').textContent=`${s?s.Name:sid} · ${type} · ${PAY_MONTHS[month-1]} ${year}`;
+  $('pay_Amount').value='';$('pay_Note').value='';
+  $('pay_DateRow').style.display='none';$('pay_MethodRow').style.display='none';
+  $('pay_SaveBtn').textContent='Flag as due';
+  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
+  setTimeout(()=>{try{$('pay_Amount').focus();}catch(e){}},60);
+}
+window.flagKit=function(sid){openDueForm(sid,'Kit');};
 window.openKitForm=function(sid,name){
-  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Kit'};
+  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Kit',mode:'paid'};
   const ex=payRecord(sid,year,month,'Kit');const isPaid=ex&&String(ex.Status||'').toLowerCase()==='paid';
+  $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
+  $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
   $('paymentModalTitle').textContent=isPaid?'Edit Kit Payment':'Kit Payment';
   $('paymentModalSub').textContent=`${name} · Kit · ${PAY_MONTHS[month-1]} ${year}`;
   $('pay_Amount').value=ex&&ex.Amount?String(ex.Amount):'';
@@ -2417,15 +2450,12 @@ window.revertKit=async function(sid,btn){
   if(ok){payRemoveLocal(sid,year,month,'Kit');buildPayments();}else{if(done)done();alert('Could not update.');}
 };
 // ── Components flow ──
-window.flagComponents=async function(sid,btn){
-  if(!confirm('Flag a components payment as due for this student this month?'))return;
-  const year=$('payYear').value,month=$('payMonth').value;const done=payBtnBusy(btn);
-  const ok=await payWrite({action:'savePayment',type:'Components',studentId:sid,year,month,status:'Pending'});
-  if(ok){payUpsertLocal(sid,year,month,'Components',{Status:'Pending'});buildPayments();}else{if(done)done();alert('Could not flag components.');}
-};
+window.flagComponents=function(sid){openDueForm(sid,'Components');};
 window.openComponentsForm=function(sid,name){
-  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Components'};
+  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Components',mode:'paid'};
   const ex=payRecord(sid,year,month,'Components');const isPaid=ex&&String(ex.Status||'').toLowerCase()==='paid';
+  $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
+  $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
   $('paymentModalTitle').textContent=isPaid?'Edit Components Payment':'Components Payment';
   $('paymentModalSub').textContent=`${name} · Components · ${PAY_MONTHS[month-1]} ${year}`;
   $('pay_Amount').value=ex&&ex.Amount?String(ex.Amount):'';
@@ -2444,13 +2474,12 @@ window.newComponentPurchase=async function(sid,name,btn){
   const rec=payRecord(sid,year,month,'Components');
   if(!rec||String(rec.Status||'').toLowerCase()!=='paid'){alert('No paid components to reopen.');return;}
   if(!confirm('Log the current paid components and reopen as "due" for a new purchase?'))return;
-  const done=payBtnBusy(btn);let ok=false;
+  const done=payBtnBusy(btn);
   try{
-    await addDoc(collection(db,'componentHistory'),{'Student ID':sid,Year:String(year),Month:String(month),Amount:rec.Amount||'','Paid Date':rec['Paid Date']||'',Method:rec.Method||'',Note:rec.Note||'',LoggedBy:(currentUser&&currentUser.email)||'','Logged At':serverTimestamp()});
-    ok=await payWrite({action:'savePayment',type:'Components',studentId:sid,year,month,status:'Pending',amount:'',paidDate:'',method:'',note:''});
-  }catch(e){console.error('newComponentPurchase',e);}
-  if(ok){payUpsertLocal(sid,year,month,'Components',{Status:'Pending',Amount:'','Paid Date':'',Method:'',Note:''});buildPayments();}
-  else{if(done)done();alert('Could not reopen.');}
+    await addDoc(collection(db,'componentHistory'),{'Student ID':sid,Year:payY(year),Month:payM(month),Amount:rec.Amount||'','Paid Date':rec['Paid Date']||'',Method:rec.Method||'',Note:rec.Note||'',LoggedBy:(currentUser&&currentUser.email)||'','Logged At':serverTimestamp()});
+  }catch(e){console.error('newComponentPurchase',e);if(done)done();alert('Could not log the current purchase.');return;}
+  if(done)done();
+  openDueForm(sid,'Components');   // ask for the new purchase amount
 };
 let componentHistoryData=[];
 window.openComponentHistory=async function(sid,name){
@@ -2870,6 +2899,7 @@ const aaState={
 };
 const AA_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const AA_MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const aaToday=()=>{const t=new Date();return new Date(t.getTime()-t.getTimezoneOffset()*60000).toISOString().slice(0,10);};
 const aid=(mod,s)=>AA[mod].p+'_'+s;
 const aEl=(mod,s)=>$(aid(mod,s));
 const aaWaIcon=()=>'<svg viewBox="0 0 24 24" width="15" height="15" style="vertical-align:-2px" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15l-1.4 5 5.1-1.3A10 10 0 1 0 12 2"/></svg>';
@@ -2880,7 +2910,7 @@ window.toast=function(msg){const t=$('toast');if(!t)return;t.textContent=msg;t.c
 function buildAaScreen(mod){
   const c=AA[mod],p=c.p,st=aaState[mod];
   if(st.built)return;
-  const today=new Date();const iso=new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const today=new Date();const iso=aaToday();
   const yr=today.getFullYear();
   let years='';for(let y=yr;y>=yr-4;y--)years+=`<option value="${y}"${y===yr?' selected':''}>${y}</option>`;
   let months='<option value="">All months</option>';
@@ -3127,6 +3157,7 @@ window.aaMarkFilter=function(mod){aaNarrow(mod,'m');aaLoadRoster(mod);};
 window.aaClearMarkFilters=function(mod){
   const p=AA[mod].p;
   ['mCountry','mBatch','mTutor','mSearch'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
+  const d=$(p+'_mDate');if(d)d.value=aaToday();          // back to today
   aaNarrow(mod,'m');aaLoadRoster(mod);
 };
 function aaRosterLoading(mod,on,err){
@@ -3147,6 +3178,8 @@ window.aaLoadRoster=async function(mod){
   const date=aEl(mod,'mDate').value;
   const box=aEl(mod,'roster');
   if(!country&&!batch&&!tutor){
+    st.roster=[];st.mark={};
+    const cnt=aEl(mod,'markCount');if(cnt)cnt.textContent='';   // don't leave a stale count behind
     box.innerHTML='<div class="pay-empty">Pick a country, batch, or tutor to load students.</div>';
     aEl(mod,'saveBar').style.display='none';aaRosterLoading(mod,false);return;
   }
@@ -3273,6 +3306,9 @@ window.aaPeriodChange=function(mod){aaFillTrendStudents(mod);aaRenderTrend(mod);
 window.aaClearTrendFilters=function(mod){
   const p=AA[mod].p;
   ['tCountry','tBatch','tTutor','tStudent','tSearch'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
+  const now=new Date();                                   // back to this month, this year
+  const y=$(p+'_tYear');if(y)y.value=String(now.getFullYear());
+  const m=$(p+'_tMonth');if(m)m.value=String(now.getMonth()+1);
   aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);
 };
 function aaFillTrendStudents(mod){
