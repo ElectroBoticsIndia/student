@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ElectroBotics · Leads (Firebase)</title>
+<title>ElectroBotics · Student Progress</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -192,6 +192,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
 .modal-head h3{font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--text);margin:0}
 .modal-close{background:none;border:none;font-size:26px;line-height:1;color:var(--text-light);cursor:pointer;padding:0 4px}
+.modal-head-actions{display:flex;align-items:center;gap:6px}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .18s}
+.icon-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.icon-btn.copied{border-color:var(--green);color:var(--green);background:var(--green-light)}
+/* WhatsApp composer: roomier and vertically centred */
+.wa-overlay.open{align-items:center}
+.wa-card{max-width:620px}
+.wa-card .modal-body{max-height:72vh;overflow-y:auto}
+#wa_Msg{min-height:300px;line-height:1.6}
+@media(max-width:640px){.wa-overlay.open{align-items:flex-start}.wa-card .modal-body{max-height:none}#wa_Msg{min-height:230px}}
 .modal-close:hover{color:var(--text)}
 .modal-body{padding:18px 22px;max-height:70vh;overflow-y:auto}
 .form-row{margin-bottom:14px;display:flex;flex-direction:column;gap:5px}
@@ -715,7 +725,7 @@ table.avail td.occ{border:1px solid transparent}
         <div class="stu-title-wrap">
           <span class="table-title">Fee Payments</span>
           <select id="payMonth" onchange="buildPayments()" class="pay-mini"></select>
-          <select id="payYear" onchange="buildPayments()" class="pay-mini"></select>
+          <select id="payYear" onchange="loadPayments()" class="pay-mini"></select>
           <input type="text" id="payFilterName" class="stu-search" placeholder="Search name, ref, note…" oninput="buildPayments()">
         </div>
         <div class="stu-actions">
@@ -790,12 +800,20 @@ table.avail td.occ{border:1px solid transparent}
   </div>
 
   <!-- WhatsApp reminder modal -->
-  <div class="modal-overlay" id="waModal">
-    <div class="modal-card" style="max-width:420px;">
-      <div class="modal-head"><h3 id="waModalTitle">WhatsApp Reminder</h3><button class="modal-close" onclick="closeWaModal()">&times;</button></div>
+  <div class="modal-overlay wa-overlay" id="waModal">
+    <div class="modal-card wa-card">
+      <div class="modal-head">
+        <h3 id="waModalTitle">WhatsApp Reminder</h3>
+        <div class="modal-head-actions">
+          <button class="icon-btn" id="wa_CopyBtn" onclick="copyWaModal()" title="Copy message" aria-label="Copy message">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <button class="modal-close" onclick="closeWaModal()">&times;</button>
+        </div>
+      </div>
       <div class="modal-body">
-        <div class="form-row"><label>Message</label><textarea id="wa_Msg" rows="5"></textarea></div>
-        <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeWaModal()">Cancel</button><button class="wa-btn wa-cancel" onclick="copyWaModal()">Copy</button><button class="wa-btn pf-save" onclick="sendWaModal()">Send on WhatsApp</button></div>
+        <div class="form-row"><label>Message</label><textarea id="wa_Msg" rows="14"></textarea></div>
+        <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeWaModal()">Cancel</button><button class="wa-btn pf-save" onclick="sendWaModal()">Send on WhatsApp</button></div>
       </div>
     </div>
   </div>
@@ -2122,10 +2140,11 @@ window.loadPayments=async function(){
   const list=$('paymentsList');
   payLoading=true;list.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
   if(!studentsLoaded){try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}catch(e){console.error(e);}}
+  const year=$('payYear').value;
   try{
-    // Every year, not just the selected one — the Pending column has to see arrears
-    // carried over from earlier months, and switching year no longer refetches.
-    const snap=await getDocs(collection(db,'payments'));
+    // Selected year only — Pending reports arrears within the year, so there is no
+    // reason to pull every year's payments into memory.
+    const snap=await getDocs(query(collection(db,'payments'),where('Year','==',String(year))));
     paymentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));paymentsLoaded=true;payIndex=null;
   }catch(e){console.error('loadPayments',e);paymentsData=[];payIndex=null;}
   // Attendance feeds the Classes column.
@@ -2164,33 +2183,33 @@ function payDues(s,selY,selM){
   if(!payIndex)buildPayIndex();
   const sid=String(s.ID||'').trim();
   const monthly=payAmt(s['Monthly Fee']);
-  const feeMonths=[];let total=0,unknown=false;
+  const items=[],feeMonths=[],extras=[];let total=0,unknown=false;
   const jm=parseJoinYM(s['Join Date']);
-  // Never look further back than the oldest payment on file — otherwise a student who
-  // joined years before the migrated data starts shows invented arrears.
-  let y=jm?jm.y:selY,m=jm?jm.mo:1;
-  if(payDataStart&&(y<payDataStart.y||(y===payDataStart.y&&m<payDataStart.mo))){y=payDataStart.y;m=payDataStart.mo;}
-  let guard=0;
-  while((y<selY||(y===selY&&m<=selM))&&guard++<300){
-    const rec=payRecord(sid,y,m,'Fee');
+  // Arrears are reported within the selected YEAR only — January at the earliest.
+  let m=1;
+  if(jm&&jm.y===selY&&jm.mo>1)m=jm.mo;                       // joined partway through the year
+  if(jm&&jm.y>selY)m=13;                                     // joined after this year: nothing due
+  if(payDataStart&&payDataStart.y===selY&&payDataStart.mo>m)m=payDataStart.mo;  // no records before this
+  for(;m<=selM;m++){
+    const rec=payRecord(sid,selY,m,'Fee');
     const st=rec?String(rec.Status||'').toLowerCase():'';
-    if(st!=='paid'&&st!=='ignore'){
-      const amt=(rec&&payAmt(rec.Amount)!==null)?payAmt(rec.Amount):monthly;
-      if(amt===null)unknown=true;else total+=amt;
-      feeMonths.push(PAY_MONTHS[m-1].slice(0,3)+' '+String(y).slice(2));
-    }
-    m++;if(m>12){m=1;y++;}
+    if(st==='paid'||st==='ignore')continue;
+    const amt=(rec&&payAmt(rec.Amount)!==null)?payAmt(rec.Amount):monthly;
+    if(amt===null)unknown=true;else total+=amt;
+    items.push({type:'Fee',label:'Fee '+PAY_MONTHS[m-1].slice(0,3)+' '+selY,amount:amt,month:m});
+    feeMonths.push(PAY_MONTHS[m-1].slice(0,3));
   }
-  const extras=[];
   ((payByStudent&&payByStudent[sid])||[]).forEach(p=>{
     const t=(String(p.Type||'').trim()||'Fee');if(t==='Fee')return;
     const st=String(p.Status||'').toLowerCase();if(st==='paid'||st==='ignore')return;
     const py=parseInt(payY(p.Year),10),pm=parseInt(payM(p.Month),10);
-    if(!py||!pm||py>selY||(py===selY&&pm>selM))return;
+    if(py!==selY||!pm||pm>selM)return;
     const amt=payAmt(p.Amount);if(amt===null)unknown=true;else total+=amt;
-    extras.push(t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+String(py).slice(2));
+    items.push({type:t,label:t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,amount:amt,month:pm});
+    extras.push(t+' '+PAY_MONTHS[pm-1].slice(0,3));
   });
-  return {total,unknown,feeMonths,extras,count:feeMonths.length+extras.length};
+  items.sort((a,b)=>a.month-b.month||a.type.localeCompare(b.type));
+  return {total,unknown,items,feeMonths,extras,count:items.length,year:selY};
 }
 function renderDueCell(s,selY,selM){
   const d=payDues(s,selY,selM);
@@ -2198,7 +2217,7 @@ function renderDueCell(s,selY,selM){
   const bits=[];
   if(d.feeMonths.length)bits.push('Fee: '+d.feeMonths.join(', '));
   if(d.extras.length)bits.push(d.extras.join(', '));
-  const detail=bits.join(' · ');
+  const detail=bits.join(' · ')+' · '+d.year;
   const amt=d.total>0?payMoney(d.total)+(d.unknown?' +':''):(d.unknown?'—':'₹0');
   return `<div class="pay-due" title="${esc(detail)}"><span class="pay-due-amt">${amt}</span><div class="pay-due-detail">${esc(detail)}</div></div>`;
 }
@@ -2313,7 +2332,15 @@ window.savePaymentRef=async function(sid,inp){
 window.payWhatsApp=function(sid){
   const s=studentsData.find(x=>x.ID===sid);if(!s)return;
   const month=PAY_MONTHS[$('payMonth').value-1],year=$('payYear').value;
-  const msg=`Dear Parent,\n\nGentle reminder to make the fees payment for the month of ${month.slice(0,3)} ${year}.\n\nKindly share the screenshot of your transfer if done already.\n\nThank you,\nTeam ElectroBotics`;
+  const d=payDues(s,+year,+$('payMonth').value);
+  // List every outstanding item — arrear fee months plus any unpaid Kit / Components.
+  let dues='';
+  if(d.count){
+    const lines=d.items.map(it=>`• ${it.label}${it.amount!==null?': ₹'+Math.round(it.amount).toLocaleString('en-IN'):''}`);
+    dues=`\nPending:\n${lines.join('\n')}\n`;
+    if(d.total>0)dues+=`Total: ₹${Math.round(d.total).toLocaleString('en-IN')}${d.unknown?' (plus items yet to be priced)':''}\n`;
+  }
+  const msg=`Dear Parent,\n\nGentle reminder to make the fees payment for the month of ${month.slice(0,3)} ${year}.\n${dues}\nKindly share the screenshot of your transfer if done already.\n\nThank you,\nTeam ElectroBotics`;
   waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
   $('waModalTitle').textContent='Reminder · '+s.Name;$('wa_Msg').value=msg;$('waModal').classList.add('open');
 };
@@ -2330,7 +2357,7 @@ window.downloadPaymentsExcel=function(){
   const rows=payVisibleRows.map(({s})=>{
     const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
     const att=attIdx[String(s.ID).trim()],due=payDues(s,selY,selM);
-    const dueBits=[];if(due.feeMonths.length)dueBits.push('Fee: '+due.feeMonths.join(', '));if(due.extras.length)dueBits.push(due.extras.join(', '));
+    const dueBits=due.items.map(it=>it.label+(it.amount!==null?' ₹'+Math.round(it.amount):''));
     return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:'',
       'Classes Attended':att?att.count:0,
       'Days Attended':att?att.dates.map(d=>d.date+(d.count>1?' x'+d.count:'')).join(', '):'',
@@ -3360,11 +3387,12 @@ window.aaShareAll=function(mod){
   $('waModal').classList.add('open');
 };
 window.copyWaModal=async function(){
-  const ta=$('wa_Msg');
+  const ta=$('wa_Msg'),btn=$('wa_CopyBtn');
   try{
     if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(ta.value);
     else{ta.select();document.execCommand('copy');}
     toast('Message copied');
+    if(btn){btn.classList.add('copied');setTimeout(()=>btn.classList.remove('copied'),1200);}
   }catch(e){toast('Couldn’t copy — select and copy manually');}
 };
 
