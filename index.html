@@ -1318,8 +1318,35 @@ window.saveHist=async function(){
   }catch(e){console.error('saveHist',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
 };
 
-function splitCsvLine(line){const out=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}else if(c===','&&!inQ){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}
-function parseCSV(text){const lines=text.trim().split(/\r?\n/);if(lines.length<2)return [];const headers=splitCsvLine(lines[0]).map(h=>h.trim());const out=[];for(let i=1;i<lines.length;i++){if(!lines[i].trim())continue;const cells=splitCsvLine(lines[i]);const obj={};headers.forEach((h,j)=>obj[h]=(cells[j]||'').trim());out.push(obj);}return out;}
+// Scans the whole text character by character rather than splitting on newlines first,
+// so a quoted Address or Notes cell containing a line break no longer shifts every
+// following column on that row.
+function parseCSV(text){
+  const s=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const rows=[];let row=[],cur='',inQ=false;
+  for(let i=0;i<s.length;i++){
+    const c=s[i];
+    if(inQ){
+      if(c==='"'){ if(s[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=c;
+    }else if(c==='"'){inQ=true;}
+    else if(c===','){row.push(cur);cur='';}
+    else if(c==='\n'){row.push(cur);cur='';rows.push(row);row=[];}
+    else cur+=c;
+  }
+  row.push(cur);rows.push(row);
+  const blank=(r)=>r.every(c=>!String(c).trim());
+  while(rows.length&&blank(rows[rows.length-1]))rows.pop();
+  if(rows.length<2)return [];
+  const headers=rows[0].map(h=>String(h).trim());
+  const out=[];
+  for(let i=1;i<rows.length;i++){
+    if(blank(rows[i]))continue;
+    const obj={};headers.forEach((h,j)=>obj[h]=String(rows[i][j]===undefined?'':rows[i][j]).trim());
+    out.push(obj);
+  }
+  return out;
+}
 window.runMigration=async function(){
   const raw=$('migInput').value.trim();const msg=$('migMsg');
   if(!raw){msg.textContent='Paste CSV or JSON first.';msg.className='msg err';return;}
@@ -2040,6 +2067,7 @@ window.saveStudent=async function(){
 
 // ═══════════ PAYMENTS ═══════════
 let paymentsData=[], paymentsLoaded=false, payStatusFilter='pending', payLoading=false, waTargetPhone='';
+let payVisibleRows=[];   // rows currently shown in the Payments table (filters + chip applied)
 const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function payDocId(sid,year,month,type){return `${String(sid).trim()}_${year}_${month}_${type||'Fee'}`;}
 function payRecord(sid,year,month,type){
@@ -2122,6 +2150,7 @@ window.buildPayments=function(){
   const chip=(k,l,n)=>`<button class="pay-chip pay-chip-${k} ${payStatusFilter===k?'active':''}" onclick="setPayStatus('${k}')">${l} ${n}</button>`;
   const chipsHtml=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
   if(summary.innerHTML!==chipsHtml)summary.innerHTML=chipsHtml;
+  payVisibleRows=rows;   // what the Excel download exports
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
   const waIco='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
@@ -2187,9 +2216,12 @@ window.sendWaModal=function(){const text=encodeURIComponent($('wa_Msg').value);c
 window.downloadPaymentsExcel=function(){
   if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
   const year=$('payYear').value,month=$('payMonth').value;
-  const rows=studentsData.filter(s=>(s.Status||'Active').toLowerCase()==='active').map(s=>{
+  // Export exactly what's on screen — same filters, same chip, same "joined by this month"
+  // exclusion — so the file matches the table instead of listing every active student.
+  if(!payVisibleRows.length){alert('Nothing to export for the current filters.');return;}
+  const rows=payVisibleRows.map(({s})=>{
     const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
-    return {'ID':s.ID,'Name':s.Name,'Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:''};
+    return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:''};
   });
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Payments');
   XLSX.writeFile(wb,`ElectroBotics_Payments_${PAY_MONTHS[month-1]}_${year}.xlsx`);
@@ -2335,7 +2367,10 @@ function computeTrend(year,pays){
   studentsData.forEach(s=>{
     const id=String(s.ID||'').trim();const region=isIndia(s.Country)?'india':'intl';if(id)idRegion[id]=region;
     const st=String(s.Status||'Active').toLowerCase();
-    let left=parseD(s['Inactive Date']);if(st!=='active'&&!left)left=null;
+    const left=parseD(s['Inactive Date']);
+    // Inactive with no Inactive Date: there is no way to know which month they left,
+    // so they are left out of the active line entirely rather than counted forever.
+    if(st!=='active'&&!left)return;
     roster.push({region,join:parseD(s['Join Date']),left});
   });
   const activeAsOf=(y,m,region)=>{const end=new Date(y,m,0,23,59,59);let n=0;roster.forEach(r=>{if(r.region!==region)return;if(r.join&&r.join>end)return;if(r.left&&r.left<=end)return;n++;});return n;};
@@ -2569,18 +2604,21 @@ async function loadSummary(){
 }
 const activeStudentsList=()=>studentsData.filter(s=>(s.Status||'Active').toLowerCase()==='active');
 function buildStats(){
-  const total=studentsData.length;const active=activeStudentsList().length;const inactive=total-active;
+  const activeList=activeStudentsList();
+  const total=studentsData.length;const active=activeList.length;const inactive=total-active;
   const canon=(c)=>{const v=String(c||'').trim();return /india/i.test(v)?'India':(v||'Unknown');};
-  const countries=new Set(studentsData.map(s=>canon(s.Country)).filter(c=>c&&c!=='Unknown'));
-  const tutors=new Set(studentsData.map(s=>s.Tutor||'Unassigned').filter(Boolean));
-  const cMap={};studentsData.forEach(s=>{const c=s.Country||'Unknown';cMap[c]=(cMap[c]||0)+1;});
+  // Countries, Tutors and Top all count ACTIVE students only, so the cards agree with the
+  // charts below them. "India"/"india" collapse to one country in both the count and Top.
+  const countries=new Set(activeList.map(s=>canon(s.Country)).filter(c=>c&&c!=='Unknown'));
+  const tutors=new Set(activeList.map(s=>s.Tutor||'Unassigned').filter(Boolean));
+  const cMap={};activeList.forEach(s=>{const c=canon(s.Country);cMap[c]=(cMap[c]||0)+1;});
   const topC=Object.entries(cMap).sort((a,b)=>b[1]-a[1])[0]||['—',0];
   const g=$('statsGrid');if(!g)return;
   g.innerHTML=`
     <div class="stat-card accent"><div class="stat-label">Total Students</div><div class="stat-value">${active}</div><div class="stat-sub">${total} total · ${inactive} inactive</div></div>
     <div class="stat-card green"><div class="stat-label">Countries</div><div class="stat-value">${countries.size}</div><div class="stat-sub">Top: ${esc(topC[0])} (${topC[1]})</div></div>
     <div class="stat-card purple"><div class="stat-label">Active Rate</div><div class="stat-value">${total?Math.round(active/total*100):0}%</div><div class="stat-sub">${active} of ${total} students</div></div>
-    <div class="stat-card amber"><div class="stat-label">Tutors</div><div class="stat-value">${tutors.size}</div><div class="stat-sub">${total&&tutors.size?Math.round(total/tutors.size):0} students avg</div></div>`;
+    <div class="stat-card amber"><div class="stat-label">Tutors</div><div class="stat-value">${tutors.size}</div><div class="stat-sub">${active&&tutors.size?Math.round(active/tutors.size):0} students avg</div></div>`;
 }
 function buildCharts(){
   if(typeof Chart==='undefined')return;
@@ -2744,8 +2782,8 @@ function buildAaScreen(mod){
         <div class="filter-group"><label>Batch</label><select id="${p}_tBatch" onchange="aaTrendFilter('${mod}')"><option value="">All batches</option></select></div>
         <div class="filter-group"><label>Tutor</label><select id="${p}_tTutor" onchange="aaTrendFilter('${mod}')"><option value="">All tutors</option></select></div>
         <div class="filter-group"><label>Student</label><select id="${p}_tStudent" onchange="aaRenderTrend('${mod}')"><option value="">All students</option></select></div>
-        <div class="filter-group"><label>Year</label><select id="${p}_tYear" onchange="aaRenderTrend('${mod}')"><option value="">All years</option>${years}</select></div>
-        <div class="filter-group"><label>Month</label><select id="${p}_tMonth" onchange="aaRenderTrend('${mod}')">${months}</select></div>
+        <div class="filter-group"><label>Year</label><select id="${p}_tYear" onchange="aaPeriodChange('${mod}')"><option value="">All years</option>${years}</select></div>
+        <div class="filter-group"><label>Month</label><select id="${p}_tMonth" onchange="aaPeriodChange('${mod}')">${months}</select></div>
         <button class="filter-clear" onclick="aaClearTrendFilters('${mod}')">Clear</button>
       </div>
       <div class="risk-criteria">Health: 🟢 75%+ · 🟡 50–74% · 🔴 below 50%.</div>
@@ -2898,6 +2936,21 @@ window.aaShow=function(mod,view){
 
 /* ── Shared helpers ── */
 const aaActive=()=>studentsData.filter(s=>{const t=String(s.Status||'Active').toLowerCase();return t==='active'||t==='';});
+// A student only appears once they've joined. A blank Join Date is treated as "always",
+// so students whose sheet row has no join date are never hidden.
+function aaJoinedBy(s,isoDate){
+  if(!isoDate)return true;
+  const j=aaNormDate(s['Join Date'],'auto');
+  return !j||j<=isoDate;
+}
+// Last day of the selected Year/Month span — the cut-off the trend list joins by.
+function aaSpanEnd(mod){
+  const yr=aEl(mod,'tYear').value,mo=aEl(mod,'tMonth').value;
+  if(!yr)return '';                                   // all years → no cut-off
+  if(!mo)return yr+'-12-31';
+  const last=new Date(+yr,+mo,0).getDate();
+  return `${yr}-${String(mo).padStart(2,'0')}-${String(last).padStart(2,'0')}`;
+}
 function aaFillSel(id,allLabel,values,current){
   const sel=$(id);if(!sel)return;
   let html=`<option value="">${allLabel}</option>`+values.map(v=>`<option value="${esc(v)}"${v===current?' selected':''}>${esc(v)}</option>`).join('');
@@ -2955,6 +3008,7 @@ window.aaLoadRoster=async function(mod){
     if(country&&(s.Country||'')!==country)return false;
     if(batch&&(s.Batch||'')!==batch)return false;
     if(tutor&&(s.Tutor||'')!==tutor)return false;
+    if(!aaJoinedBy(s,date))return false;   // not enrolled yet on this date
     return true;
   }).sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
   const key=mod+'|'+date;
@@ -3056,6 +3110,8 @@ function aaPatchCache(mod,date,records){
 
 /* ── TRENDS view ── */
 window.aaTrendFilter=function(mod){aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);};
+// Year/Month move the join-date cut-off, so the student dropdown is rebuilt too.
+window.aaPeriodChange=function(mod){aaFillTrendStudents(mod);aaRenderTrend(mod);};
 window.aaClearTrendFilters=function(mod){
   const p=AA[mod].p;
   ['tCountry','tBatch','tTutor','tStudent'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
@@ -3064,10 +3120,12 @@ window.aaClearTrendFilters=function(mod){
 function aaFillTrendStudents(mod){
   const p=AA[mod].p,sel=$(p+'_tStudent');if(!sel)return;
   const cv=$(p+'_tCountry').value,bv=$(p+'_tBatch').value,tv=$(p+'_tTutor').value,cur=sel.value;
+  const end=aaSpanEnd(mod);
   const list=aaActive().filter(s=>{
     if(cv&&(s.Country||'')!==cv)return false;
     if(bv&&(s.Batch||'')!==bv)return false;
     if(tv&&(s.Tutor||'')!==tv)return false;
+    if(!aaJoinedBy(s,end))return false;
     return true;
   }).sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
   sel.innerHTML='<option value="">All students</option>'+list.map(s=>`<option value="${esc(s.ID)}">${esc(s.Name)} (${esc(s.ID)})</option>`).join('');
@@ -3101,11 +3159,13 @@ window.aaRenderTrend=function(mod){
   const c=AA[mod],st=aaState[mod],card=aEl(mod,'trendTable');
   const cv=aEl(mod,'tCountry').value,bv=aEl(mod,'tBatch').value,tv=aEl(mod,'tTutor').value;
   const sv=aEl(mod,'tStudent').value,yr=aEl(mod,'tYear').value,mo=aEl(mod,'tMonth').value;
+  const end=aaSpanEnd(mod);
   let list=aaActive().filter(s=>{
     if(cv&&(s.Country||'')!==cv)return false;
     if(bv&&(s.Batch||'')!==bv)return false;
     if(tv&&(s.Tutor||'')!==tv)return false;
     if(sv&&String(s.ID)!==sv)return false;
+    if(!aaJoinedBy(s,end))return false;   // hadn't joined by the end of this period
     return true;
   }).sort((a,b)=>String(a.ID||'').localeCompare(String(b.ID||''),undefined,{numeric:true}));
   const records=(mod==='attendance'?attendanceData:assignmentsData);
