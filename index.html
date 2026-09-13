@@ -2280,7 +2280,7 @@ window.buildPayments=function(){
   else if(fStatus==='compdue')rows=rows.filter(r=>r.compSt&&r.compSt!=='paid');
   else if(fStatus)rows=rows.filter(r=>r.st===fStatus);
   const chip=(k,l,n)=>`<button class="pay-chip pay-chip-${k} ${payStatusFilter===k?'active':''}" onclick="setPayStatus('${k}')">${l} ${n}</button>`;
-  const chipsHtml=chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue)+`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`;
+  const chipsHtml=`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`+chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue);
   if(summary.innerHTML!==chipsHtml)summary.innerHTML=chipsHtml;
   payVisibleRows=rows;   // what the Excel download exports
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
@@ -2635,7 +2635,7 @@ window.renderRisk=function(){
   if(!riskData)return;const c=riskData.counts;
   $('riskWindow').textContent='· rolling 4 weeks';
   const rc=(band,label,n)=>`<button class="risk-stat-btn${riskCol.risk===band?' active':''}" onclick="setRiskCol('risk','${band}')"><span class="risk-dot ${band}"></span>${n} ${label}</button>`;
-  $('riskSummary').innerHTML=rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','no data',c.nodata)+`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`;
+  $('riskSummary').innerHTML=`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`+rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','no data',c.nodata);
   const all=riskData.students;
   let rows=all.slice();
   if(riskCol.country)rows=rows.filter(s=>(s.country||'')===riskCol.country);
