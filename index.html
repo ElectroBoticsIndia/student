@@ -747,25 +747,15 @@ table.avail td.occ{border:1px solid transparent}
 
     <div class="chart-card" id="payMigCard" style="display:none;">
       <div class="mig-head" onclick="toggleMigCard('payMigBody','migChevPay')">
-        <div class="chart-title">Payments &amp; Attendance Migration (admin)</div>
+        <div class="chart-title">Payments Migration (admin)</div>
         <span class="mig-chev" id="migChevPay">▾</span>
       </div>
       <div id="payMigBody" style="display:none;margin-top:12px;">
-      <div class="note">Import your Payments and Attendance sheets as CSV. Keys prevent duplicates on re-import. Google Sheets stay untouched.</div>
+      <div class="note">Import your Payments sheet as CSV. Keys prevent duplicates on re-import. Google Sheets stay untouched. <strong>Attendance and Assignments now import from their own tabs.</strong></div>
       <div class="stu-mig">
         <label class="stu-mig-label">Payments CSV <span class="stu-mig-hint">(Student ID, Year, Month, Type, Status, Amount, Paid Date, Method, Note)</span></label>
         <textarea id="migPayments" placeholder="Student ID,Year,Month,Type,Status,Amount,Paid Date,Method,Note&#10;EB001,2026,7,Fee,Paid,1500,2026-07-05,UPI,"></textarea>
         <div class="stu-mig-actions"><button class="btn-primary" onclick="migPayments()">Import Payments</button><span class="msg" id="migPaymentsMsg"></span></div>
-      </div>
-      <div class="stu-mig">
-        <label class="stu-mig-label">Attendance CSV <span class="stu-mig-hint">(StudentID, Date, Status, Count) — Status "present" counts</span></label>
-        <textarea id="migAttendance" placeholder="StudentID,Date,Status,Count&#10;EB001,2026-07-06,present,1"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migAttendance()">Import Attendance</button><span class="msg" id="migAttendanceMsg"></span></div>
-      </div>
-      <div class="stu-mig">
-        <label class="stu-mig-label">Assignments CSV <span class="stu-mig-hint">(StudentID, Date, Status, Count) — Status "submitted" counts</span></label>
-        <textarea id="migAssignments" placeholder="StudentID,Date,Status,Count&#10;EB001,2026-07-06,submitted,1"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migAssignments()">Import Assignments</button><span class="msg" id="migAssignmentsMsg"></span></div>
       </div>
       </div>
     </div>
@@ -2367,44 +2357,6 @@ window.renderTrendChart=function(){
   if(scroller)requestAnimationFrame(()=>{scroller.scrollLeft=scroller.scrollWidth;});
 };
 
-window.migAttendance=async function(){
-  const records=parseCSV($('migAttendance').value.trim());const msg=$('migAttendanceMsg');
-  if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
-  msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
-  let done=0,fail=0,batch=writeBatch(db),n=0;
-  for(const r of records){
-    try{
-      const sid=String(r.StudentID||r['Student ID']||'').trim();const date=String(r.Date||'').trim();
-      if(!sid||!date){fail++;continue;}
-      const id=(sid+'_'+date).replace(/[\/#\.\[\]]/g,'_');
-      batch.set(doc(db,'attendance',id),{StudentID:sid,Date:date,Status:r.Status||'',Count:r.Count||'1',migratedAt:serverTimestamp()},{merge:true});
-      n++;done++;if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
-    }catch(e){console.error('mig att',r,e);fail++;}
-  }
-  try{if(n>0)await batch.commit();}catch(e){fail+=n;done-=n;}
-  msg.textContent=`Imported ${done} attendance row(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
-  attendanceLoaded=false;
-};
-window.migAssignments=async function(){
-  const records=parseCSV($('migAssignments').value.trim());const msg=$('migAssignmentsMsg');
-  if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
-  msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
-  let done=0,fail=0,batch=writeBatch(db),n=0;
-  for(const r of records){
-    try{
-      const sid=String(r.StudentID||r['Student ID']||'').trim();const date=String(r.Date||'').trim();
-      if(!sid||!date){fail++;continue;}
-      // Keyed by student+date only (no status suffix) so re-marking a student
-      // replaces the row instead of leaving a second, contradictory one.
-      const id=(sid+'_'+date).replace(/[\/#\.\[\]]/g,'_');
-      batch.set(doc(db,'assignments',id),{StudentID:sid,Date:date,Status:r.Status||'',Count:r.Count||'1',migratedAt:serverTimestamp()},{merge:true});
-      n++;done++;if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
-    }catch(e){console.error('mig asg',r,e);fail++;}
-  }
-  try{if(n>0)await batch.commit();}catch(e){fail+=n;done-=n;}
-  msg.textContent=`Imported ${done} assignment row(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
-  assignmentsLoaded=false;
-};
 
 // ═══════════ AT-RISK ═══════════
 let assignmentsData=[], assignmentsLoaded=false, riskData=null;
@@ -2679,13 +2631,15 @@ const AA={
     markHeading:'Mark attendance',trendHeading:'Attendance trends',
     markSub:"Filter by country, batch, or tutor (any combination), then set status only for the students you need. Unmarked students aren't saved.",
     saveBtn:'Save attendance',daysLabel:'Days attended',datesLabel:'Attended dates',
-    unit:'classes',verb:'attended',shareOne:'Attendance update',shareAll:'Attendance summary'},
+    unit:'classes',verb:'attended',shareOne:'Attendance update',shareAll:'Attendance summary',
+    migTitle:'Attendance Migration',sheetName:'Attendance'},
   assignments:{p:'asg',col:'assignments',
     pos:'submitted',neg:'not submitted',posLbl:'Submitted',negLbl:'Not submitted',posShort:'Sub.',negShort:'Not sub.',
     markHeading:'Demo submissions',trendHeading:'Submission trends',
     markSub:"Filter by country, batch, or tutor (any combination), then set submission status only for the students you need. Unmarked students aren't saved.",
     saveBtn:'Save submissions',daysLabel:'Days submitted',datesLabel:'Submitted dates',
-    unit:'submissions',verb:'submitted',shareOne:'Demo submission update',shareAll:'Demo submission summary'}
+    unit:'submissions',verb:'submitted',shareOne:'Demo submission update',shareAll:'Demo submission summary',
+    migTitle:'Assignments Migration',sheetName:'Assignments'}
 };
 const aaState={
   attendance:{built:false,view:'mark',roster:[],mark:{},summary:[],prefillKey:null,prefill:{}},
@@ -2752,9 +2706,127 @@ function buildAaScreen(mod){
       <div class="risk-criteria">Health: 🟢 75%+ · 🟡 50–74% · 🔴 below 50%.</div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="${p}_trendTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
+  </div>
+
+  <div class="chart-card" id="${p}_migCard" style="display:none;">
+    <div class="mig-head" onclick="toggleMigCard('${p}_migBody','${p}_migChev')">
+      <div class="chart-title">${esc(c.migTitle)} (admin)</div>
+      <span class="mig-chev" id="${p}_migChev">▾</span>
+    </div>
+    <div id="${p}_migBody" style="display:none;margin-top:12px;">
+      <div class="note">Paste the ${esc(c.sheetName)} sheet's CSV export below. Rows are keyed by <strong>Student ID + Date</strong>, so re-importing updates rather than duplicates. Dates are normalised to <code>YYYY-MM-DD</code> and statuses to <code>${esc(c.pos)}</code> / <code>${esc(c.neg)}</code> so they match what the ${esc(c.markHeading)} screen writes. Your Google Sheet stays untouched.</div>
+      <div class="stu-mig">
+        <label class="stu-mig-label">${esc(c.sheetName)} CSV <span class="stu-mig-hint">(StudentID, Date, Status, Count) — “${esc(c.posLbl)}” rows are the ones that count</span></label>
+        <textarea id="${p}_migInput" placeholder="StudentID,Date,Status,Count&#10;EB001,2026-09-06,${esc(c.posLbl)},1"></textarea>
+        <div class="stu-mig-actions">
+          <select id="${p}_migDateFmt" class="pay-mini" title="How to read ambiguous slash dates">
+            <option value="auto" selected>Dates: auto-detect</option>
+            <option value="dmy">Dates: DD/MM/YYYY</option>
+            <option value="mdy">Dates: MM/DD/YYYY</option>
+          </select>
+          <button class="wa-btn wa-cancel" style="padding:7px 14px;font-size:12px;" onclick="aaMigrate('${mod}',true)">Check first</button>
+          <button class="btn-primary" onclick="aaMigrate('${mod}',false)">Import ${esc(c.sheetName)}</button>
+          <span class="msg" id="${p}_migMsg"></span>
+        </div>
+      </div>
+    </div>
   </div>`;
   st.built=true;
 }
+
+/* ── Migration helper (admin) ──
+   Same shape as the Students helper: paste CSV, keyed writes, no duplicates.
+   Adds date/status normalisation because the sheets carry display-formatted
+   dates and capitalised statuses, while the app reads YYYY-MM-DD + lowercase. */
+function aaNormDate(raw,order){
+  const s=String(raw||'').trim();
+  if(!s)return '';
+  const pad=(n)=>String(n).padStart(2,'0');
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);            // already ISO (with or without a time part)
+  if(m)return `${m[1]}-${pad(+m[2])}-${pad(+m[3])}`;
+  m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); // 6/9/2026 and friends
+  if(m){
+    let a=+m[1],b=+m[2],y=+m[3];if(y<100)y+=2000;
+    let d,mo;
+    if(order==='mdy'){mo=a;d=b;}
+    else if(order==='dmy'){d=a;mo=b;}
+    else if(a>12){d=a;mo=b;}                                 // auto: only one reading is possible
+    else if(b>12){mo=a;d=b;}
+    else {d=a;mo=b;}                                         // auto + ambiguous: assume DD/MM
+    if(mo<1||mo>12||d<1||d>31)return '';
+    return `${y}-${pad(mo)}-${pad(d)}`;
+  }
+  const dt=new Date(s);                                      // "6 Sep 2026", "Sep 6, 2026", …
+  if(!isNaN(dt))return new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  return '';
+}
+function aaNormStatus(mod,raw){
+  const c=AA[mod],s=String(raw||'').trim().toLowerCase();
+  if(!s)return '';
+  if(s===c.pos||s===c.neg)return s;
+  if(mod==='attendance'){
+    if(/^(p|present|yes|y|1|true)$/.test(s))return 'present';
+    if(/^(a|absent|no|n|0|false)$/.test(s))return 'absent';
+  }else{
+    if(/^(s|sub|submitted|yes|y|1|true|done|completed)$/.test(s))return 'submitted';
+    if(/^(not[\s_-]?submitted|ns|no|n|0|false|pending|missing)$/.test(s))return 'not submitted';
+  }
+  return s;   // unrecognised: keep it verbatim and report it, never silently drop
+}
+window.aaMigrate=async function(mod,dryRun){
+  const c=AA[mod],p=c.p,msg=$(p+'_migMsg');
+  const order=$(p+'_migDateFmt').value;
+  const rows=parseCSV($(p+'_migInput').value.trim());
+  if(!rows.length){msg.textContent='No rows found — paste the CSV including its header row.';msg.className='msg err';return;}
+  // Parse + normalise everything first, so a dry run and a real import agree.
+  const good=[],bad={noId:0,noDate:0,noStatus:0},seen={},tally={};
+  rows.forEach(r=>{
+    const sid=String(r.StudentID||r['Student ID']||r.ID||'').trim();
+    if(!sid){bad.noId++;return;}
+    const date=aaNormDate(r.Date||r.date,order);
+    if(!date){bad.noDate++;return;}
+    const status=aaNormStatus(mod,r.Status||r.status);
+    if(!status){bad.noStatus++;return;}
+    let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
+    const key=sid+'_'+date;
+    if(seen[key]!==undefined)good[seen[key]]={sid,date,status,count:n};   // later row wins
+    else{seen[key]=good.length;good.push({sid,date,status,count:n});}
+  });
+  const dupes=rows.length-(good.length+bad.noId+bad.noDate+bad.noStatus);
+  good.forEach(g=>{tally[g.status]=(tally[g.status]||0)+1;});   // count what will actually be written
+  const parts=[];
+  Object.keys(tally).sort().forEach(k=>parts.push(`${tally[k]} ${k}`));
+  const skipped=bad.noId+bad.noDate+bad.noStatus;
+  const skipNote=skipped?` · skipped ${skipped} (${[bad.noId?bad.noId+' no ID':'',bad.noDate?bad.noDate+' bad date':'',bad.noStatus?bad.noStatus+' no status':''].filter(Boolean).join(', ')})`:'';
+  const dupNote=dupes>0?` · ${dupes} duplicate student+date row(s) collapsed`:'';
+  const range=good.length?` · ${good.map(g=>g.date).sort()[0]} → ${good.map(g=>g.date).sort().slice(-1)[0]}`:'';
+  const detail=`${parts.length?parts.join(', '):'no recognised statuses'}${range}${dupNote}${skipNote}`;
+  const summary=`${good.length} row(s) — ${detail}`;
+  if(dryRun){
+    msg.textContent=(good.length?'Ready to import ':'Nothing to import — ')+summary+'. Nothing written yet.';
+    msg.className=good.length?'msg ok':'msg err';return;
+  }
+  if(!good.length){msg.textContent='Nothing importable — '+summary+'.';msg.className='msg err';return;}
+  msg.innerHTML='<span class="spinner"></span> Importing '+good.length+'…';msg.className='msg busy';
+  let done=0,fail=0,wb=writeBatch(db),n=0;
+  for(const g of good){
+    try{
+      const id=(g.sid+'_'+g.date).replace(/[\/#\.\[\]]/g,'_');
+      wb.set(doc(db,c.col,id),{StudentID:g.sid,Date:g.date,Status:g.status,Count:String(g.count),migratedAt:serverTimestamp()},{merge:true});
+      n++;done++;
+      if(n>=400){await wb.commit();wb=writeBatch(db);n=0;}
+    }catch(e){console.error('aa mig',g,e);fail++;}
+  }
+  try{if(n>0)await wb.commit();}catch(e){console.error('aa mig commit',e);fail+=n;done-=n;}
+  msg.textContent=`Imported ${done} ${c.sheetName.toLowerCase()} row(s)`+(fail?`, ${fail} failed`:'')+` — ${detail}.`;
+  msg.className=fail?'msg err':'msg ok';
+  // Force a refetch so Trends and At-Risk see the imported rows.
+  if(mod==='attendance'){attendanceLoaded=false;attendanceData=[];}
+  else{assignmentsLoaded=false;assignmentsData=[];}
+  aaState[mod].prefillKey=null;aaState[mod].prefill={};
+  riskData=null;
+  if(aaState[mod].view==='trend')aaLoadTrend(mod);
+};
 
 /* ── Entry points from setTab ── */
 window.initAttendance=function(){aaInit('attendance');};
@@ -2762,6 +2834,7 @@ window.initAssignments=function(){aaInit('assignments');};
 async function aaInit(mod){
   buildAaScreen(mod);
   const st=aaState[mod];
+  if(isAdmin())aEl(mod,'migCard').style.display='';
   if(!studentsLoaded){
     try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}
     catch(e){console.error('aa students',e);}
