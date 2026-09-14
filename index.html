@@ -409,6 +409,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-actions-sub{display:inline-flex;align-items:center;gap:6px}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
 .pay-sid2{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.cur-chip{font-family:var(--font-mono);font-size:10px;font-weight:700;background:var(--accent-light);color:var(--accent-dark);border-radius:20px;padding:2px 8px;margin-left:6px;letter-spacing:.5px}
 /* Payments: Classes + Pending columns */
 .pay-cls{display:flex;flex-direction:column;gap:4px;min-width:120px}
 .pay-cls-n{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--accent-dark)}
@@ -416,7 +417,69 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-cls-dates{max-width:190px;line-height:1.8}
 .pay-due{display:flex;flex-direction:column;gap:3px;min-width:110px}
 /* Student profile: pending payments */
-.prof-dues-card{margin-bottom:22px}
+/* Profile: progress + notice row */
+.prof-row{display:grid;grid-template-columns:1fr;gap:18px;margin-bottom:24px;align-items:stretch}
+.prof-row.has-notice{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+.prof-row .progress-summary{margin-bottom:0}
+.notice-card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:18px 22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.notice-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.notice-title{font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--accent)}
+.notice-add{flex:none}
+.notice-item{padding:10px 0;border-bottom:1px dashed var(--border)}
+.notice-item:last-child{border-bottom:none;padding-bottom:0}
+.notice-item:first-child{padding-top:0}
+.notice-cat{display:inline-block;font-family:var(--font-mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-radius:20px;padding:2px 9px;margin-bottom:6px}
+.notice-cat.general{background:var(--accent-light);color:var(--accent-dark)}
+.notice-cat.attendance{background:var(--amber-bg);color:#8a6a00}
+.notice-cat.assignments{background:var(--amber-bg);color:#8a6a00}
+.notice-cat.payment{background:var(--red-light);color:#c0472a}
+.notice-cat.appreciation{background:var(--green-bg);color:#5a7a00}
+.notice-text{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap}
+.notice-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.notice-del{background:none;border:none;color:var(--text-light);font-family:var(--font-mono);font-size:10px;cursor:pointer;text-decoration:underline;padding:0}
+.notice-del:hover{color:var(--red)}
+.notice-empty{font-size:13px;color:var(--text-light);line-height:1.6}
+.notice-existing{margin:14px 0 0;max-height:190px;overflow-y:auto}
+
+/* Profile: this-month glance cards */
+.glance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:24px}
+.glance-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;text-align:left;transition:all .18s;display:flex;flex-direction:column;gap:8px;font-family:var(--font-body)}
+.glance-card:hover{border-color:var(--accent);box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.glance-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.glance-label{font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim)}
+.glance-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.glance-dot.good{background:var(--green)}
+.glance-dot.watch{background:var(--amber)}
+.glance-dot.bad{background:var(--red)}
+.glance-dot.none{background:var(--border)}
+.glance-value{font-size:26px;font-weight:700;color:var(--text);line-height:1.1}
+.glance-value .unit{font-size:14px;font-weight:600;color:var(--text-dim);margin-left:4px}
+.glance-sub{font-family:var(--font-mono);font-size:11px;color:var(--text-light);line-height:1.5}
+.glance-foot{display:flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--accent);margin-top:2px}
+.glance-foot svg{flex:none}
+/* Drill-down dialog */
+.gl-rows{display:flex;flex-direction:column;gap:2px}
+.gl-row{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
+.gl-row:last-child{border-bottom:none}
+.gl-month{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim)}
+.gl-bar{height:8px;border-radius:6px;background:var(--surface-alt);overflow:hidden}
+.gl-bar span{display:block;height:100%;border-radius:6px}
+.gl-bar span.good{background:var(--green)}
+.gl-bar span.watch{background:var(--amber)}
+.gl-bar span.bad{background:var(--red)}
+.gl-n{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text);white-space:nowrap}
+.gl-dates{grid-column:1/-1;padding:0 0 8px 76px;margin-top:-4px}
+.gl-status{font-family:var(--font-mono);font-size:11px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap}
+.gl-status.paid{background:var(--green-bg);color:#5a7a00}
+.gl-status.due{background:var(--red-light);color:#c0472a}
+.gl-status.skip{background:var(--surface-alt);color:var(--text-light)}
+.gl-note{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:14px;line-height:1.6}
+@media(max-width:820px){
+  .prof-row.has-notice{grid-template-columns:1fr}
+  .glance-grid{grid-template-columns:1fr}
+  .gl-row{grid-template-columns:56px 1fr auto;gap:10px}
+  .gl-dates{padding-left:66px}
+}
 .dues-list{display:flex;flex-direction:column;gap:8px}
 .dues-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-alt)}
 .dues-label{font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text)}
@@ -799,7 +862,7 @@ table.avail td.occ{border:1px solid transparent}
       <div class="modal-head"><h3 id="paymentModalTitle">Add Payment</h3><button class="modal-close" onclick="closePaymentForm()">&times;</button></div>
       <div class="modal-body">
         <div class="pay-modal-sub" id="paymentModalSub"></div>
-        <div class="form-row"><label>Amount (₹)</label><input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500"></div>
+        <div class="form-row"><label>Amount <span id="pay_Cur" class="cur-chip">INR</span></label><input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500"></div>
         <div class="form-row" id="pay_DateRow"><label>Paid Date</label><input type="date" id="pay_Date"></div>
         <div class="form-row" id="pay_MethodRow"><label>Method</label><input type="text" id="pay_Method" placeholder="UPI / Cash / Bank" list="payMethodList"><datalist id="payMethodList"><option value="UPI"><option value="Cash"><option value="Bank Transfer"><option value="Card"></datalist></div>
         <div class="form-row"><label>Note</label><input type="text" id="pay_Note" placeholder="Optional"></div>
@@ -901,17 +964,58 @@ table.avail td.occ{border:1px solid transparent}
         <button class="btn-logout" id="profBackBtn" onclick="backFromProfile()"><span class="back-arrow">←</span> Back</button>
       </div>
     </div>
-    <div class="progress-summary" id="profSummary"></div>
-
-    <!-- Pending payments — visible to parents too, so they can check dues alongside progress -->
-    <div class="chart-card prof-dues-card" id="profDuesCard" style="display:none;padding:0;overflow:hidden;">
-      <div class="stu-header"><div class="stu-title-wrap">
-        <span class="table-title">Pending Payments <span id="profDuesMeta" class="trend-summary"></span></span>
-      </div></div>
-      <div id="profDuesBody" style="padding:16px 20px 18px;"></div>
+    <!-- Learning progress + a message from ElectroBotics (the right half is dropped when empty) -->
+    <div class="prof-row">
+      <div class="progress-summary" id="profSummary"></div>
+      <div class="notice-card" id="profNoticeCard" style="display:none;">
+        <div class="notice-head">
+          <span class="notice-title">Message from ElectroBotics</span>
+          <button class="btn-primary notice-add" id="noticeAddBtn" onclick="openNoticeForm()" style="display:none;">+ Add</button>
+        </div>
+        <div id="profNoticeBody"></div>
+      </div>
     </div>
 
+    <!-- This month at a glance: attendance · assignments · payments -->
+    <div class="glance-grid" id="profGlance" style="display:none;"></div>
+
     <div class="roadmap" id="roadmap"></div>
+  </div>
+</div>
+
+<!-- Glance drill-down -->
+<div class="modal-overlay" id="glanceModal">
+  <div class="modal-card" style="max-width:540px;">
+    <div class="modal-head"><h3 id="glanceTitle">Details</h3><button class="modal-close" onclick="closeGlance()">&times;</button></div>
+    <div class="modal-body">
+      <div id="glanceBody"></div>
+      <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeGlance()">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Notice editor (admin) -->
+<div class="modal-overlay" id="noticeModal">
+  <div class="modal-card" style="max-width:480px;">
+    <div class="modal-head"><h3 id="noticeModalTitle">Message to Parent</h3><button class="modal-close" onclick="closeNoticeForm()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Category</label>
+        <select id="n_Category">
+          <option value="General">General</option>
+          <option value="Attendance">Attendance</option>
+          <option value="Assignments">Assignments</option>
+          <option value="Payment">Payment</option>
+          <option value="Appreciation">Appreciation</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Message</label><textarea id="n_Text" rows="4" placeholder="Written for the parent to read — keep it short and specific."></textarea></div>
+      <div class="notice-existing" id="n_Existing"></div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeNoticeForm()">Cancel</button>
+        <button class="wa-btn pf-save" id="n_SaveBtn" onclick="saveNotice()">Post message</button>
+      </div>
+      <div class="msg" id="n_Msg"></div>
+    </div>
   </div>
 </div>
 
@@ -957,7 +1061,7 @@ table.avail td.occ{border:1px solid transparent}
       </div>
       <div class="form-row"><label>Country <span class="req">*</span></label>
         <div class="combo" data-field="s_Country">
-          <select class="combo-select" onchange="onComboSelect('s_Country')"></select>
+          <select class="combo-select" onchange="onComboSelect('s_Country');onCountryPicked();"></select>
           <input type="text" class="combo-new" id="s_Country" placeholder="Type a new country" style="display:none;">
           <button type="button" class="combo-back" onclick="comboBack('s_Country')" style="display:none;" title="Back to list">↩</button>
         </div>
@@ -999,6 +1103,17 @@ table.avail td.occ{border:1px solid transparent}
         </div>
       </div>
       <div class="form-row"><label>Address</label><textarea id="s_Address" rows="2" placeholder="Home address (optional)"></textarea></div>
+      <div class="form-row"><label>Currency</label>
+        <select id="s_Currency" onchange="this.dataset.touched='1';onCurrencyChange()">
+          <option value="INR">INR — Indian Rupee (₹)</option>
+          <option value="USD">USD — US Dollar ($)</option>
+          <option value="CHF">CHF — Swiss Franc</option>
+          <option value="CAD">CAD — Canadian Dollar (CA$)</option>
+          <option value="__other">Other…</option>
+        </select>
+        <input type="text" id="s_CurrencyOther" placeholder="3-letter code, e.g. AED" maxlength="3" style="display:none;margin-top:8px;text-transform:uppercase;">
+        <small>Used for this student's fee, kit and components amounts.</small>
+      </div>
       <div class="form-row"><label>Monthly Fee</label><input type="text" id="s_Fee" placeholder="e.g. 1500" inputmode="decimal"></div>
       <div class="form-row"><label>Payment Ref</label><input type="text" id="s_PayRef" placeholder="acct / UPI ref (optional)"></div>
       <div class="form-row"><label>Photo URL</label><input type="text" id="s_Photo" placeholder="Google Drive share link or image URL (optional)" oninput="updatePhotoPreview()"><div id="photoPreview" class="photo-preview" style="display:none;"></div></div>
@@ -1464,6 +1579,7 @@ window.migStudents=async function(){
       Tutor:r.Tutor||'',Batch:r.Batch||'',Status:r.Status||'Active','Join Date':r['Join Date']||'',
       Email:r.Email||'',parentEmails:splitEmails(r.Email),Contact:String(r.Contact||''),
       School:r.School||'',Address:r.Address||'','Monthly Fee':r['Monthly Fee']||'',
+      Currency:String(r.Currency||'').trim().toUpperCase()||currencyForCountry(r.Country),
       // Same Drive-link conversion the Add/Edit form applies, so migrated photos render too.
       Photo:driveToImageUrl(r.Photo||''),
       'Payment Ref':r['Payment Ref']||'','Inactive Date':r['Inactive Date']||'','Inactive Reason':r['Inactive Reason']||'',
@@ -1765,6 +1881,9 @@ window.openProfile=async function(id){
   $('profMeta').innerHTML=meta.join('');
   $('profBackBtn').style.display=(userRole==='parent'&&studentsData.length<=1)?'none':'';
   $('profSummary').innerHTML='';
+  $('profNoticeCard').style.display='none';
+  const prow=document.querySelector('.prof-row');if(prow)prow.classList.remove('has-notice');
+  $('profGlance').style.display='none';$('profGlance').innerHTML='';
   $('roadmap').innerHTML='<div class="roadmap-loading"><div class="spinner"></div>Loading progress…</div>';
   await loadRefData();
   try{
@@ -1775,7 +1894,8 @@ window.openProfile=async function(id){
     currentProgress=pr.docs.map(d=>({_id:d.id,...d.data()}));
     currentProjects=pj.docs.map(d=>({_id:d.id,...d.data()}));
     buildRoadmap();
-    loadProfileDues(s);
+    loadProfileNotices(s);
+    loadProfileGlance(s);
   }catch(e){console.error('load progress',e);$('roadmap').innerHTML='<div class="roadmap-error">Could not load progress. '+esc(e.code||e.message)+'</div>';}
 };
 window.backFromProfile=function(){
@@ -1795,44 +1915,230 @@ window.backFromProfile=function(){
   }
 };
 
-/* ── Pending payments on the student profile ──
-   Its own small query (this student, this year) so it works for parents too and never
-   disturbs the Payments tab's cache. Requires a Firestore rule letting a parent read
-   payments for a student whose parentEmails contains them. */
-async function loadProfileDues(s){
-  const card=$('profDuesCard'),body=$('profDuesBody'),meta=$('profDuesMeta');
-  if(!card||!s)return;
-  const now=new Date(),selY=now.getFullYear(),selM=now.getMonth()+1;
-  card.style.display='';
-  meta.textContent='';
-  body.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
-  let records=[];
+/* ═══════════════════════════════════════════════════════════════════════
+   STUDENT PROFILE — messages, and this-month glance
+   All three glance cards read from per-student queries scoped to the current
+   year, so they work identically for staff and for a signed-in parent.
+   ═══════════════════════════════════════════════════════════════════════ */
+let profNotices=[], profGlanceData=null, profStudent=null;
+const NOTICE_CATS=['General','Attendance','Assignments','Payment','Appreciation'];
+
+// ── Messages from ElectroBotics (admin writes, parents read) ──
+async function loadProfileNotices(s){
+  profStudent=s;
+  const card=$('profNoticeCard'),row=document.querySelector('.prof-row');
+  const addBtn=$('noticeAddBtn');
+  if(addBtn)addBtn.style.display=isAdmin()?'':'none';
+  profNotices=[];
   try{
-    const snap=await getDocs(query(collection(db,'payments'),
-      where('Student ID','==',String(s.ID).trim()),where('Year','==',payY(selY))));
-    records=snap.docs.map(d=>d.data());
-  }catch(e){
-    console.warn('profile dues',e);
-    body.innerHTML='<div class="pay-empty">Payment details aren\u2019t available right now.</div>';
+    const snap=await getDocs(collection(db,'students',String(s.ID),'notices'));
+    profNotices=snap.docs.map(d=>({_id:d.id,...d.data()}))
+      .filter(n=>n.active!==false)
+      .sort((a,b)=>{const ta=a.at&&a.at.toDate?a.at.toDate().getTime():0,tb=b.at&&b.at.toDate?b.at.toDate().getTime():0;return tb-ta;});
+  }catch(e){console.warn('notices',e);}
+  renderProfileNotices();
+}
+function renderProfileNotices(){
+  const card=$('profNoticeCard'),body=$('profNoticeBody'),row=document.querySelector('.prof-row');
+  if(!card)return;
+  // An empty panel is worse than no panel — only admins see the placeholder.
+  const show=profNotices.length>0||isAdmin();
+  card.style.display=show?'':'none';
+  if(row)row.classList.toggle('has-notice',show);
+  if(!show)return;
+  if(!profNotices.length){
+    body.innerHTML='<div class="notice-empty">No message posted. Use <strong>+ Add</strong> to tell this parent something — a concern, a reminder, or a word of praise.</div>';
     return;
   }
-  const d=payDues(s,selY,selM,payCtxFrom(records));
-  meta.textContent='· '+PAY_MONTHS[selM-1].slice(0,3)+' '+selY+' and earlier';
-  if(!d.count){
-    body.innerHTML=`<div class="dues-clear">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16 9"/></svg>
-      No pending payments for ${selY}. Thank you!</div>`;
-    return;
-  }
-  const rows=d.items.map(it=>{
-    const kind=it.type==='Fee'?'Monthly fee':it.type;
-    const period=it.label.replace(/^\S+\s/,'');
-    const amt=it.amount!==null?`<span class="dues-amt">${payMoney(it.amount)}</span>`:'<span class="dues-amt na">To be advised</span>';
-    return `<div class="dues-row"><div><span class="dues-kind">${esc(kind)}</span><span class="dues-label">${esc(period)}</span></div>${amt}</div>`;
+  body.innerHTML=profNotices.map(n=>{
+    const cat=String(n.category||'General');
+    const when=n.at&&n.at.toDate?n.at.toDate().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+    const del=isAdmin()?`<button class="notice-del" onclick="removeNotice('${jsq(n._id)}')">Remove</button>`:'';
+    return `<div class="notice-item">
+      <span class="notice-cat ${esc(cat.toLowerCase())}">${esc(cat)}</span>
+      <div class="notice-text">${esc(n.text||'')}</div>
+      <div class="notice-meta"><span>${esc(when)}</span>${del}</div>
+    </div>`;
   }).join('');
-  const total=d.total>0?`<div class="dues-total"><span class="dues-total-lbl">Total pending</span><span class="dues-total-amt">${payMoney(d.total)}${d.unknown?' +':''}</span></div>`:'';
-  body.innerHTML=`<div class="dues-list">${rows}</div>${total}
-    <div class="dues-note">Covers ${esc(String(selY))} up to ${esc(PAY_MONTHS[selM-1])}. Please ignore if you have already paid \u2014 it may not be recorded yet.</div>`;
+}
+window.openNoticeForm=function(){
+  if(!isAdmin()||!profStudent)return;
+  $('noticeModalTitle').textContent='Message to '+(profStudent.Name||profStudent.ID)+'’s parent';
+  $('n_Category').value='General';$('n_Text').value='';
+  $('n_Msg').textContent='';$('n_SaveBtn').disabled=false;
+  $('n_Existing').innerHTML=profNotices.length
+    ? '<div class="notice-empty" style="margin-bottom:8px;">Currently showing:</div>'+profNotices.map(n=>
+        `<div class="notice-item"><span class="notice-cat ${esc(String(n.category||'General').toLowerCase())}">${esc(n.category||'General')}</span><div class="notice-text">${esc(n.text||'')}</div><div class="notice-meta"><button class="notice-del" onclick="removeNotice('${jsq(n._id)}',true)">Remove</button></div></div>`).join('')
+    : '';
+  $('noticeModal').classList.add('open');
+};
+window.closeNoticeForm=function(){$('noticeModal').classList.remove('open');};
+window.saveNotice=async function(){
+  if(!isAdmin()||!profStudent)return;
+  const text=$('n_Text').value.trim(),msg=$('n_Msg'),btn=$('n_SaveBtn');
+  if(!text){msg.textContent='Please type the message.';msg.className='msg err';return;}
+  btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Posting…';msg.className='msg busy';
+  try{
+    await addDoc(collection(db,'students',String(profStudent.ID),'notices'),
+      {text,category:$('n_Category').value,active:true,at:serverTimestamp(),by:(currentUser&&currentUser.email)||''});
+    closeNoticeForm();
+    await loadProfileNotices(profStudent);
+    toast('Message posted');
+  }catch(e){console.error('saveNotice',e);msg.textContent='Could not post: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
+};
+window.removeNotice=async function(id,fromModal){
+  if(!isAdmin()||!profStudent)return;
+  if(!confirm('Remove this message? The parent will no longer see it.'))return;
+  try{
+    await deleteDoc(doc(db,'students',String(profStudent.ID),'notices',id));
+    await loadProfileNotices(profStudent);
+    if(fromModal)openNoticeForm();
+    toast('Message removed');
+  }catch(e){console.error('removeNotice',e);toast('Could not remove.');}
+};
+
+// ── This month at a glance ──
+const GL_EXPECTED=4;   // classes / assignments expected per month
+function glTier(done,expected){
+  if(!expected)return 'none';
+  const p=done/expected*100;
+  return p>=75?'good':(p>=50?'watch':'bad');
+}
+function glMonthRows(records,positive,selY){
+  // month index 1..12 -> {count, dates[]}
+  const by={};
+  records.forEach(r=>{
+    if(String(r.Status||'').toLowerCase()!==positive)return;
+    const d=String(r.Date||'').trim();if(d.length<7)return;
+    if(d.slice(0,4)!==String(selY))return;
+    const m=parseInt(d.slice(5,7),10);if(!m)return;
+    let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;
+    const e=(by[m]=by[m]||{count:0,dates:[]});
+    e.count+=c;e.dates.push({date:d,count:c});
+  });
+  Object.values(by).forEach(e=>e.dates.sort((a,b)=>a.date.localeCompare(b.date)));
+  return by;
+}
+async function loadProfileGlance(s){
+  const grid=$('profGlance');if(!grid||!s)return;
+  const now=new Date(),selY=now.getFullYear(),selM=now.getMonth()+1;
+  grid.style.display='';
+  grid.innerHTML='<div class="glance-card"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div>';
+  const sid=String(s.ID).trim();
+  const q1=query(collection(db,'attendance'),where('StudentID','==',sid));
+  const q2=query(collection(db,'assignments'),where('StudentID','==',sid));
+  const q3=query(collection(db,'payments'),where('Student ID','==',sid),where('Year','==',payY(selY)));
+  const grab=async(qy)=>{try{const snap=await getDocs(qy);return snap.docs.map(d=>d.data());}catch(e){console.warn('glance',e);return null;}};
+  const [att,asg,pay]=await Promise.all([grab(q1),grab(q2),grab(q3)]);
+  profGlanceData={
+    year:selY,month:selM,student:s,
+    att:att?glMonthRows(att,'present',selY):null,
+    asg:asg?glMonthRows(asg,'submitted',selY):null,
+    pay:pay,dues:pay?payDues(s,selY,selM,payCtxFrom(pay)):null
+  };
+  renderProfileGlance();
+}
+function renderProfileGlance(){
+  const grid=$('profGlance'),g=profGlanceData;if(!grid||!g)return;
+  const mName=PAY_MONTHS[g.month-1].slice(0,3)+' '+g.year;
+  const chev='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  const card=(key,label,dot,value,unit,sub)=>`<button class="glance-card" onclick="openGlance('${key}')">
+      <div class="glance-top"><span class="glance-label">${esc(label)}</span><span class="glance-dot ${dot}"></span></div>
+      <div class="glance-value">${value}${unit?`<span class="unit">${esc(unit)}</span>`:''}</div>
+      <div class="glance-sub">${sub}</div>
+      <div class="glance-foot">View by month ${chev}</div>
+    </button>`;
+  let html='';
+  // Attendance — the plain count leads; the expectation is the quieter second line.
+  if(g.att===null)html+=card('att','Attendance','none','—','','Not available');
+  else{
+    const e=g.att[g.month]||{count:0};
+    html+=card('att','Attendance',glTier(e.count,GL_EXPECTED),e.count,e.count===1?'class':'classes',
+      `attended in ${esc(mName)}<br>usually ${GL_EXPECTED} a month`);
+  }
+  if(g.asg===null)html+=card('asg','Assignments','none','—','','Not available');
+  else{
+    const e=g.asg[g.month]||{count:0};
+    html+=card('asg','Assignments',glTier(e.count,GL_EXPECTED),e.count,e.count===1?'demo':'demos',
+      `submitted in ${esc(mName)}<br>usually ${GL_EXPECTED} a month`);
+  }
+  if(!g.dues)html+=card('pay','Payments','none','—','','Not available');
+  else if(!g.dues.count)html+=card('pay','Payments','good','All clear','',`nothing pending for ${g.year}`);
+  else html+=card('pay','Payments','bad',esc(g.dues.totalText||'Due'),'',
+      `${g.dues.count} item${g.dues.count===1?'':'s'} pending<br>up to ${esc(mName)}`);
+  grid.innerHTML=html;
+}
+window.closeGlance=function(){$('glanceModal').classList.remove('open');};
+window.openGlance=function(key){
+  const g=profGlanceData;if(!g)return;
+  const title={att:'Attendance',asg:'Assignments',pay:'Payments'}[key];
+  $('glanceTitle').textContent=title+' · '+g.year;
+  const body=$('glanceBody');
+  if(key==='pay'){body.innerHTML=glPaymentsHtml(g);$('glanceModal').classList.add('open');return;}
+  const src=key==='att'?g.att:g.asg;
+  if(!src){body.innerHTML='<div class="pay-empty">Not available right now.</div>';$('glanceModal').classList.add('open');return;}
+  const word=key==='att'?'attended':'submitted';
+  const jm=parseJoinYM(g.student&&g.student['Join Date']);
+  const from=(jm&&jm.y===g.year&&jm.mo>1)?jm.mo:1;
+  let rows='';
+  for(let m=from;m<=g.month;m++){
+    const e=src[m]||{count:0,dates:[]};
+    const tier=glTier(e.count,GL_EXPECTED);
+    const pct=Math.min(100,Math.round(e.count/GL_EXPECTED*100));
+    rows+=`<div class="gl-row">
+      <span class="gl-month">${esc(PAY_MONTHS[m-1].slice(0,3))}</span>
+      <span class="gl-bar"><span class="${tier}" style="width:${pct}%"></span></span>
+      <span class="gl-n">${e.count} ${esc(word)}</span>
+    </div>`;
+    if(e.dates.length)rows+=`<div class="gl-dates">${e.dates.map(d=>{
+      const dt=new Date(d.date+'T00:00:00');
+      const lbl=isNaN(dt)?d.date:dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+      return `<span class="aa-chip">${esc(lbl)}${d.count>1?' ×'+d.count:''}</span>`;}).join(' ')}</div>`;
+  }
+  body.innerHTML=`<div class="gl-rows">${rows}</div>
+    <div class="gl-note">Bars compare against a usual ${GL_EXPECTED} a month. A short month, a holiday week or a mid-month join will read lower without anything being wrong.</div>`;
+  $('glanceModal').classList.add('open');
+};
+function glPaymentsHtml(g){
+  const s=g.student,ctx=payCtxFrom(g.pay||[]);
+  const cur=studentCurrency(s);
+  const from=(g.dues&&g.dues.startMonth)||1;   // never list months before they joined
+  let rows='';
+  for(let m=from;m<=g.month;m++){
+    const rec=ctx.rec(String(s.ID).trim(),g.year,m,'Fee');
+    const st=rec?String(rec.Status||'').toLowerCase():'';
+    let cls='due',txt='Pending';
+    if(st==='paid'){cls='paid';txt='Paid'+(rec['Paid Date']?' · '+rec['Paid Date']:'');}
+    else if(st==='ignore'){cls='skip';txt='Not applicable';}
+    const amt=rec&&payAmt(rec.Amount)!==null?payAmt(rec.Amount):payAmt(s['Monthly Fee']);
+    rows+=`<div class="gl-row" style="grid-template-columns:64px 1fr auto;">
+      <span class="gl-month">${esc(PAY_MONTHS[m-1].slice(0,3))}</span>
+      <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${amt!==null?esc(money(amt,(rec&&rec.Currency)||cur)):'—'}</span>
+      <span class="gl-status ${cls}">${esc(txt)}</span>
+    </div>`;
+  }
+  const extras=((ctx.by&&ctx.by[String(s.ID).trim()])||[]).filter(p=>(String(p.Type||'').trim()||'Fee')!=='Fee')
+    .sort((a,b)=>parseInt(payM(a.Month),10)-parseInt(payM(b.Month),10));
+  let extraHtml='';
+  if(extras.length){
+    extraHtml='<div class="gl-note" style="margin-top:18px;margin-bottom:6px;">Kit &amp; components</div><div class="gl-rows">'+
+      extras.map(p=>{
+        const st=String(p.Status||'').toLowerCase();
+        const cls=st==='paid'?'paid':(st==='ignore'?'skip':'due');
+        const txt=st==='paid'?'Paid':(st==='ignore'?'Not applicable':'Pending');
+        const amt=payAmt(p.Amount);
+        return `<div class="gl-row" style="grid-template-columns:64px 1fr auto;">
+          <span class="gl-month">${esc(PAY_MONTHS[(parseInt(payM(p.Month),10)||1)-1].slice(0,3))}</span>
+          <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${esc(String(p.Type||''))}${amt!==null?' · '+esc(money(amt,p.Currency||cur)):''}</span>
+          <span class="gl-status ${cls}">${esc(txt)}</span>
+        </div>`;}).join('')+'</div>';
+  }
+  const d=g.dues;
+  const total=(d&&d.count)
+    ? `<div class="dues-total"><span class="dues-total-lbl">Total pending</span><span class="dues-total-amt">${esc(d.totalText||'')}${d.unknown?' +':''}</span></div>`
+    : '<div class="dues-total"><span class="dues-total-lbl">Total pending</span><span class="dues-total-amt" style="color:var(--green)">Nothing due</span></div>';
+  return `<div class="gl-rows">${rows}</div>${extraHtml}${total}
+    <div class="gl-note">Please ignore if you have already paid — it may not be recorded yet.</div>`;
 }
 
 function topicsForLevel(levelName){
@@ -1983,6 +2289,27 @@ window.onStuStatusChange=function(){
   $('inactiveReasonRow').style.display=inactive?'':'none';
   if(!inactive){$('s_InactiveReason').value='';$('s_InactiveReasonOther').value='';$('s_InactiveReasonOther').style.display='none';}
 };
+window.onCurrencyChange=function(){
+  const other=$('s_Currency').value==='__other';
+  $('s_CurrencyOther').style.display=other?'':'none';
+  if(!other)$('s_CurrencyOther').value='';
+};
+function setCurrencyValue(code){
+  const c=String(code||'INR').toUpperCase();
+  if(CURRENCIES.includes(c)){$('s_Currency').value=c;$('s_CurrencyOther').value='';}
+  else{$('s_Currency').value='__other';$('s_CurrencyOther').value=c;}
+  onCurrencyChange();
+}
+function currentCurrencyValue(){
+  const v=$('s_Currency').value;
+  if(v!=='__other')return v;
+  return String($('s_CurrencyOther').value||'').trim().toUpperCase()||'INR';
+}
+// Typing a new country nudges the currency, but never overrides a deliberate choice.
+window.onCountryPicked=function(){
+  if($('s_Currency').dataset.touched==='1')return;
+  setCurrencyValue(currencyForCountry($('s_Country').value||''));
+};
 window.onStuReasonChange=function(){const o=$('s_InactiveReason').value==='Other';$('s_InactiveReasonOther').style.display=o?'':'none';if(!o)$('s_InactiveReasonOther').value='';};
 let editingStudentId=null;
 /* ── Combo control (select existing OR add new), ported from production ── */
@@ -2039,6 +2366,7 @@ function nextStudentId(){
 }
 window.openStudentForm=function(id){
   if(!canManageStudents())return;   // tutors may edit progress, not the student record
+  $('s_Currency').dataset.touched='';
   editingStudentId=id||null;
   const s=id?studentsData.find(x=>x.ID===id):null;
   $('studentModalTitle').textContent=s?'Edit Student':'Add Student';
@@ -2059,6 +2387,7 @@ window.openStudentForm=function(id){
     $('s_Email').value=s.Email||'';$('s_Contact').value=s.Contact||'';
     $('s_Address').value=s.Address||'';$('s_Fee').value=s['Monthly Fee']||'';
     $('s_PayRef').value=s['Payment Ref']||'';$('s_Photo').value=s.Photo||'';
+    setCurrencyValue(studentCurrency(s));
     const reason=s['Inactive Reason']||'';
     const presets=['Waiting for batch','Academics / higher grade','Lost interest','Re-location'];
     if(reason&&!presets.includes(reason)){$('s_InactiveReason').value='Other';$('s_InactiveReasonOther').value=reason;}
@@ -2072,6 +2401,7 @@ window.openStudentForm=function(id){
     const t=new Date();$('s_JoinDate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
     $('s_Email').value='';$('s_Contact').value='';$('s_Address').value='';$('s_Fee').value='';
     $('s_PayRef').value='';$('s_Photo').value='';$('s_InactiveReason').value='';$('s_InactiveReasonOther').value='';
+    setCurrencyValue('INR');
     editStatusOnOpen='Active';
   }
   onStuStatusChange();onStuReasonChange();updatePhotoPreview();
@@ -2140,7 +2470,7 @@ window.saveStudent=async function(){
     Tutor:$('s_Tutor').value.trim(),Batch:$('s_Batch').value.trim(),Status:status,
     'Join Date':$('s_JoinDate').value,Email:email,parentEmails:splitEmailsClient(email),
     Contact:$('s_Contact').value.trim(),School:$('s_School').value.trim(),Address:$('s_Address').value.trim(),
-    'Monthly Fee':$('s_Fee').value.trim(),'Payment Ref':$('s_PayRef').value.trim(),Photo:driveToImageUrl($('s_Photo').value.trim()),
+    'Monthly Fee':$('s_Fee').value.trim(),Currency:currentCurrencyValue(),'Payment Ref':$('s_PayRef').value.trim(),Photo:driveToImageUrl($('s_Photo').value.trim()),
     'Inactive Reason':inactiveReason,updatedAt:serverTimestamp(),updatedBy:currentUser.email
   };
   if(status==='Inactive'&&editStatusOnOpen==='Active')data['Inactive Date']=new Date().toISOString().slice(0,10);
@@ -2239,7 +2569,38 @@ function renderClassesCell(e){
   return `<div class="pay-cls"><span class="pay-cls-n">${e.count}</span><div class="pay-cls-dates">${chips}</div></div>`;
 }
 const payAmt=(v)=>{const n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,''));return isNaN(n)?null:n;};
-const payMoney=(n)=>'₹'+Math.round(n).toLocaleString('en-IN');
+/* ── Currency ──
+   Lives on the STUDENT, not on each payment: one student bills in one currency.
+   Every payment row still stores the currency it was recorded in, so changing a
+   student's currency never re-labels their history. */
+const CURRENCIES=['INR','USD','CHF','CAD'];
+const CURRENCY_BY_COUNTRY=[
+  [/india/i,'INR'],[/switzerland|swiss/i,'CHF'],
+  [/united states|u\.?s\.?a?\b|america/i,'USD'],[/canada/i,'CAD']
+];
+function currencyForCountry(country){
+  const c=String(country||'');
+  for(const [re,cur] of CURRENCY_BY_COUNTRY)if(re.test(c))return cur;
+  return 'INR';
+}
+// A student's currency: what's recorded, else derived from their country, else INR.
+function studentCurrency(s){
+  const c=String((s&&s.Currency)||'').trim().toUpperCase();
+  if(c)return c;
+  return currencyForCountry(s&&s.Country);
+}
+// en-US for CAD and CHF gives the unambiguous "CA$1,500" / "CHF 1,500"; en-CA would
+// render CAD as a bare "$1,500", indistinguishable from USD in a mixed list.
+const CUR_LOCALE={INR:'en-IN',USD:'en-US',CHF:'en-US',CAD:'en-US'};
+function money(n,cur){
+  const code=String(cur||'INR').trim().toUpperCase()||'INR';
+  const v=Math.round(Number(n)||0);
+  try{
+    return new Intl.NumberFormat(CUR_LOCALE[code]||'en-IN',
+      {style:'currency',currency:code,maximumFractionDigits:0}).format(v);
+  }catch(e){ return code+' '+v.toLocaleString('en-IN'); }
+}
+const payMoney=(n,cur)=>money(n,cur);
 // Everything still owed up to and including the selected month: unpaid monthly fees from
 // earlier months, plus any Kit / Components entry that was flagged and never marked paid.
 // Build a lookup context from an arbitrary set of payment records, so the student
@@ -2253,11 +2614,13 @@ function payCtxFrom(records){
     const y=parseInt(payY(p.Year),10),m=parseInt(payM(p.Month),10);
     if(y&&m&&(!start||y<start.y||(y===start.y&&m<start.mo)))start={y,mo:m};
   });
-  return {rec:(sid,y,m,t)=>idx[payKey(sid,y,m,t)]||null,by,start};
+  return {rec:(sid,y,m,t)=>idx[payKey(sid,y,m,t)]||null,by,start:null};
 }
 function payDues(s,selY,selM,ctx){
   if(!ctx){if(!payIndex)buildPayIndex();ctx={rec:payRecord,by:payByStudent,start:payDataStart};}
   const sid=String(s.ID||'').trim();
+  const cur=studentCurrency(s);
+  const byCur={};   // totals are kept per currency — amounts are never added across them
   const monthly=payAmt(s['Monthly Fee']);
   const items=[],feeMonths=[],extras=[];let total=0,unknown=false;
   const jm=parseJoinYM(s['Join Date']);
@@ -2266,13 +2629,15 @@ function payDues(s,selY,selM,ctx){
   if(jm&&jm.y===selY&&jm.mo>1)m=jm.mo;                       // joined partway through the year
   if(jm&&jm.y>selY)m=13;                                     // joined after this year: nothing due
   if(ctx.start&&ctx.start.y===selY&&ctx.start.mo>m)m=ctx.start.mo;  // no records before this
+  const startMonth=m;
   for(;m<=selM;m++){
     const rec=ctx.rec(sid,selY,m,'Fee');
     const st=rec?String(rec.Status||'').toLowerCase():'';
     if(st==='paid'||st==='ignore')continue;
     const amt=(rec&&payAmt(rec.Amount)!==null)?payAmt(rec.Amount):monthly;
-    if(amt===null)unknown=true;else total+=amt;
-    items.push({type:'Fee',label:'Fee '+PAY_MONTHS[m-1].slice(0,3)+' '+selY,amount:amt,month:m});
+    const c=String((rec&&rec.Currency)||cur).toUpperCase();
+    if(amt===null)unknown=true;else{total+=amt;byCur[c]=(byCur[c]||0)+amt;}
+    items.push({type:'Fee',label:'Fee '+PAY_MONTHS[m-1].slice(0,3)+' '+selY,amount:amt,currency:c,month:m});
     feeMonths.push(PAY_MONTHS[m-1].slice(0,3));
   }
   ((ctx.by&&ctx.by[sid])||[]).forEach(p=>{
@@ -2280,12 +2645,18 @@ function payDues(s,selY,selM,ctx){
     const st=String(p.Status||'').toLowerCase();if(st==='paid'||st==='ignore')return;
     const py=parseInt(payY(p.Year),10),pm=parseInt(payM(p.Month),10);
     if(py!==selY||!pm||pm>selM)return;
-    const amt=payAmt(p.Amount);if(amt===null)unknown=true;else total+=amt;
-    items.push({type:t,label:t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,amount:amt,month:pm});
+    const amt=payAmt(p.Amount);
+    const c=String(p.Currency||cur).toUpperCase();
+    if(amt===null)unknown=true;else{total+=amt;byCur[c]=(byCur[c]||0)+amt;}
+    items.push({type:t,label:t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,amount:amt,currency:c,month:pm});
     extras.push(t+' '+PAY_MONTHS[pm-1].slice(0,3));
   });
   items.sort((a,b)=>a.month-b.month||a.type.localeCompare(b.type));
-  return {total,unknown,items,feeMonths,extras,count:items.length,year:selY};
+  // totalText renders one figure per currency, so a student with mixed rows reads
+  // "₹3,000 + CHF 120" rather than a meaningless single sum.
+  const curKeys=Object.keys(byCur);
+  const totalText=curKeys.length?curKeys.sort().map(k=>money(byCur[k],k)).join(' + '):'';
+  return {total,unknown,byCur,totalText,currency:cur,items,feeMonths,extras,count:items.length,year:selY,startMonth};
 }
 function renderDueCell(s,selY,selM){
   const d=payDues(s,selY,selM);
@@ -2294,13 +2665,17 @@ function renderDueCell(s,selY,selM){
   if(d.feeMonths.length)bits.push('Fee: '+d.feeMonths.join(', '));
   if(d.extras.length)bits.push(d.extras.join(', '));
   const detail=bits.join(' · ')+' · '+d.year;
-  const amt=d.total>0?payMoney(d.total)+(d.unknown?' +':''):(d.unknown?'—':'₹0');
+  const amt=d.totalText?(d.totalText+(d.unknown?' +':'')):(d.unknown?'—':money(0,d.currency));
   return `<div class="pay-due" title="${esc(detail)}"><span class="pay-due-amt">${amt}</span><div class="pay-due-detail">${esc(detail)}</div></div>`;
 }
 function payUpsertLocal(sid,year,month,type,fields){
   const t=type||'Fee';let rec=payRecord(sid,year,month,t);
   if(rec){Object.assign(rec,fields);}
-  else{paymentsData.push(Object.assign({'Student ID':String(sid),'Year':payY(year),'Month':payM(month),'Type':t},fields));payIndex=null;}
+  else{
+    const stu=studentsData.find(x=>String(x.ID)===String(sid));
+    paymentsData.push(Object.assign({'Student ID':String(sid),'Year':payY(year),'Month':payM(month),'Type':t,'Currency':studentCurrency(stu)},fields));
+    payIndex=null;
+  }
 }
 function payRemoveLocal(sid,year,month,type){
   const t=type||'Fee',k=payKey(sid,year,month,t);
@@ -2323,7 +2698,8 @@ async function payWrite(body){
   const {action,type,studentId,year,month}=body;const id=payDocId(studentId,year,month,type||'Fee');
   try{
     if(action==='deletePayment'){await deleteDoc(doc(db,'payments',id));return true;}
-    const data={'Student ID':String(studentId),Year:String(year),Month:String(month),Type:type||'Fee',Status:body.status||'Paid',Amount:body.amount||'','Paid Date':body.paidDate||'',Method:body.method||'',Note:body.note||'',MarkedBy:(currentUser&&currentUser.email)||'',updatedAt:serverTimestamp()};
+    const stu=studentsData.find(x=>String(x.ID)===String(studentId));
+    const data={'Student ID':String(studentId),Year:payY(year),Month:payM(month),Type:type||'Fee',Status:body.status||'Paid',Amount:body.amount||'',Currency:studentCurrency(stu),'Paid Date':body.paidDate||'',Method:body.method||'',Note:body.note||'',MarkedBy:(currentUser&&currentUser.email)||'',updatedAt:serverTimestamp()};
     await setDoc(doc(db,'payments',id),data,{merge:true});return true;
   }catch(e){console.error('payWrite',e);return false;}
 }
@@ -2366,7 +2742,7 @@ window.buildPayments=function(){
     </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,compRec,compSt})=>{
       const fee=s['Monthly Fee']||'';
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
-      const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?('₹'+esc(String(rec.Amount))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
+      const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?esc(money(payAmt(rec.Amount)||0,rec.Currency||studentCurrency(s))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
       const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,compRec,compSt);
       let action='';
       if(st==='pending'){
@@ -2374,7 +2750,7 @@ window.buildPayments=function(){
         action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${jsq(s.ID)}','${jsq(s.Name)}','${jsq(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${jsq(s.ID)}',this)">Ignore</button></div></div>`;
       }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
       // Batch + monthly fee now ride along under the name, like the student ID.
-      const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',fee?('₹'+esc(String(fee))):''].filter(Boolean).join(' · ');
+      const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',fee?esc(money(payAmt(fee)||0,studentCurrency(s))):''].filter(Boolean).join(' · ');
       return `<tr><td><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
@@ -2386,6 +2762,7 @@ function fillPaySelect(id,allLabel,items,current){
 }
 let payCurrentCtx=null;
 window.openPaymentForm=function(sid,name,fee){
+  payShowCurrency(sid);
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Fee',mode:'paid'};
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
@@ -2442,7 +2819,7 @@ window.payWhatsApp=function(sid){
   if(d.count){
     const lines=d.items.map(it=>{
       const showAmt=it.type!=='Fee'&&it.amount!==null;
-      return '• '+it.label+(showAmt?': ₹'+Math.round(it.amount).toLocaleString('en-IN'):'');
+      return '• '+it.label+(showAmt?': '+money(it.amount,it.currency):'');
     });
     dues=`\nPending:\n${lines.join('\n')}\n`;
   }
@@ -2463,23 +2840,23 @@ window.downloadPaymentsExcel=function(){
   const rows=payVisibleRows.map(({s})=>{
     const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
     const att=attIdx[String(s.ID).trim()],due=payDues(s,selY,selM);
-    const dueBits=due.items.map(it=>it.label+(it.amount!==null?' ₹'+Math.round(it.amount):''));
+    const dueBits=due.items.map(it=>it.label+(it.amount!==null?' '+money(it.amount,it.currency):''));
     return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:'',
       'Classes Attended':att?att.count:0,
       'Days Attended':att?att.dates.map(d=>d.date+(d.count>1?' x'+d.count:'')).join(', '):'',
-      'Pending Amount':due.total||0,'Pending Details':dueBits.join(' · ')};
+      'Currency':studentCurrency(s),'Pending Amount':due.total||0,'Pending Details':dueBits.join(' · ')};
   });
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Payments');
   XLSX.writeFile(wb,`ElectroBotics_Payments_${PAY_MONTHS[month-1]}_${year}.xlsx`);
 };
 function renderKitCell(s,kitRec,kitSt){
   if(!kitRec)return `<button class="pay-act pay-act-kit" onclick="flagKit('${jsq(s.ID)}',this)" title="Flag kit payment">+ Kit</button>`;
-  if(kitSt==='paid'){const kd=`${kitRec.Amount?('₹'+esc(String(kitRec.Amount))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${jsq(s.ID)}',this)">Undo</button></div>`;}
+  if(kitSt==='paid'){const kd=`${kitRec.Amount?esc(money(payAmt(kitRec.Amount)||0,kitRec.Currency||studentCurrency(s))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${jsq(s.ID)}',this)">Undo</button></div>`;}
   return `<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openKitForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${jsq(s.ID)}',this)">Remove</button></div></div>`;
 }
 function renderCompCell(s,compRec,compSt){
   if(!compRec)return `<button class="pay-act pay-act-kit" onclick="flagComponents('${jsq(s.ID)}',this)" title="Flag components payment">+ Components</button>`;
-  if(compSt==='paid'){const cd=`${compRec.Amount?('₹'+esc(String(compRec.Amount))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${jsq(s.ID)}','${jsq(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
+  if(compSt==='paid'){const cd=`${compRec.Amount?esc(money(payAmt(compRec.Amount)||0,compRec.Currency||studentCurrency(s))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${jsq(s.ID)}','${jsq(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
   return `<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${jsq(s.ID)}',this)">Remove</button></div></div>`;
 }
 window.migPayments=async function(){
@@ -2492,7 +2869,8 @@ window.migPayments=async function(){
       const sid=String(r['Student ID']||'').trim();if(!sid){fail++;continue;}
       const type=String(r.Type||'Fee').trim()||'Fee';const year=String(r.Year||'').trim();const month=String(r.Month||'').trim();
       if(!year||!month){fail++;continue;}
-      batch.set(doc(db,'payments',payDocId(sid,year,month,type)),{'Student ID':sid,Year:year,Month:month,Type:type,Status:r.Status||'Paid',Amount:r.Amount||'','Paid Date':r['Paid Date']||'',Method:r.Method||'',Note:r.Note||'',MarkedBy:r.MarkedBy||'',migratedAt:serverTimestamp()},{merge:true});
+      const stu=studentsData.find(x=>String(x.ID)===sid);
+      batch.set(doc(db,'payments',payDocId(sid,year,month,type)),{'Student ID':sid,Year:payY(year),Month:payM(month),Type:type,Status:r.Status||'Paid',Amount:r.Amount||'',Currency:String(r.Currency||'').trim().toUpperCase()||studentCurrency(stu),'Paid Date':r['Paid Date']||'',Method:r.Method||'',Note:r.Note||'',MarkedBy:r.MarkedBy||'',migratedAt:serverTimestamp()},{merge:true});
       n++;done++;if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
     }catch(e){console.error('mig pay row',r,e);fail++;}
   }
@@ -2503,8 +2881,13 @@ window.migPayments=async function(){
 // ── Kit flow ──
 // "+ Kit" / "+ Components" now ask for the amount, so the Pending column and the
 // reminder message can account for them instead of showing an unpriced due.
+function payShowCurrency(sid){
+  const st=studentsData.find(x=>String(x.ID)===String(sid));
+  const el=$('pay_Cur');if(el)el.textContent=studentCurrency(st);
+}
 function openDueForm(sid,type){
   const s=studentsData.find(x=>x.ID===sid);
+  payShowCurrency(sid);
   const year=$('payYear').value,month=$('payMonth').value;
   payCurrentCtx={studentId:sid,year,month,type,mode:'due'};
   $('paymentModalTitle').textContent=type+' Due';
@@ -2517,6 +2900,7 @@ function openDueForm(sid,type){
 }
 window.flagKit=function(sid){openDueForm(sid,'Kit');};
 window.openKitForm=function(sid,name){
+  payShowCurrency(sid);
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Kit',mode:'paid'};
   const ex=payRecord(sid,year,month,'Kit');const isPaid=ex&&String(ex.Status||'').toLowerCase()==='paid';
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
@@ -2536,6 +2920,7 @@ window.revertKit=async function(sid,btn){
 // ── Components flow ──
 window.flagComponents=function(sid){openDueForm(sid,'Components');};
 window.openComponentsForm=function(sid,name){
+  payShowCurrency(sid);
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Components',mode:'paid'};
   const ex=payRecord(sid,year,month,'Components');const isPaid=ex&&String(ex.Status||'').toLowerCase()==='paid';
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
@@ -2560,7 +2945,8 @@ window.newComponentPurchase=async function(sid,name,btn){
   if(!confirm('Log the current paid components and reopen as "due" for a new purchase?'))return;
   const done=payBtnBusy(btn);
   try{
-    await addDoc(collection(db,'componentHistory'),{'Student ID':sid,Year:payY(year),Month:payM(month),Amount:rec.Amount||'','Paid Date':rec['Paid Date']||'',Method:rec.Method||'',Note:rec.Note||'',LoggedBy:(currentUser&&currentUser.email)||'','Logged At':serverTimestamp()});
+    const stuC=studentsData.find(x=>String(x.ID)===String(sid));
+    await addDoc(collection(db,'componentHistory'),{'Student ID':sid,Year:payY(year),Month:payM(month),Amount:rec.Amount||'',Currency:rec.Currency||studentCurrency(stuC),'Paid Date':rec['Paid Date']||'',Method:rec.Method||'',Note:rec.Note||'',LoggedBy:(currentUser&&currentUser.email)||'','Logged At':serverTimestamp()});
   }catch(e){console.error('newComponentPurchase',e);if(done)done();alert('Could not log the current purchase.');return;}
   if(done)done();
   openDueForm(sid,'Components');   // ask for the new purchase amount
@@ -2585,7 +2971,7 @@ function renderComponentHistory(sid){
   if(!items.length){box.innerHTML='<div class="pay-empty">No past component payments logged.</div>';return;}
   box.innerHTML=items.map(h=>{
     const when=h['Logged At']&&h['Logged At'].toDate?h['Logged At'].toDate().toLocaleString():'';
-    return `<div class="hist-item"><div class="hist-meta">${h.Amount?('₹'+esc(String(h.Amount))):''}${h['Paid Date']?(' · paid '+esc(String(h['Paid Date']))):''}${h.Month&&h.Year?(' · '+esc(String(h.Month))+'/'+esc(String(h.Year))):''}</div>${h.Note?`<div class="hist-text">${esc(String(h.Note))}</div>`:''}<div class="hist-meta" style="opacity:.7;">logged ${esc(when)}${h.LoggedBy?(' · '+esc(String(h.LoggedBy))):''}</div></div>`;
+    return `<div class="hist-item"><div class="hist-meta">${h.Amount?esc(money(payAmt(h.Amount)||0,h.Currency||'')):''}${h['Paid Date']?(' · paid '+esc(String(h['Paid Date']))):''}${h.Month&&h.Year?(' · '+esc(String(h.Month))+'/'+esc(String(h.Year))):''}</div>${h.Note?`<div class="hist-text">${esc(String(h.Note))}</div>`:''}<div class="hist-meta" style="opacity:.7;">logged ${esc(when)}${h.LoggedBy?(' · '+esc(String(h.LoggedBy))):''}</div></div>`;
   }).join('');
 }
 
