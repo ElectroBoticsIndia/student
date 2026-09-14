@@ -409,6 +409,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-actions-sub{display:inline-flex;align-items:center;gap:6px}
 .pay-modal-sub{font-family:var(--font-mono);font-size:12px;color:var(--accent-dark);background:var(--accent-light);padding:8px 12px;border-radius:8px;margin-bottom:14px}
 .pay-sid2{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
+.pay-stu-link{cursor:pointer;transition:background .15s}
+.pay-stu-link:hover{background:var(--accent-light)}
+.pay-stu-link:hover strong{color:var(--accent-dark)}
+.pay-stu-go{display:block;font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--accent);opacity:0;transition:opacity .15s;margin-top:2px}
+.pay-stu-link:hover .pay-stu-go{opacity:1}
 .cur-chip{font-family:var(--font-mono);font-size:10px;font-weight:700;background:var(--accent-light);color:var(--accent-dark);border-radius:20px;padding:2px 8px;margin-left:6px;letter-spacing:.5px}
 /* Payments: Classes + Pending columns */
 .pay-cls{display:flex;flex-direction:column;gap:4px;min-width:120px}
@@ -1315,8 +1320,10 @@ function enterApp(){
   setTab('summary');
   if(isAdmin())subscribeLeads();
 }
+let activeTab='summary';
 window.setTab=function(tab){
   if(!allowedTab(tab))tab='summary';     // hard guard, not just a hidden button
+  activeTab=tab;
   ALL_TABS.forEach(t=>{
     const s=$(t+'Screen');if(s)s.style.display=(t===tab)?'':'none';
   });
@@ -1638,6 +1645,7 @@ window.toggleMig=function(){
 /* ═══════════ STUDENTS (sub-step 2) ═══════════ */
 let studentsData=[], levelsData=[], topicsData=[], studentsLoaded=false, refDataLoaded=false;
 let currentStudentId=null, currentStudentName='', currentProgress=[], currentProjects=[];
+let profileReturnTab='students';
 
 // Build a video embed (Drive iframe or YouTube) + watch/download URLs from a project.
 function videoEmbed(p){
@@ -1856,6 +1864,7 @@ window.downloadStudentsExcel=function(){
 window.openProfile=async function(id){
   currentStudentId=id;
   selectedStudentId=id;
+  if(userRole!=='parent')profileReturnTab=activeTab;   // Back goes where you came from
   const s=studentsData.find(x=>x.ID===id);if(!s)return;
   currentStudentName=s.Name||'';
   $('leadsScreen').style.display='none';$('studentsScreen').style.display='none';$('staffTabs').style.display='none';
@@ -1904,7 +1913,8 @@ window.backFromProfile=function(){
     if(studentsData.length>1)showChildPicker(studentsData);
     else{ $('profileScreen').style.display=''; }
   }else{
-    $('staffTabs').style.display='';setTab('students');
+    $('staffTabs').style.display='';setTab(profileReturnTab||'students');
+    if(profileReturnTab!=='students')return;
     // Return to the same row: scroll it into view, flash it, and leave it marked
     // as the current selection (renderStudents applies .row-selected).
     const sid=currentStudentId;
@@ -1998,7 +2008,23 @@ window.removeNotice=async function(id,fromModal){
 };
 
 // ── This month at a glance ──
-const GL_EXPECTED=4;   // classes / assignments expected per month
+const GL_EXPECTED=4;   // a full month's worth of classes / assignments
+/* How many sessions should have happened in this month SO FAR — elapsed weeks, not a
+   flat 4. Two weeks into September, 2 of 2 is a full house, not 2 out of 4. Also
+   prorated for the month a student joined. */
+function glExpected(year,month,student){
+  const today=new Date();
+  const monthStart=new Date(year,month-1,1);
+  const monthEnd=new Date(year,month,0);
+  let from=monthStart;
+  const jd=parseD(student&&student['Join Date']);
+  if(jd&&jd>from)from=jd;
+  let to=monthEnd;
+  if(today<to)to=today;
+  if(to<from)return 0;
+  const days=Math.floor((to-from)/86400000)+1;
+  return Math.max(1,Math.min(GL_EXPECTED,Math.ceil(days/7)));
+}
 function glTier(done,expected){
   if(!expected)return 'none';
   const p=done/expected*100;
@@ -2050,17 +2076,19 @@ function renderProfileGlance(){
     </button>`;
   let html='';
   // Attendance — the plain count leads; the expectation is the quieter second line.
+  const exp=glExpected(g.year,g.month,g.student);
+  const expLine=exp?`${exp} expected so far`:'not started yet';
   if(g.att===null)html+=card('att','Attendance','none','—','','Not available');
   else{
     const e=g.att[g.month]||{count:0};
-    html+=card('att','Attendance',glTier(e.count,GL_EXPECTED),e.count,e.count===1?'class':'classes',
-      `attended in ${esc(mName)}<br>usually ${GL_EXPECTED} a month`);
+    html+=card('att','Attendance',glTier(e.count,exp),e.count,e.count===1?'class':'classes',
+      `attended in ${esc(mName)}<br>${esc(expLine)}`);
   }
   if(g.asg===null)html+=card('asg','Assignments','none','—','','Not available');
   else{
     const e=g.asg[g.month]||{count:0};
-    html+=card('asg','Assignments',glTier(e.count,GL_EXPECTED),e.count,e.count===1?'demo':'demos',
-      `submitted in ${esc(mName)}<br>usually ${GL_EXPECTED} a month`);
+    html+=card('asg','Assignments',glTier(e.count,exp),e.count,e.count===1?'demo':'demos',
+      `submitted in ${esc(mName)}<br>${esc(expLine)}`);
   }
   if(!g.dues)html+=card('pay','Payments','none','—','','Not available');
   else if(!g.dues.count)html+=card('pay','Payments','good','All clear','',`nothing pending for ${g.year}`);
@@ -2079,16 +2107,18 @@ window.openGlance=function(key){
   if(!src){body.innerHTML='<div class="pay-empty">Not available right now.</div>';$('glanceModal').classList.add('open');return;}
   const word=key==='att'?'attended':'submitted';
   const jm=parseJoinYM(g.student&&g.student['Join Date']);
-  const from=(jm&&jm.y===g.year&&jm.mo>1)?jm.mo:1;
+  let from=dataStartMonth(g.year);
+  if(jm&&jm.y===g.year&&jm.mo>from)from=jm.mo;
   let rows='';
   for(let m=from;m<=g.month;m++){
     const e=src[m]||{count:0,dates:[]};
-    const tier=glTier(e.count,GL_EXPECTED);
-    const pct=Math.min(100,Math.round(e.count/GL_EXPECTED*100));
+    const exp=glExpected(g.year,m,g.student);
+    const tier=glTier(e.count,exp);
+    const pct=exp?Math.min(100,Math.round(e.count/exp*100)):0;
     rows+=`<div class="gl-row">
       <span class="gl-month">${esc(PAY_MONTHS[m-1].slice(0,3))}</span>
       <span class="gl-bar"><span class="${tier}" style="width:${pct}%"></span></span>
-      <span class="gl-n">${e.count} ${esc(word)}</span>
+      <span class="gl-n">${e.count} of ${exp}</span>
     </div>`;
     if(e.dates.length)rows+=`<div class="gl-dates">${e.dates.map(d=>{
       const dt=new Date(d.date+'T00:00:00');
@@ -2096,7 +2126,7 @@ window.openGlance=function(key){
       return `<span class="aa-chip">${esc(lbl)}${d.count>1?' ×'+d.count:''}</span>`;}).join(' ')}</div>`;
   }
   body.innerHTML=`<div class="gl-rows">${rows}</div>
-    <div class="gl-note">Bars compare against a usual ${GL_EXPECTED} a month. A short month, a holiday week or a mid-month join will read lower without anything being wrong.</div>`;
+    <div class="gl-note">Each month is compared against the sessions expected by that point — the current month counts only the weeks that have passed. A holiday week or a mid-month join can still read lower without anything being wrong.</div>`;
   $('glanceModal').classList.add('open');
 };
 function glPaymentsHtml(g){
@@ -2573,6 +2603,16 @@ const payAmt=(v)=>{const n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,''
    Lives on the STUDENT, not on each payment: one student bills in one currency.
    Every payment row still stores the currency it was recorded in, so changing a
    student's currency never re-labels their history. */
+/* Nothing was recorded in Firestore before this month, so attendance, assignments
+   and payments are never shown earlier than this — otherwise every month before the
+   migration reads as "absent" or "unpaid". Change this one line if the history is
+   ever backfilled further. */
+const DATA_START={y:2026,mo:6};   // June 2026
+function dataStartMonth(selY){
+  if(selY>DATA_START.y)return 1;
+  if(selY<DATA_START.y)return 13;   // nothing at all for that year
+  return DATA_START.mo;
+}
 const CURRENCIES=['INR','USD','CHF','CAD'];
 const CURRENCY_BY_COUNTRY=[
   [/india/i,'INR'],[/switzerland|swiss/i,'CHF'],
@@ -2625,8 +2665,8 @@ function payDues(s,selY,selM,ctx){
   const items=[],feeMonths=[],extras=[];let total=0,unknown=false;
   const jm=parseJoinYM(s['Join Date']);
   // Arrears are reported within the selected YEAR only — January at the earliest.
-  let m=1;
-  if(jm&&jm.y===selY&&jm.mo>1)m=jm.mo;                       // joined partway through the year
+  let m=dataStartMonth(selY);                                // never before the data begins
+  if(jm&&jm.y===selY&&jm.mo>m)m=jm.mo;                       // joined partway through the year
   if(jm&&jm.y>selY)m=13;                                     // joined after this year: nothing due
   if(ctx.start&&ctx.start.y===selY&&ctx.start.mo>m)m=ctx.start.mo;  // no records before this
   const startMonth=m;
@@ -2751,7 +2791,7 @@ window.buildPayments=function(){
       }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
       // Batch + monthly fee now ride along under the name, like the student ID.
       const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',fee?esc(money(payAmt(fee)||0,studentCurrency(s))):''].filter(Boolean).join(' · ');
-      return `<tr><td><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
+      return `<tr><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function fillPaySelect(id,allLabel,items,current){
