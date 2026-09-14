@@ -1155,15 +1155,19 @@ table.avail td.occ{border:1px solid transparent}
       <div class="form-row"><label>Student Name <span class="req">*</span></label><input type="text" id="l_Name" placeholder="Student name"></div>
       <div class="form-row"><label>Country</label><input type="text" id="l_Country" placeholder="Country" list="countryList"><datalist id="countryList"></datalist></div>
       <div class="form-row"><label>Mobile Contact <span class="req">*</span></label><input type="text" id="l_Contact" placeholder="With country code, e.g. 9198…"></div>
-      <div class="form-row"><label>Preferred Batch</label><input type="text" id="l_Batch" placeholder="e.g. Sun - 9:30 am" list="batchList"><datalist id="batchList"></datalist></div>
+      <div class="form-row"><label>Preferred Batch</label>
+        <div class="combo" data-field="l_Batch">
+          <select class="combo-select" onchange="onComboSelect('l_Batch')"></select>
+          <input type="text" class="combo-new" id="l_Batch" placeholder="e.g. Sun - 9:30 am" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('l_Batch')" style="display:none;" title="Back to list">↩</button>
+        </div>
+      </div>
       <div class="form-row"><label>Source</label>
-        <select id="l_Source" onchange="onSourceChange()">
-          <option value="">— How did they find us? —</option>
-          <option>Google</option><option>Website</option><option>Reference</option><option>WhatsApp</option>
-          <option>Instagram</option><option>AI Agent</option><option>Summer Camp</option>
-          <option>Apartment Outreach</option><option>Stalls</option><option>Others</option>
-        </select>
-        <input type="text" id="l_SourceOther" placeholder="Please specify" style="display:none;margin-top:8px;">
+        <div class="combo" data-field="l_Source">
+          <select class="combo-select" onchange="onComboSelect('l_Source')"></select>
+          <input type="text" class="combo-new" id="l_Source" placeholder="Type a new source" style="display:none;">
+          <button type="button" class="combo-back" onclick="comboBack('l_Source')" style="display:none;" title="Back to list">↩</button>
+        </div>
       </div>
       <div class="form-row"><label>Status</label>
         <select id="l_Status">
@@ -1353,6 +1357,7 @@ window.setTab=function(tab){
   if(tab==='risk')loadRisk();
   if(tab==='tutor')loadTutor();
   if(tab==='summary')loadSummary();
+  if(tab==='leads')ensureStudents();
   if(tab==='attendance')initAttendance();
   if(tab==='assignments')initAssignments();
   if(tab==='payments'){
@@ -1361,6 +1366,14 @@ window.setTab=function(tab){
     setTimeout(initTrend,300);
   }
 };
+// Leads needs the student list for the batch combo and for the next auto ID on convert.
+async function ensureStudents(){
+  if(studentsLoaded)return;
+  try{
+    const snap=await getDocs(collection(db,'students'));
+    studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;
+  }catch(e){console.warn('ensureStudents',e);}
+}
 function hideAllTabScreens(){
   ALL_TABS.forEach(t=>{const s=$(t+'Screen');if(s)s.style.display='none';});
 }
@@ -1372,6 +1385,17 @@ window.toggleMigCard=function(bodyId,chevId){
 };
 window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
 document.addEventListener('click',()=>{const d=$('acctDrop');if(d)d.classList.remove('open');});
+// Escape closes whichever dialog is on top. It clicks that dialog's own close button, so
+// each one runs its real cancel path rather than just having the overlay hidden.
+document.addEventListener('keydown',(e)=>{
+  if(e.key!=='Escape'&&e.key!=='Esc')return;
+  const open=[...document.querySelectorAll('.modal-overlay.open')];
+  if(!open.length)return;
+  e.preventDefault();e.stopPropagation();
+  const top=open[open.length-1];
+  const btn=top.querySelector('.modal-close');
+  if(btn)btn.click(); else top.classList.remove('open');
+});
 
 function subscribeLeads(){
   const qy=query(collection(db,'leads'),orderBy('createdAt','desc'));
@@ -1387,7 +1411,6 @@ function fillDatalists(){
   const c=[...new Set(leadsData.map(l=>l.Country).filter(Boolean))].sort();
   const b=[...new Set(leadsData.map(l=>l['Preferred Batch']).filter(Boolean))].sort();
   $('countryList').innerHTML=c.map(x=>`<option value="${esc(x)}">`).join('');
-  $('batchList').innerHTML=b.map(x=>`<option value="${esc(x)}">`).join('');
 }
 window.setStatusFilter=function(s){statusFilter=s;$('statusFilter').value=s;renderLeads();};
 window.clearLeadFilters=function(){$('leadSearch').value='';$('statusFilter').value='';statusFilter='';renderLeads();};
@@ -1406,19 +1429,19 @@ window.renderLeads=function(){
     LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${jsq(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
   if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
   list.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>Name</th><th>Country</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
+    <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
     </tr></thead><tbody>${rows.map(l=>`<tr>
-      <td><strong>${esc(l.Name||'—')}</strong>${contactBtns(l.Contact,l.Name)}${l.Contact?`<br><span class="pay-sid2">${esc(l.Contact)}</span>`:''}</td>
+      <td><strong>${esc(l.Name||'—')}</strong></td>
       <td>${esc(l.Country||'—')}</td>
+      <td>${l.Contact?`<a href="tel:${esc(digitsOnly(l.Contact))}" class="lead-tel">${esc(l.Contact)}</a>`:'—'}</td>
       <td>${esc(l['Preferred Batch']||'—')}</td>
       <td>${esc(l.Source||'—')}</td>
       <td><span class="lead-badge ${statusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
       <td class="lead-notes-cell">${esc(l.Notes||'')}</td>
-      <td><div class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${jsq(l._id)}')">Edit</button><button class="pay-act pay-act-history" onclick="openHist('${jsq(l._id)}')">History</button></div></td>
+      <td><div class="lead-action-cell"><button class="pay-act pay-act-paid" onclick="openLeadForm('${jsq(l._id)}')">Edit</button>${(isAdmin()&&String(l.Status||'')!=='Converted')?`<button class="pay-act pay-act-kit" title="Create a student from this lead" onclick="convertLead('${jsq(l._id)}')">Convert</button>`:''}<button class="pay-act pay-act-history" onclick="openHist('${jsq(l._id)}')">History</button></div></td>
     </tr>`).join('')}</tbody></table>`;
 };
 
-window.onSourceChange=function(){const other=$('l_Source').value==='Others';$('l_SourceOther').style.display=other?'':'none';if(!other)$('l_SourceOther').value='';};
 window.openLeadForm=function(id){
   editingLeadId=id||null;
   const lead=id?leadsData.find(l=>l._id===id):null;
@@ -1426,18 +1449,20 @@ window.openLeadForm=function(id){
   $('l_Name').value=lead?(lead.Name||''):'';
   $('l_Country').value=lead?(lead.Country||''):'';
   $('l_Contact').value=lead?(lead.Contact||''):'';
-  $('l_Batch').value=lead?(lead['Preferred Batch']||''):'';
   $('l_Notes').value=lead?(lead.Notes||''):'';
   $('l_Status').value=lead?(lead.Status||'Enquiry'):'Enquiry';
-  const src=lead?(lead.Source||''):'';
-  if(src&&!PRESET_SOURCES.includes(src)){$('l_Source').value='Others';$('l_SourceOther').value=src;$('l_SourceOther').style.display='';}
-  else{$('l_Source').value=src;$('l_SourceOther').value='';$('l_SourceOther').style.display='none';}
+  // Source and Preferred Batch use the same combo control as the student form: pick from
+  // the list, or choose "+ Add new…" to type one that isn't there yet.
+  fillCombo('l_Source',PRESET_SOURCES.concat(leadsData.map(l=>l.Source)));
+  fillCombo('l_Batch',leadsData.map(l=>l['Preferred Batch']).concat(studentsData.map(s=>s.Batch)));
+  setComboValue('l_Source',lead?(lead.Source||''):'');
+  setComboValue('l_Batch',lead?(lead['Preferred Batch']||''):'');
   $('l_Msg').textContent='';$('l_SaveBtn').disabled=false;
   const del=$('l_DeleteBtn');del.style.display=editingLeadId?'':'none';del.disabled=false;
   $('leadModal').classList.add('open');
 };
 window.closeLeadForm=function(){$('leadModal').classList.remove('open');editingLeadId=null;};
-function currentSource(){const s=$('l_Source').value;return s==='Others'?$('l_SourceOther').value.trim():s;}
+function currentSource(){return String($('l_Source').value||'').trim();}
 
 window.saveLead=async function(){
   const msg=$('l_Msg'),btn=$('l_SaveBtn');
@@ -1463,6 +1488,25 @@ window.saveLead=async function(){
   }catch(e){console.error('saveLead',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
 };
 
+// Convert: open Add Student pre-filled from the lead. On save the lead is marked
+// Converted and linked to the new student id.
+let convertingLeadId=null;
+window.convertLead=async function(id){
+  if(!isAdmin())return;
+  const lead=leadsData.find(l=>l._id===id);if(!lead)return;
+  await ensureStudents();
+  convertingLeadId=id;
+  closeLeadForm();
+  setTab('students');
+  setTimeout(()=>{
+    openStudentForm(null,{
+      Name:lead.Name||'',Country:lead.Country||'',Contact:lead.Contact||'',
+      Batch:lead['Preferred Batch']||''
+    });
+    const m=$('s_Msg');
+    if(m){m.innerHTML='Converting lead <strong>'+esc(lead.Name||'')+'</strong> — check the details and add the missing fields.';m.className='modal-msg';}
+  },120);
+};
 window.deleteLead=async function(){
   if(!editingLeadId)return;
   const lead=leadsData.find(l=>l._id===editingLeadId);
@@ -1856,7 +1900,7 @@ window.renderStudents=function(){
     <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th>${canManageStudents()?'<th></th>':''}
     </tr></thead><tbody>${rows.map(s=>`<tr class="student-row${String(s.ID)===String(selectedStudentId)?' row-selected':''}" data-sid="${esc(s.ID)}" onclick="openProfile('${jsq(s.ID)}')">
       <td><strong class="stu-id-bold">${esc(s.ID)}</strong></td>
-      <td>${esc(s.Name||'—')}${contactBtns(s.Contact,s.Name)}</td>
+      <td>${esc(s.Name||'—')}</td>
       <td>${esc(s['Current Level']||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
       <td>${esc(s.Country||'—')}</td>
@@ -2440,12 +2484,14 @@ function nextStudentId(){
   studentsData.forEach(s=>{const m=String(s.ID||'').match(/^([A-Za-z]+)(\d+)$/);if(m){const n=parseInt(m[2]);if(n>max){max=n;prefix=m[1];pad=m[2].length;}}});
   return prefix+String(max+1).padStart(pad,'0');
 }
-window.openStudentForm=function(id){
+window.openStudentForm=function(id,prefill){
   if(!canManageStudents())return;   // tutors may edit progress, not the student record
   $('s_Currency').dataset.touched='';
+  if(!id&&!prefill)convertingLeadId=null;   // a plain Add is not a conversion
   editingStudentId=id||null;
   const s=id?studentsData.find(x=>x.ID===id):null;
-  $('studentModalTitle').textContent=s?'Edit Student':'Add Student';
+  // 6. Editing shows who you are editing.
+  $('studentModalTitle').textContent=s?`Edit Student · ${s.Name||''} (${s.ID})`:(prefill?'Add Student — from lead':'Add Student');
   // Populate combos from existing student data
   fillCombo('s_Level',studentsData.map(x=>x['Current Level']).concat(levelsData.map(l=>l.name)));
   fillCombo('s_Tutor',studentsData.map(x=>x.Tutor));
@@ -2471,13 +2517,15 @@ window.openStudentForm=function(id){
     editStatusOnOpen=s.Status||'Active';
   }else{
     idInput.value=nextStudentId();idInput.disabled=false;note.textContent='Auto-generated (edit if needed)';
-    $('s_Name').value='';
-    ['s_Level','s_Tutor','s_Country','s_Batch','s_School'].forEach(f=>setComboValue(f,''));
+    const pf=prefill||{};
+    $('s_Name').value=pf.Name||'';
+    ['s_Level','s_Tutor','s_School'].forEach(f=>setComboValue(f,''));
+    setComboValue('s_Country',pf.Country||'');setComboValue('s_Batch',pf.Batch||'');
     $('s_Status').value='Active';
     const t=new Date();$('s_JoinDate').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-    $('s_Email').value='';$('s_Contact').value='';$('s_Address').value='';$('s_Fee').value='';
+    $('s_Email').value='';$('s_Contact').value=pf.Contact||'';$('s_Address').value='';$('s_Fee').value='';
     $('s_PayRef').value='';$('s_Photo').value='';$('s_InactiveReason').value='';$('s_InactiveReasonOther').value='';
-    setCurrencyValue('INR');
+    setCurrencyValue(currencyForCountry(pf.Country||''));
     editStatusOnOpen='Active';
   }
   onStuStatusChange();onStuReasonChange();updatePhotoPreview();
@@ -2572,6 +2620,14 @@ window.saveStudent=async function(){
     await setDoc(doc(db,'students',id),data,{merge:true});
     const idx=studentsData.findIndex(s=>s.ID===id);
     if(idx>=0)studentsData[idx]={...studentsData[idx],...data};else studentsData.push({_id:id,...data});
+    if(convertingLeadId){
+      const leadId=convertingLeadId;convertingLeadId=null;
+      try{
+        await updateDoc(doc(db,'leads',leadId),{Status:'Converted','Converted Student ID':id,updatedAt:serverTimestamp(),updatedBy:currentUser.email});
+        await logHistory(leadId,'Converted','Converted to student '+id);
+      }catch(e){console.warn('lead convert link',e);}
+      toast('Lead converted to '+id);
+    }
     closeStudentForm();fillStudentFilters();highlightStudentRow(id);
     if($('profileScreen').style.display!=='none'&&currentStudentId===id)openProfile(id);
   }catch(e){console.error('saveStudent',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='modal-msg err';btn.disabled=false;}
@@ -2853,7 +2909,7 @@ window.buildPayments=function(){
       }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
       // Batch + monthly fee now ride along under the name, like the student ID.
       const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',fee?esc(money(payAmt(fee)||0,studentCurrency(s))):''].filter(Boolean).join(' · ');
-      return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong>${contactBtns(s.Contact,s.Name)}<br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
+      return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function fillPaySelect(id,allLabel,items,current){
@@ -3229,7 +3285,7 @@ window.renderRisk=function(){
   t.innerHTML=`<table class="pay-table"><thead>
     <tr><th>Student</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th></tr>
     </thead><tbody>${rows.map(s=>`<tr data-sid="${esc(s.id)}" class="${String(s.id)===String(selectedStudentId)?'row-selected':''}">
-      <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong>${contactBtns(s.contact,s.name)}<br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
+      <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
       <td>${esc(s.tutor||'—')}</td><td>${esc(s.country||'—')}</td><td>${esc(s.batch||'—')}</td>
       <td><span class="rate-pct ${rateCls(s.att_rate)}">${rateLabel(s.att_rate)}</span></td>
       <td><span class="rate-pct ${rateCls(s.sub_rate)}">${rateLabel(s.sub_rate)}</span></td>
@@ -3846,7 +3902,7 @@ function aaRenderRoster(mod){
   if(!rows.length){box.innerHTML='<div class="pay-empty">No students match your search.</div>';aEl(mod,'saveBar').style.display='';aaUpdateMarkedCount(mod);return;}
   box.innerHTML=`<table class="pay-table"><thead><tr><th>Student</th><th>Tutor</th><th>Batch</th><th>Status</th></tr></thead><tbody>${
     rows.map(s=>`<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}">
-        <td class="pay-stu-link" title="Open ${esc(s.Name||'')}'s profile" onclick="aaGoProfile('${jsq(mod)}','${jsq(s.ID)}')"><strong>${esc(s.Name||'—')}</strong>${contactBtns(s.Contact,s.Name)}<br><span class="pay-sid2">${esc(s.ID)}</span><span class="pay-stu-go">View profile ›</span></td>
+        <td class="pay-stu-link" title="Open ${esc(s.Name||'')}'s profile" onclick="aaGoProfile('${jsq(mod)}','${jsq(s.ID)}')"><strong>${esc(s.Name||'—')}</strong><br><span class="pay-sid2">${esc(s.ID)}</span><span class="pay-stu-go">View profile ›</span></td>
         <td>${esc(s.Tutor||'—')}</td>
         <td>${esc(s.Batch||'—')}</td>
         <td class="aa-status-td">${aaStatusCellHtml(mod,s)}</td>
@@ -4016,7 +4072,7 @@ window.aaRenderTrend=function(mod){
   card.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Student</th><th>Tutor</th><th>${esc(c.daysLabel)}</th><th>${esc(c.datesLabel)}</th><th>%</th><th></th>
     </tr></thead><tbody>${st.summary.map((s,i)=>`<tr data-sid="${esc(s.id)}" class="${String(s.id)===String(selectedStudentId)?'row-selected':''}">
-      <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong>${contactBtns(s.contact,s.name)}<br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
+      <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
       <td>${esc(s.tutor||'—')}</td>
       <td>${s.days}</td>
       <td class="aa-dates-col">${fmtDates(s.dates)}</td>
