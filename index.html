@@ -106,12 +106,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
 .pay-table tbody tr:hover{background:var(--accent-light)}
 .student-row{cursor:pointer}
-.student-row.row-flash{animation:rowFlash 1.6s ease-out}
+tr.row-flash{animation:rowFlash 1.6s ease-out}
 @keyframes rowFlash{0%,30%{background:var(--amber-light,#fdf6e3)}100%{background:transparent}}
 /* Persistent "this is the row you were just on" marker */
-.pay-table tbody tr.student-row.row-selected{background:var(--accent-light);box-shadow:inset 3px 0 0 var(--accent)}
-.pay-table tbody tr.student-row.row-selected td:first-child{position:relative}
-.pay-table tbody tr.student-row.row-selected:hover{background:var(--accent-light)}
+.pay-table tbody tr.row-selected{background:var(--accent-light);box-shadow:inset 3px 0 0 var(--accent)}
+.pay-table tbody tr.row-selected td:first-child{position:relative}
+.pay-table tbody tr.row-selected:hover{background:var(--accent-light)}
 /* Collapsible migration-helper header (shared by Students / Payments / Leads) */
 .mig-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:10px}
 .mig-head .chart-title{margin-bottom:0}
@@ -1923,15 +1923,11 @@ window.backFromProfile=function(){
     if(studentsData.length>1)showChildPicker(studentsData);
     else{ $('profileScreen').style.display=''; }
   }else{
-    $('staffTabs').style.display='';setTab(profileReturnTab||'students');
-    if(profileReturnTab!=='students')return;
-    // Return to the same row: scroll it into view, flash it, and leave it marked
-    // as the current selection (renderStudents applies .row-selected).
-    const sid=currentStudentId;
-    setTimeout(()=>{
-      const row=document.querySelector(`#studentsList tr[data-sid="${(window.CSS&&CSS.escape)?CSS.escape(sid):sid}"]`);
-      if(row){row.scrollIntoView({behavior:'smooth',block:'center'});row.classList.add('row-flash');setTimeout(()=>row.classList.remove('row-flash'),1600);}
-    },60);
+    const back=profileReturnTab||'students';
+    $('staffTabs').style.display='';setTab(back);
+    if(back!=='students'&&back!=='payments')return;
+    // setTab already re-rendered the list, so just find the row, scroll to it and flash.
+    highlightStudentRow(currentStudentId,{rerender:false});
   }
 };
 
@@ -2484,16 +2480,21 @@ window.closeStudentForm=function(){
   highlightStudentRow(id);   // keep the row you were just editing marked, same as returning from a profile
 };
 // Mark a student's row as the current selection, scroll it into view and flash it.
-function highlightStudentRow(id){
+// Works for the Students table and the Payments table — whichever is on screen.
+function highlightStudentRow(id,opts){
   if(!id)return;
   selectedStudentId=id;
-  const scr=$('studentsScreen');
-  if(!scr||scr.style.display==='none')return;
-  if(studentsLoaded)renderStudents();
+  const o=opts||{};
+  const onStudents=$('studentsScreen')&&$('studentsScreen').style.display!=='none';
+  const onPayments=$('paymentsScreen')&&$('paymentsScreen').style.display!=='none';
+  if(!onStudents&&!onPayments)return;
+  if(onStudents&&studentsLoaded&&o.rerender!==false)renderStudents();
+  if(onPayments&&o.rerender!==false)buildPayments();
   setTimeout(()=>{
-    const row=document.querySelector(`#studentsList tr[data-sid="${(window.CSS&&CSS.escape)?CSS.escape(id):id}"]`);
+    const sel=(window.CSS&&CSS.escape)?CSS.escape(id):id;
+    const row=document.querySelector(`#studentsList tr[data-sid="${sel}"], #paymentsList tr[data-sid="${sel}"]`);
     if(row){row.scrollIntoView({behavior:'smooth',block:'center'});row.classList.add('row-flash');setTimeout(()=>row.classList.remove('row-flash'),1600);}
-  },60);
+  },80);
 }
 function splitEmailsClient(raw){return String(raw||'').toLowerCase().split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);}
 window.saveStudent=async function(){
@@ -2556,7 +2557,7 @@ window.saveStudent=async function(){
 };
 
 // ═══════════ PAYMENTS ═══════════
-let paymentsData=[], paymentsLoaded=false, payStatusFilter='pending', payLoading=false, waTargetPhone='';
+let paymentsData=[], paymentsLoaded=false, payStatusFilter='', payLoading=false, waTargetPhone='';
 let payVisibleRows=[];   // rows currently shown in the Payments table (filters + chip applied)
 const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 // Month is normalised to a plain integer everywhere, so a sheet exporting "09" and the
@@ -2766,7 +2767,7 @@ function payBtnBusy(btn){if(!btn)return null;const prev=btn.innerHTML;btn.disabl
 window.setPayStatus=function(key){if(payLoading)return;payStatusFilter=key;buildPayments();};
 window.clearPayFilters=function(){
   ['payFilterCountry','payFilterLevel','payFilterTutor','payFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});
-  $('payFilterName').value='';payStatusFilter='pending';
+  $('payFilterName').value='';payStatusFilter='';
   // Back to the page default: this month, this year.
   const now=new Date(),mSel=$('payMonth'),ySel=$('payYear');
   if(mSel)mSel.value=String(now.getMonth()+1);
@@ -2831,7 +2832,7 @@ window.buildPayments=function(){
       }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
       // Batch + monthly fee now ride along under the name, like the student ID.
       const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',fee?esc(money(payAmt(fee)||0,studentCurrency(s))):''].filter(Boolean).join(' · ');
-      return `<tr><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
+      return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function fillPaySelect(id,allLabel,items,current){
