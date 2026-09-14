@@ -534,6 +534,11 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .gl-rows{display:flex;flex-direction:column;gap:2px}
 .gl-row{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)}
 .gl-row:last-child{border-bottom:none}
+/* One month = the bar row plus its own date chips, kept together above a single rule. */
+.gl-m{border-bottom:1px solid var(--border)}
+.gl-m:last-child{border-bottom:none}
+.gl-m .gl-row{border-bottom:none;padding:10px 0 0}
+.gl-m .gl-row.no-dates{padding:10px 0}
 .gl-month{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim)}
 .gl-bar{height:8px;border-radius:6px;background:var(--surface-alt);overflow:hidden}
 .gl-bar span{display:block;height:100%;border-radius:6px}
@@ -541,7 +546,8 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .gl-bar span.watch{background:var(--amber)}
 .gl-bar span.bad{background:var(--red)}
 .gl-n{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text);white-space:nowrap}
-.gl-dates{grid-column:1/-1;padding:0 0 8px 76px;margin-top:-4px}
+.gl-dates{display:flex;flex-wrap:wrap;gap:4px 5px;padding:7px 0 10px 76px}
+.gl-dates .aa-chip{margin:0}
 .gl-status{font-family:var(--font-mono);font-size:11px;font-weight:700;border-radius:20px;padding:3px 10px;white-space:nowrap}
 .gl-status.paid{background:var(--green-bg);color:#5a7a00}
 .gl-status.due{background:var(--red-light);color:#c0472a}
@@ -552,6 +558,7 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
   .glance-grid{grid-template-columns:1fr}
   .gl-row{grid-template-columns:56px 1fr auto;gap:10px}
   .gl-dates{padding-left:66px}
+  .gl-m .gl-row{grid-template-columns:56px 1fr auto;gap:10px}
 }
 .dues-list{display:flex;flex-direction:column;gap:8px}
 .dues-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-alt)}
@@ -567,6 +574,7 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .dues-note{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:12px;line-height:1.6}
 .pay-due-amt{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--red)}
 .pay-due-detail{font-family:var(--font-mono);font-size:10px;color:var(--text-light);line-height:1.5;max-width:170px}
+.pay-due-conv{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);font-weight:700}
 @media(max-width:640px){.pay-cls-dates,.pay-due-detail{max-width:130px}}
 #pay_Amount,#pay_Date,#pay_Method,#pay_Note,#wa_Msg{width:100%;box-sizing:border-box;font-family:var(--font-body);font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;outline:none}
 #wa_Msg{resize:vertical;font-size:13px}
@@ -876,7 +884,7 @@ table.avail td.occ{border:1px solid transparent}
       <div class="stu-header">
         <div class="stu-title-wrap">
           <span class="table-title">Fee Payments</span>
-          <select id="payMonth" onchange="buildPayments()" class="pay-mini"></select>
+          <select id="payMonth" onchange="buildPayments();buildRevenue()" class="pay-mini"></select>
           <select id="payYear" onchange="loadPayments()" class="pay-mini"></select>
           <input type="text" id="payFilterName" class="stu-search" placeholder="Search name, ref, note…" oninput="buildPayments()">
         </div>
@@ -2321,7 +2329,7 @@ function renderProfileGlance(){
       `submitted in ${esc(period)}<br>${v.e?esc(v.e+' expected'+(sc.isNow?' so far':'')):'not started yet'}`);
   }
   if(!g.dues)html+=card('pay','Payments','none','—','','Not available');
-  else if(!g.dues.count)html+=card('pay','Payments','good','All clear','',`nothing pending for ${g.selYear}`);
+  else if(!g.dues.count)html+=card('pay','Payments','good','No dues','',`nothing pending for ${g.selYear}`);
   else html+=card('pay','Payments','bad',esc(g.dues.totalText||'Due'),'',
       `${g.dues.count} item${g.dues.count===1?'':'s'} pending<br>up to ${esc(period)}`);
   grid.innerHTML=html;
@@ -2351,15 +2359,17 @@ window.openGlance=function(key){
     const exp=glExpected(g.year,m,g.student);
     const tier=glTier(e.count,exp);
     const pct=exp?Math.min(100,Math.round(e.count/exp*100)):0;
-    rows+=`<div class="gl-row">
-      <span class="gl-month">${esc(PAY_MONTHS[m-1].slice(0,3))}</span>
-      <span class="gl-bar"><span class="${tier}" style="width:${pct}%"></span></span>
-      <span class="gl-n">${e.count} of ${exp}</span>
+    const chips=e.dates.map(d=>{
+      return `<span class="aa-chip">${esc(chipDate(d.date))}${d.count>1?' ×'+d.count:''}</span>`;}).join('');
+    // Row + its own chips live in one block, so the rule falls below the chips, not between.
+    rows+=`<div class="gl-m">
+      <div class="gl-row${chips?'':' no-dates'}">
+        <span class="gl-month">${esc(PAY_MONTHS[m-1].slice(0,3))}</span>
+        <span class="gl-bar"><span class="${tier}" style="width:${pct}%"></span></span>
+        <span class="gl-n">${e.count} of ${exp}</span>
+      </div>
+      ${chips?`<div class="gl-dates">${chips}</div>`:''}
     </div>`;
-    if(e.dates.length)rows+=`<div class="gl-dates">${e.dates.map(d=>{
-      const dt=new Date(d.date+'T00:00:00');
-      const lbl=isNaN(dt)?d.date:dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-      return `<span class="aa-chip">${esc(lbl)}${d.count>1?' ×'+d.count:''}</span>`;}).join(' ')}</div>`;
   }
   body.innerHTML=`<div class="gl-rows">${rows}</div>
     <div class="gl-note">Each month is compared against the sessions expected by that point — the current month counts only the weeks that have passed. A holiday week or a mid-month join can still read lower without anything being wrong.</div>`;
@@ -2396,16 +2406,17 @@ function glPaymentsHtml(g){
         const amt=payAmt(p.Amount);
         return `<div class="gl-row" style="grid-template-columns:64px 1fr auto;">
           <span class="gl-month">${esc(PAY_MONTHS[(parseInt(payM(p.Month),10)||1)-1].slice(0,3))}</span>
-          <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${esc(String(p.Type||''))}${amt!==null?' · '+esc(inr(amt)):''}</span>
+          <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${esc(String(p.Type||''))}${amt!==null?' · '+esc(money(amt,payRowCur(p))):''}</span>
           <span class="gl-status ${cls}">${esc(txt)}</span>
         </div>`;}).join('')+'</div>';
   }
   const d=g.dues;
   const total=(d&&d.count)
-    ? `<div class="dues-total"><span class="dues-total-lbl">Total pending</span><span class="dues-total-amt">${esc(d.totalText||'')}${d.unknown?' +':''}</span></div>`
+    ? `<div class="dues-total"><span class="dues-total-lbl">Total pending</span><span class="dues-total-amt">${esc(d.totalText||'')}${d.showINR&&d.totalINR&&d.totalINR!==d.totalText?' ('+esc(d.totalINR)+')':''}${d.unknown?' +':''}</span></div>`
     : '<div class="dues-total"><span class="dues-total-lbl">Total pending</span><span class="dues-total-amt" style="color:var(--green)">Nothing due</span></div>';
-  return `<div class="gl-rows">${rows}</div>${extraHtml}${total}
-    <div class="gl-note">Please ignore if you have already paid — it may not be recorded yet.</div>`;
+  // The "may not be recorded yet" caveat only makes sense when something is outstanding.
+  const note=(d&&d.count)?'<div class="gl-note">Please ignore if you have already paid — it may not be recorded yet.</div>':'';
+  return `<div class="gl-rows">${rows}</div>${extraHtml}${total}${note}`;
 }
 
 function topicsForLevel(levelName){
@@ -2704,6 +2715,8 @@ function highlightStudentRow(id,opts){
   (function find(){
     const row=document.querySelector(q);
     if(row){
+      // Only ever one row marked, whatever any earlier render left behind.
+      document.querySelectorAll('tr.row-selected').forEach(x=>{if(x!==row)x.classList.remove('row-selected');});
       row.classList.add('row-selected');
       row.scrollIntoView({behavior:'smooth',block:'center'});
       row.classList.add('row-flash');setTimeout(()=>row.classList.remove('row-flash'),1600);
@@ -2784,6 +2797,10 @@ window.saveStudent=async function(){
 let paymentsData=[], paymentsLoaded=false, payStatusFilter='', payLoading=false, waTargetPhone='';
 let payVisibleRows=[];   // rows currently shown in the Payments table (filters + chip applied)
 const PAY_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+// Date chips always read "13 Sep". en-GB renders September as "Sept", which is a
+// letter wider than every other month and doesn't match the labels beside it.
+const chipDate=(s)=>{const dt=new Date(String(s||'')+'T00:00:00');
+  return isNaN(dt)?String(s||''):dt.getDate()+' '+PAY_MONTHS[dt.getMonth()].slice(0,3);};
 // Month is normalised to a plain integer everywhere, so a sheet exporting "09" and the
 // month dropdown's "9" resolve to the SAME document instead of two rival rows.
 const payM=(m)=>{const n=parseInt(String(m||'').trim(),10);return isNaN(n)?'':String(n);};
@@ -2860,9 +2877,7 @@ function buildPayAttIndex(year,month){
 function renderClassesCell(e){
   if(!e||!e.count)return '<span class="pay-cls-none">0</span>';
   const chips=e.dates.map(d=>{
-    const dt=new Date(d.date+'T00:00:00');
-    const lbl=isNaN(dt)?d.date:dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-    return `<span class="aa-chip">${esc(lbl)}${d.count>1?' ×'+d.count:''}</span>`;
+    return `<span class="aa-chip">${esc(chipDate(d.date))}${d.count>1?' ×'+d.count:''}</span>`;
   }).join(' ');
   return `<div class="pay-cls"><span class="pay-cls-n">${e.count}</span><div class="pay-cls-dates">${chips}</div></div>`;
 }
@@ -2931,27 +2946,32 @@ function payDues(s,selY,selM,ctx){
   const cur=studentCurrency(s);                 // the currency the fee is QUOTED in
   const monthly=payAmt(s['Monthly Fee']);       // in that quoted currency
   const items=[],feeMonths=[],extras=[];let total=0,unknown=false;
+  const byCur={};   // what is owed, kept in the currency each item is actually billed in
   const jm=parseJoinYM(s['Join Date']);
   // Arrears are reported within the selected YEAR only — January at the earliest.
   let m=dataStartMonth(selY);                                // never before the data begins
   if(jm&&jm.y===selY&&jm.mo>m)m=jm.mo;                       // joined partway through the year
   if(jm&&jm.y>selY)m=13;                                     // joined after this year: nothing due
-  if(ctx.start&&ctx.start.y===selY&&ctx.start.mo>m)m=ctx.start.mo;  // no records before this
   const startMonth=m;
-  // A recorded Amount is already rupees; a missing one is the quoted fee converted.
-  const dueINR=(rec,mm)=>{
-    const v=payRowINR(rec,selY,mm);          // uses the currency recorded on that row
-    if(v!==null)return v;
-    if(monthly===null)return null;
-    return toINR(monthly,cur,selY,mm);
+  /* Each item has a NATURAL amount (what the parent is asked for, in the currency it is
+     billed in) and a rupee value (for totals and reporting). A row already carries its
+     own currency; a month with no row falls back to the quoted monthly fee. */
+  const dueOf=(rec,mm)=>{
+    const raw=payAmt(rec&&rec.Amount);
+    if(raw!==null){const c=payRowCur(rec);return {amount:raw,currency:c,amountINR:toINR(raw,c,selY,mm)};}
+    if(monthly===null)return {amount:null,currency:cur,amountINR:null};
+    return {amount:monthly,currency:cur,amountINR:toINR(monthly,cur,selY,mm)};
+  };
+  const tally=(d)=>{
+    if(d.amountINR===null){unknown=true;return;}
+    total+=d.amountINR;byCur[d.currency]=(byCur[d.currency]||0)+d.amount;
   };
   for(;m<=selM;m++){
     const rec=ctx.rec(sid,selY,m,'Fee');
     const st=rec?String(rec.Status||'').toLowerCase():'';
     if(st==='paid'||st==='ignore')continue;
-    const amt=dueINR(rec,m);
-    if(amt===null)unknown=true;else total+=amt;
-    items.push({type:'Fee',label:'Fee '+PAY_MONTHS[m-1].slice(0,3)+' '+selY,amount:amt,month:m});
+    const d=dueOf(rec,m);tally(d);
+    items.push({type:'Fee',label:'Fee '+PAY_MONTHS[m-1].slice(0,3)+' '+selY,amount:d.amount,currency:d.currency,amountINR:d.amountINR,month:m});
     feeMonths.push(PAY_MONTHS[m-1].slice(0,3));
   }
   ((ctx.by&&ctx.by[sid])||[]).forEach(p=>{
@@ -2959,15 +2979,21 @@ function payDues(s,selY,selM,ctx){
     const st=String(p.Status||'').toLowerCase();if(st==='paid'||st==='ignore')return;
     const py=parseInt(payY(p.Year),10),pm=parseInt(payM(p.Month),10);
     if(py!==selY||!pm||pm>selM)return;
-    const amt=payRowINR(p,selY,pm);   // converted from whatever currency it was recorded in
-    if(amt===null)unknown=true;else total+=amt;
-    items.push({type:t,label:t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,amount:amt,month:pm});
+    const raw=payAmt(p.Amount),c=payRowCur(p);
+    const d={amount:raw,currency:c,amountINR:raw===null?null:toINR(raw,c,selY,pm)};
+    tally(d);
+    items.push({type:t,label:t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,amount:d.amount,currency:d.currency,amountINR:d.amountINR,month:pm});
     extras.push(t+' '+PAY_MONTHS[pm-1].slice(0,3));
   });
   items.sort((a,b)=>a.month-b.month||a.type.localeCompare(b.type));
-  const totalText=total>0?inr(total):'';
+  // What the parent is asked for, in the currency they are billed in.
+  const curKeys=Object.keys(byCur).sort();
+  const totalText=curKeys.length?curKeys.map(k=>money(byCur[k],k)).join(' + '):'';
+  const totalINR=total>0?inr(total):'';
+  const mixed=curKeys.length>1||(curKeys.length===1&&curKeys[0]!=='INR');
   const quoted=(cur!=='INR'&&monthly!==null)?money(monthly,cur):'';
-  return {total,unknown,totalText,currency:'INR',quoted,quotedCurrency:cur,items,feeMonths,extras,count:items.length,year:selY,startMonth};
+  return {total,unknown,byCur,totalText,totalINR,showINR:mixed,currency:'INR',quoted,quotedCurrency:cur,
+          items,feeMonths,extras,count:items.length,year:selY,startMonth};
 }
 function renderDueCell(s,selY,selM){
   const d=payDues(s,selY,selM);
@@ -2977,7 +3003,8 @@ function renderDueCell(s,selY,selM){
   if(d.extras.length)bits.push(d.extras.join(', '));
   const detail=bits.join(' · ')+' · '+d.year;
   const amt=d.totalText?(d.totalText+(d.unknown?' +':'')):(d.unknown?'—':inr(0));
-  return `<div class="pay-due" title="${esc(detail)}"><span class="pay-due-amt">${amt}</span><div class="pay-due-detail">${esc(detail)}</div></div>`;
+  const conv=(d.showINR&&d.totalINR&&d.totalINR!==d.totalText)?`<div class="pay-due-conv">≈ ${esc(d.totalINR)}</div>`:'';
+  return `<div class="pay-due" title="${esc(detail)}"><span class="pay-due-amt">${amt}</span>${conv}<div class="pay-due-detail">${esc(detail)}</div></div>`;
 }
 function payUpsertLocal(sid,year,month,type,fields){
   const t=type||'Fee';let rec=payRecord(sid,year,month,t);
@@ -2993,6 +3020,13 @@ function payRemoveLocal(sid,year,month,type){
   payIndex=null;
 }
 function payBtnBusy(btn){if(!btn)return null;const prev=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spinner"></span>';return ()=>{try{btn.innerHTML=prev;btn.disabled=false;}catch(e){}};}
+/* After any payment change: redraw the table and the revenue card together, then mark
+   the row you just acted on so it is easy to find again in a long list. */
+function payAfterChange(sid){
+  if(sid)selectedStudentId=sid;       // set BEFORE rendering so the row draws marked
+  buildPayments();buildRevenue();
+  if(sid)highlightStudentRow(sid,{rerender:false});
+}
 window.setPayStatus=function(key){if(payLoading)return;payStatusFilter=key;buildPayments();};
 window.clearPayFilters=function(){
   ['payFilterCountry','payFilterLevel','payFilterTutor','payFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});
@@ -3002,7 +3036,7 @@ window.clearPayFilters=function(){
   if(mSel)mSel.value=String(now.getMonth()+1);
   const yNow=String(now.getFullYear()),changedYear=ySel&&ySel.value!==yNow&&[...ySel.options].some(o=>o.value===yNow);
   if(changedYear){ySel.value=yNow;loadPayments();return;}
-  buildPayments();
+  buildPayments();buildRevenue();
 };
 async function payWrite(body){
   const {action,type,studentId,year,month}=body;const id=payDocId(studentId,year,month,type||'Fee');
@@ -3096,28 +3130,28 @@ window.savePaymentForm=async function(){
     $('pay_Amount').classList.remove('invalid');
     btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
     const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Pending',amount,currency:curSel,paidDate:'',method:'',note});
-    if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Pending',Amount:amount,Currency:curSel,'Paid Date':'',Method:'',Note:note});closePaymentForm();buildPayments();buildRevenue();}
+    if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Pending',Amount:amount,Currency:curSel,'Paid Date':'',Method:'',Note:note});closePaymentForm();payAfterChange(c.studentId);}
     else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
     return;
   }
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
   const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Paid',amount,currency:curSel,paidDate:$('pay_Date').value,method:$('pay_Method').value.trim(),note});
-  if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:amount,Currency:curSel,'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:note});closePaymentForm();buildPayments();buildRevenue();}
+  if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:amount,Currency:curSel,'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:note});closePaymentForm();payAfterChange(c.studentId);}
   else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
 };
 window.markPaymentIgnore=async function(sid,btn){
   const year=$('payYear').value,month=$('payMonth').value;const done=payBtnBusy(btn);
   const ok=await payWrite({action:'savePayment',studentId:sid,year,month,status:'Ignore'});
-  if(ok){payUpsertLocal(sid,year,month,'Fee',{Status:'Ignore'});buildPayments();}else{if(done)done();alert('Could not update.');}
+  if(ok){payUpsertLocal(sid,year,month,'Fee',{Status:'Ignore'});payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
 window.revertPayment=async function(sid,btn){
   const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Revert this to Pending?'))return;const done=payBtnBusy(btn);
   const ok=await payWrite({action:'deletePayment',studentId:sid,year,month});
-  if(ok){payRemoveLocal(sid,year,month,'Fee');buildPayments();}else{if(done)done();alert('Could not update.');}
+  if(ok){payRemoveLocal(sid,year,month,'Fee');payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
 window.savePaymentRef=async function(sid,inp){
   const val=inp.value.trim();inp.classList.remove('saved','error');inp.classList.add('saving');
-  try{await setDoc(doc(db,'students',sid),{'Payment Ref':val,updatedAt:serverTimestamp()},{merge:true});const s=studentsData.find(x=>x.ID===sid);if(s)s['Payment Ref']=val;inp.classList.remove('saving');inp.classList.add('saved');setTimeout(()=>inp.classList.remove('saved'),1200);}
+  try{await setDoc(doc(db,'students',sid),{'Payment Ref':val,updatedAt:serverTimestamp()},{merge:true});const s=studentsData.find(x=>x.ID===sid);if(s)s['Payment Ref']=val;inp.classList.remove('saving');inp.classList.add('saved');setTimeout(()=>inp.classList.remove('saved'),1200);selectedStudentId=sid;}
   catch(e){console.error(e);inp.classList.remove('saving');inp.classList.add('error');}
 };
 window.payWhatsApp=function(sid){
@@ -3125,15 +3159,17 @@ window.payWhatsApp=function(sid){
   const month=PAY_MONTHS[$('payMonth').value-1],year=$('payYear').value;
   const d=payDues(s,+year,+$('payMonth').value);
   // List every outstanding item — arrear fee months plus any unpaid Kit / Components.
-  // Fee months are listed by month alone (the monthly fee is already known to the parent);
-  // Kit and Components carry their cost, since those vary per purchase.
+  // Every line carries its cost in the currency the parent is billed in — fees, kit and
+  // components alike — followed by the total.
   let dues='';
   if(d.count){
-    const lines=d.items.map(it=>{
-      const showAmt=it.type!=='Fee'&&it.amount!==null;
-      return '• '+it.label+(showAmt?': '+inr(it.amount):'');
-    });
+    const lines=d.items.map(it=>'• '+it.label+(it.amount!==null?': '+money(it.amount,it.currency):''));
     dues=`\nPending:\n${lines.join('\n')}\n`;
+    if(d.totalText){
+      dues+=`Total: ${d.totalText}`;
+      if(d.showINR&&d.totalINR&&d.totalINR!==d.totalText)dues+=` (${d.totalINR})`;
+      dues+=(d.unknown?' plus items yet to be priced':'')+'\n';
+    }
   }
   const msg=`Dear Parent,\n\nGentle reminder to make the fees payment for the month of ${month.slice(0,3)} ${year}.\n${dues}\nKindly share the screenshot of your transfer if done already.\n\nThank you,\nTeam ElectroBotics`;
   waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
@@ -3152,11 +3188,11 @@ window.downloadPaymentsExcel=function(){
   const rows=payVisibleRows.map(({s})=>{
     const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
     const att=attIdx[String(s.ID).trim()],due=payDues(s,selY,selM);
-    const dueBits=due.items.map(it=>it.label+(it.amount!==null?' '+inr(it.amount):''));
+    const dueBits=due.items.map(it=>it.label+(it.amount!==null?' '+money(it.amount,it.currency):''));
     return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:'',
       'Classes Attended':att?att.count:0,
       'Days Attended':att?att.dates.map(d=>d.date+(d.count>1?' x'+d.count:'')).join(', '):'',
-      'Currency':studentCurrency(s),'Pending Amount':due.total||0,'Pending Details':dueBits.join(' · ')};
+      'Currency':studentCurrency(s),'Pending (billed)':due.totalText||'','Pending Amount (INR)':Math.round(due.total||0),'Pending Details':dueBits.join(' · ')};
   });
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Payments');
   XLSX.writeFile(wb,`ElectroBotics_Payments_${PAY_MONTHS[month-1]}_${year}.xlsx`);
@@ -3251,7 +3287,7 @@ window.openKitForm=function(sid,name){
 window.revertKit=async function(sid,btn){
   const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Remove the kit payment entry for this month?'))return;const done=payBtnBusy(btn);
   const ok=await payWrite({action:'deletePayment',type:'Kit',studentId:sid,year,month});
-  if(ok){payRemoveLocal(sid,year,month,'Kit');buildPayments();}else{if(done)done();alert('Could not update.');}
+  if(ok){payRemoveLocal(sid,year,month,'Kit');payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
 // ── Components flow ──
 window.flagComponents=function(sid){openDueForm(sid,'Components');};
@@ -3271,7 +3307,7 @@ window.openComponentsForm=function(sid,name){
 window.revertComponents=async function(sid,btn){
   const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Remove the components payment entry for this month?'))return;const done=payBtnBusy(btn);
   const ok=await payWrite({action:'deletePayment',type:'Components',studentId:sid,year,month});
-  if(ok){payRemoveLocal(sid,year,month,'Components');buildPayments();}else{if(done)done();alert('Could not update.');}
+  if(ok){payRemoveLocal(sid,year,month,'Components');payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
 // "New purchase": archive the paid cycle to componentHistory, then reopen as due.
 window.newComponentPurchase=async function(sid,name,btn){
@@ -3741,6 +3777,7 @@ function revMonthDetail(r){
       <div class="rev-d-sub">${p}% collected</div>
     </div>`;}).join('');
   const rows=Object.values(r.byCountry||{})
+    .filter(c=>c.students>0)                       // every student that month was waived
     .filter(c=>revRegion==='both'||revRegion===c.region)
     .sort((a,b)=>b.recINR-a.recINR||a.name.localeCompare(b.name));
   const countryHtml=rows.length?`<table class="pay-table rev-d-table"><thead><tr>
@@ -4603,9 +4640,7 @@ window.aaRenderTrend=function(mod){
   aEl(mod,'tMeta').textContent=`· ${st.summary.length} student${st.summary.length===1?'':'s'} · expected ${expected} ${c.unit}`;
   if(!st.summary.length){card.innerHTML='<div class="pay-empty">No students match this selection.</div>';return;}
   const fmtDates=(arr)=>arr.length?arr.map(d=>{
-    const dt=new Date(d.date+'T00:00:00');
-    const lbl=isNaN(dt)?d.date:dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
-    return `<span class="aa-chip">${esc(lbl)}${d.count>1?' ×'+d.count:''}</span>`;
+    return `<span class="aa-chip">${esc(chipDate(d.date))}${d.count>1?' ×'+d.count:''}</span>`;
   }).join(' '):'<span class="aa-nodates">—</span>';
   card.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Student</th><th>Tutor</th><th>${esc(c.daysLabel)}</th><th>${esc(c.datesLabel)}</th><th>%</th><th></th>
