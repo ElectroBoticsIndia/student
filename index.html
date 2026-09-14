@@ -100,7 +100,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .lead-badge-lost{background:#fdeae5;color:#c0472a}
 
 .avail-scroll{overflow-x:auto;overflow-y:auto;max-height:62vh}
-.avail-scroll thead th{position:sticky;top:0;z-index:2;background:var(--surface)}
+.avail-scroll thead th{position:sticky;top:0;z-index:2;background:var(--surface);box-shadow:inset 0 -1px 0 var(--border)}
 .pay-table{width:100%;border-collapse:collapse;font-size:13px}
 .pay-table th{text-align:left;font-family:var(--font-mono);font-size:11px;color:var(--text-light);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
 .pay-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -415,6 +415,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .pay-cls-none{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--text-light)}
 .pay-cls-dates{max-width:190px;line-height:1.8}
 .pay-due{display:flex;flex-direction:column;gap:3px;min-width:110px}
+/* Student profile: pending payments */
+.prof-dues-card{margin-bottom:22px}
+.dues-list{display:flex;flex-direction:column;gap:8px}
+.dues-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface-alt)}
+.dues-label{font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text)}
+.dues-kind{font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-light);display:block;margin-bottom:2px}
+.dues-amt{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--red);white-space:nowrap}
+.dues-amt.na{color:var(--text-light);font-weight:600}
+.dues-total{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.dues-total-lbl{font-family:var(--font-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim)}
+.dues-total-amt{font-family:var(--font-mono);font-size:19px;font-weight:700;color:var(--red)}
+.dues-clear{display:flex;align-items:center;gap:10px;font-family:var(--font-body);font-size:14px;color:var(--text-dim)}
+.dues-clear svg{color:var(--green);flex:none}
+.dues-note{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:12px;line-height:1.6}
 .pay-due-amt{font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--red)}
 .pay-due-detail{font-family:var(--font-mono);font-size:10px;color:var(--text-light);line-height:1.5;max-width:170px}
 @media(max-width:640px){.pay-cls-dates,.pay-due-detail{max-width:130px}}
@@ -595,8 +609,8 @@ table.avail td.occ{border:1px solid transparent}
         </select></div>
         <button class="filter-clear" onclick="clearLeadFilters()">Clear</button>
       </div>
-      <div class="pay-summary" id="leadSummary" style="padding:12px 20px 0;"></div>
-      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="leadsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="pay-summary" id="leadSummary" style="padding:12px 20px 10px;"></div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="leadsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
     <div class="chart-card" id="migCard" style="display:none;">
@@ -741,8 +755,8 @@ table.avail td.occ{border:1px solid transparent}
         <div class="filter-group"><label>Batch</label><select id="payFilterBatch" onchange="buildPayments()"><option value="">All</option></select></div>
         <button class="filter-clear" onclick="clearPayFilters()">Clear</button>
       </div>
-      <div class="pay-summary" id="paySummary" style="padding:12px 20px 0;"></div>
-      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="paymentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="pay-summary" id="paySummary" style="padding:12px 20px 10px;"></div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="paymentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
     <div class="chart-card" id="trendCard" style="padding:0;overflow:hidden;">
@@ -834,7 +848,7 @@ table.avail td.occ{border:1px solid transparent}
     <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Performance <span id="tutorStatsNote" class="trend-summary"></span></span></div></div>
       <div class="risk-criteria">Aggregated per tutor from the same rolling 4-week window as At-Risk. Click a note icon to log/view notes.</div>
-      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="tutorStatsTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="tutorStatsTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
     <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Tutor Availability by Day &amp; Time Slot</span></div></div>
@@ -869,9 +883,9 @@ table.avail td.occ{border:1px solid transparent}
         <div class="filter-group"><label>Batch</label><select id="riskFilterBatch" onchange="setRiskCol('batch',this.value)"><option value="">All</option></select></div>
         <button class="filter-clear" onclick="clearRiskFilters()">Clear</button>
       </div>
-      <div class="pay-summary" id="riskSummary" style="padding:12px 20px 0;"></div>
+      <div class="pay-summary" id="riskSummary" style="padding:12px 20px 10px;"></div>
       <div class="risk-criteria">Risk = attendance &lt; 50% or submissions &lt; 40% · Watch = attendance 50–60% or submissions 40–50% · On track = above both · No data = nothing recorded (rolling 4 weeks).</div>
-      <div class="avail-scroll" style="padding:8px 20px 16px;"><div id="riskTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="riskTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
   </div>
 
@@ -888,6 +902,15 @@ table.avail td.occ{border:1px solid transparent}
       </div>
     </div>
     <div class="progress-summary" id="profSummary"></div>
+
+    <!-- Pending payments — visible to parents too, so they can check dues alongside progress -->
+    <div class="chart-card prof-dues-card" id="profDuesCard" style="display:none;padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap">
+        <span class="table-title">Pending Payments <span id="profDuesMeta" class="trend-summary"></span></span>
+      </div></div>
+      <div id="profDuesBody" style="padding:16px 20px 18px;"></div>
+    </div>
+
     <div class="roadmap" id="roadmap"></div>
   </div>
 </div>
@@ -1752,6 +1775,7 @@ window.openProfile=async function(id){
     currentProgress=pr.docs.map(d=>({_id:d.id,...d.data()}));
     currentProjects=pj.docs.map(d=>({_id:d.id,...d.data()}));
     buildRoadmap();
+    loadProfileDues(s);
   }catch(e){console.error('load progress',e);$('roadmap').innerHTML='<div class="roadmap-error">Could not load progress. '+esc(e.code||e.message)+'</div>';}
 };
 window.backFromProfile=function(){
@@ -1770,6 +1794,46 @@ window.backFromProfile=function(){
     },60);
   }
 };
+
+/* ── Pending payments on the student profile ──
+   Its own small query (this student, this year) so it works for parents too and never
+   disturbs the Payments tab's cache. Requires a Firestore rule letting a parent read
+   payments for a student whose parentEmails contains them. */
+async function loadProfileDues(s){
+  const card=$('profDuesCard'),body=$('profDuesBody'),meta=$('profDuesMeta');
+  if(!card||!s)return;
+  const now=new Date(),selY=now.getFullYear(),selM=now.getMonth()+1;
+  card.style.display='';
+  meta.textContent='';
+  body.innerHTML='<div class="pay-loading"><span class="spinner"></span> Loading…</div>';
+  let records=[];
+  try{
+    const snap=await getDocs(query(collection(db,'payments'),
+      where('Student ID','==',String(s.ID).trim()),where('Year','==',payY(selY))));
+    records=snap.docs.map(d=>d.data());
+  }catch(e){
+    console.warn('profile dues',e);
+    body.innerHTML='<div class="pay-empty">Payment details aren\u2019t available right now.</div>';
+    return;
+  }
+  const d=payDues(s,selY,selM,payCtxFrom(records));
+  meta.textContent='· '+PAY_MONTHS[selM-1].slice(0,3)+' '+selY+' and earlier';
+  if(!d.count){
+    body.innerHTML=`<div class="dues-clear">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12.5 11 15.5 16 9"/></svg>
+      No pending payments for ${selY}. Thank you!</div>`;
+    return;
+  }
+  const rows=d.items.map(it=>{
+    const kind=it.type==='Fee'?'Monthly fee':it.type;
+    const period=it.label.replace(/^\S+\s/,'');
+    const amt=it.amount!==null?`<span class="dues-amt">${payMoney(it.amount)}</span>`:'<span class="dues-amt na">To be advised</span>';
+    return `<div class="dues-row"><div><span class="dues-kind">${esc(kind)}</span><span class="dues-label">${esc(period)}</span></div>${amt}</div>`;
+  }).join('');
+  const total=d.total>0?`<div class="dues-total"><span class="dues-total-lbl">Total pending</span><span class="dues-total-amt">${payMoney(d.total)}${d.unknown?' +':''}</span></div>`:'';
+  body.innerHTML=`<div class="dues-list">${rows}</div>${total}
+    <div class="dues-note">Covers ${esc(String(selY))} up to ${esc(PAY_MONTHS[selM-1])}. Please ignore if you have already paid \u2014 it may not be recorded yet.</div>`;
+}
 
 function topicsForLevel(levelName){
   const nLvl=normLevel(levelName);
@@ -2178,8 +2242,21 @@ const payAmt=(v)=>{const n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,''
 const payMoney=(n)=>'₹'+Math.round(n).toLocaleString('en-IN');
 // Everything still owed up to and including the selected month: unpaid monthly fees from
 // earlier months, plus any Kit / Components entry that was flagged and never marked paid.
-function payDues(s,selY,selM){
-  if(!payIndex)buildPayIndex();
+// Build a lookup context from an arbitrary set of payment records, so the student
+// profile can compute dues from its own small fetch without touching the Payments tab.
+function payCtxFrom(records){
+  const idx={},by={};let start=null;
+  (records||[]).forEach(p=>{
+    idx[payKey(p['Student ID'],p.Year,p.Month,p.Type)]=p;
+    const sid=String(p['Student ID']||'').trim();
+    (by[sid]=by[sid]||[]).push(p);
+    const y=parseInt(payY(p.Year),10),m=parseInt(payM(p.Month),10);
+    if(y&&m&&(!start||y<start.y||(y===start.y&&m<start.mo)))start={y,mo:m};
+  });
+  return {rec:(sid,y,m,t)=>idx[payKey(sid,y,m,t)]||null,by,start};
+}
+function payDues(s,selY,selM,ctx){
+  if(!ctx){if(!payIndex)buildPayIndex();ctx={rec:payRecord,by:payByStudent,start:payDataStart};}
   const sid=String(s.ID||'').trim();
   const monthly=payAmt(s['Monthly Fee']);
   const items=[],feeMonths=[],extras=[];let total=0,unknown=false;
@@ -2188,9 +2265,9 @@ function payDues(s,selY,selM){
   let m=1;
   if(jm&&jm.y===selY&&jm.mo>1)m=jm.mo;                       // joined partway through the year
   if(jm&&jm.y>selY)m=13;                                     // joined after this year: nothing due
-  if(payDataStart&&payDataStart.y===selY&&payDataStart.mo>m)m=payDataStart.mo;  // no records before this
+  if(ctx.start&&ctx.start.y===selY&&ctx.start.mo>m)m=ctx.start.mo;  // no records before this
   for(;m<=selM;m++){
-    const rec=payRecord(sid,selY,m,'Fee');
+    const rec=ctx.rec(sid,selY,m,'Fee');
     const st=rec?String(rec.Status||'').toLowerCase():'';
     if(st==='paid'||st==='ignore')continue;
     const amt=(rec&&payAmt(rec.Amount)!==null)?payAmt(rec.Amount):monthly;
@@ -2198,7 +2275,7 @@ function payDues(s,selY,selM){
     items.push({type:'Fee',label:'Fee '+PAY_MONTHS[m-1].slice(0,3)+' '+selY,amount:amt,month:m});
     feeMonths.push(PAY_MONTHS[m-1].slice(0,3));
   }
-  ((payByStudent&&payByStudent[sid])||[]).forEach(p=>{
+  ((ctx.by&&ctx.by[sid])||[]).forEach(p=>{
     const t=(String(p.Type||'').trim()||'Fee');if(t==='Fee')return;
     const st=String(p.Status||'').toLowerCase();if(st==='paid'||st==='ignore')return;
     const py=parseInt(payY(p.Year),10),pm=parseInt(payM(p.Month),10);
@@ -2359,8 +2436,16 @@ window.payWhatsApp=function(sid){
   const month=PAY_MONTHS[$('payMonth').value-1],year=$('payYear').value;
   const d=payDues(s,+year,+$('payMonth').value);
   // List every outstanding item — arrear fee months plus any unpaid Kit / Components.
+  // Fee months are listed by month alone (the monthly fee is already known to the parent);
+  // Kit and Components carry their cost, since those vary per purchase.
   let dues='';
-  if(d.count)dues=`\nPending:\n${d.items.map(it=>'• '+it.label).join('\n')}\n`;
+  if(d.count){
+    const lines=d.items.map(it=>{
+      const showAmt=it.type!=='Fee'&&it.amount!==null;
+      return '• '+it.label+(showAmt?': ₹'+Math.round(it.amount).toLocaleString('en-IN'):'');
+    });
+    dues=`\nPending:\n${lines.join('\n')}\n`;
+  }
   const msg=`Dear Parent,\n\nGentle reminder to make the fees payment for the month of ${month.slice(0,3)} ${year}.\n${dues}\nKindly share the screenshot of your transfer if done already.\n\nThank you,\nTeam ElectroBotics`;
   waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
   $('waModalTitle').textContent='Reminder · '+s.Name;$('wa_Msg').value=msg;$('waModal').classList.add('open');
