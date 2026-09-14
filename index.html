@@ -414,6 +414,15 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .pay-stu-link:hover strong{color:var(--accent-dark)}
 .pay-stu-go{display:block;font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--accent);opacity:0;transition:opacity .15s;margin-top:2px}
 .pay-stu-link:hover .pay-stu-go{opacity:1}
+.contact-btns{display:inline-flex;gap:5px;vertical-align:middle;margin-left:8px}
+.prof-contact{display:inline-flex;align-items:center}
+.prof-contact .contact-btns{margin-left:2px}
+.contact-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;transition:all .18s;text-decoration:none;flex:none}
+.contact-btn.call{color:var(--accent)}
+.contact-btn.call:hover{border-color:var(--accent);background:var(--accent-light)}
+.contact-btn.wa{color:#25d366}
+.contact-btn.wa:hover{border-color:#25d366;background:#eafaf0}
+.contact-btn.off{color:var(--border);cursor:default;background:var(--surface-alt)}
 .cur-chip{font-family:var(--font-mono);font-size:10px;font-weight:700;background:var(--accent-light);color:var(--accent-dark);border-radius:20px;padding:2px 8px;margin-left:6px;letter-spacing:.5px}
 /* Payments: Classes + Pending columns */
 .pay-cls{display:flex;flex-direction:column;gap:4px;min-width:120px}
@@ -1848,7 +1857,7 @@ window.renderStudents=function(){
     <th>ID</th><th>Name</th><th>Level</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Status</th>${canManageStudents()?'<th></th>':''}
     </tr></thead><tbody>${rows.map(s=>`<tr class="student-row${String(s.ID)===String(selectedStudentId)?' row-selected':''}" data-sid="${esc(s.ID)}" onclick="openProfile('${jsq(s.ID)}')">
       <td><strong class="stu-id-bold">${esc(s.ID)}</strong></td>
-      <td>${esc(s.Name||'—')}</td>
+      <td>${esc(s.Name||'—')}${contactBtns(s.Contact,s.Name)}</td>
       <td>${esc(s['Current Level']||'—')}</td>
       <td>${esc(s.Tutor||'—')}</td>
       <td>${esc(s.Country||'—')}</td>
@@ -1898,7 +1907,7 @@ window.openProfile=async function(id){
   if(s['Join Date'])meta.push(`<span>${ic.date}Joined ${esc(formatCertDate(s['Join Date'])||s['Join Date'])}</span>`);
   if(s.Tutor)meta.push(`<span>${ic.tutor}${esc(s.Tutor)}</span>`);
   if(s.Country)meta.push(`<span>${ic.country}${esc(s.Country)}</span>`);
-  $('profMeta').innerHTML=meta.join('');
+  $('profMeta').innerHTML=meta.join('')+(userRole!=='parent'?`<span class="prof-contact">${contactBtns(s.Contact,s.Name)}</span>`:'');
   $('profBackBtn').style.display=(userRole==='parent'&&studentsData.length<=1)?'none':'';
   $('profSummary').innerHTML='';
   $('profNoticeCard').style.display='none';
@@ -1927,9 +1936,9 @@ window.backFromProfile=function(){
   }else{
     const back=profileReturnTab||'students';
     $('staffTabs').style.display='';setTab(back);
-    if(back!=='students'&&back!=='payments')return;
-    // setTab already re-rendered the list, so just find the row, scroll to it and flash.
-    highlightStudentRow(currentStudentId,{rerender:false});
+    // setTab re-renders the list (some of them asynchronously); the highlighter polls for it.
+    if(['students','payments','risk','attendance','assignments'].includes(back))
+      highlightStudentRow(currentStudentId,{rerender:false});
   }
 };
 
@@ -2483,20 +2492,31 @@ window.closeStudentForm=function(){
 };
 // Mark a student's row as the current selection, scroll it into view and flash it.
 // Works for the Students table and the Payments table — whichever is on screen.
+// Every list that shows students by row, in the order they appear on screen.
+const ROW_LISTS=['#studentsList','#paymentsList','#riskTable','#att_roster','#asg_roster','#att_trendTable','#asg_trendTable'];
 function highlightStudentRow(id,opts){
   if(!id)return;
   selectedStudentId=id;
   const o=opts||{};
-  const onStudents=$('studentsScreen')&&$('studentsScreen').style.display!=='none';
-  const onPayments=$('paymentsScreen')&&$('paymentsScreen').style.display!=='none';
-  if(!onStudents&&!onPayments)return;
-  if(onStudents&&studentsLoaded&&o.rerender!==false)renderStudents();
-  if(onPayments&&o.rerender!==false)buildPayments();
-  setTimeout(()=>{
-    const sel=(window.CSS&&CSS.escape)?CSS.escape(id):id;
-    const row=document.querySelector(`#studentsList tr[data-sid="${sel}"], #paymentsList tr[data-sid="${sel}"]`);
-    if(row){row.scrollIntoView({behavior:'smooth',block:'center'});row.classList.add('row-flash');setTimeout(()=>row.classList.remove('row-flash'),1600);}
-  },80);
+  if(o.rerender!==false){
+    if($('studentsScreen')&&$('studentsScreen').style.display!=='none'&&studentsLoaded)renderStudents();
+    if($('paymentsScreen')&&$('paymentsScreen').style.display!=='none')buildPayments();
+  }
+  // At-Risk and the Attendance/Assignments lists finish loading asynchronously, so poll
+  // briefly for the row rather than looking once and giving up.
+  const sel=(window.CSS&&CSS.escape)?CSS.escape(String(id)):String(id);
+  const q=ROW_LISTS.map(l=>`${l} tr[data-sid="${sel}"]`).join(', ');
+  let tries=0;
+  (function find(){
+    const row=document.querySelector(q);
+    if(row){
+      row.classList.add('row-selected');
+      row.scrollIntoView({behavior:'smooth',block:'center'});
+      row.classList.add('row-flash');setTimeout(()=>row.classList.remove('row-flash'),1600);
+      return;
+    }
+    if(tries++<20)setTimeout(find,120);
+  })();
 }
 function splitEmailsClient(raw){return String(raw||'').toLowerCase().split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);}
 window.saveStudent=async function(){
@@ -2834,7 +2854,7 @@ window.buildPayments=function(){
       }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
       // Batch + monthly fee now ride along under the name, like the student ID.
       const sub=[esc(s.ID),s.Batch?esc(s.Batch):'',fee?esc(money(payAmt(fee)||0,studentCurrency(s))):''].filter(Boolean).join(' · ');
-      return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong><br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
+      return `<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}"><td class="pay-stu-link" title="Open ${esc(s.Name)}'s profile" onclick="openProfile('${jsq(s.ID)}')"><strong>${esc(s.Name)}</strong>${contactBtns(s.Contact,s.Name)}<br><span class="pay-sid2">${sub}</span><span class="pay-stu-go">View profile ›</span></td><td><input type="text" class="pay-ref-input" value="${esc(s['Payment Ref']||'')}" placeholder="acct / UPI ref" onblur="savePaymentRef('${jsq(s.ID)}',this)"></td><td>${badge}${detail}</td><td>${kitCell}</td><td>${compCell}</td><td>${renderClassesCell(attIdx[String(s.ID).trim()])}</td><td>${renderDueCell(s,selY,selM)}</td><td>${action}</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 function fillPaySelect(id,allLabel,items,current){
@@ -3175,7 +3195,7 @@ function computeRisk(){
     const id=String(s.ID||'').trim();const a=att[id]||{present:0,total:0};
     const attRate=a.total>0?a.present/a.total:null;
     let subRate=expected>0?(sub[id]||0)/expected:null;if(subRate!==null&&subRate>1)subRate=1;
-    return {id,name:s.Name||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
+    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
   });
   const order={red:0,yellow:1,green:2,nodata:3};
   const comb=r=>(r.att_rate===null?1:r.att_rate)+(r.sub_rate===null?1:r.sub_rate);
@@ -3209,8 +3229,8 @@ window.renderRisk=function(){
   if(!rows.length){t.innerHTML='<div class="pay-empty">No students match. (If everything is empty, import Attendance & Assignments first.)</div>';return;}
   t.innerHTML=`<table class="pay-table"><thead>
     <tr><th>Student</th><th>Tutor</th><th>Country</th><th>Batch</th><th>Attendance</th><th>Submissions</th><th>Risk</th></tr>
-    </thead><tbody>${rows.map(s=>`<tr>
-      <td><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span></td>
+    </thead><tbody>${rows.map(s=>`<tr data-sid="${esc(s.id)}" class="${String(s.id)===String(selectedStudentId)?'row-selected':''}">
+      <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong>${contactBtns(s.contact,s.name)}<br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
       <td>${esc(s.tutor||'—')}</td><td>${esc(s.country||'—')}</td><td>${esc(s.batch||'—')}</td>
       <td><span class="rate-pct ${rateCls(s.att_rate)}">${rateLabel(s.att_rate)}</span></td>
       <td><span class="rate-pct ${rateCls(s.sub_rate)}">${rateLabel(s.sub_rate)}</span></td>
@@ -3455,6 +3475,20 @@ const AA_MONTHS_FULL=['January','February','March','April','May','June','July','
 const aaToday=()=>{const t=new Date();return new Date(t.getTime()-t.getTimezoneOffset()*60000).toISOString().slice(0,10);};
 const aid=(mod,s)=>AA[mod].p+'_'+s;
 const aEl=(mod,s)=>$(aid(mod,s));
+const ICO_PHONE='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
+const ICO_WA='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15l-1.4 5 5.1-1.3A10 10 0 1 0 12 2"/></svg>';
+const digitsOnly=(v)=>String(v||'').replace(/[^0-9+]/g,'');
+/* Call + WhatsApp for the parent, shown beside the student everywhere they are listed.
+   `contact` may come from a student doc or from a derived row, so it is passed in. */
+function contactBtns(contact,name){
+  const n=digitsOnly(contact);
+  if(!n)return `<span class="contact-btns"><span class="contact-btn off" title="No contact number on file">${ICO_PHONE}</span><span class="contact-btn off">${ICO_WA}</span></span>`;
+  const who=name?(' \u00b7 '+name):'';
+  return `<span class="contact-btns">`+
+    `<a class="contact-btn call" href="tel:${esc(n)}" title="Call${esc(who)}" onclick="event.stopPropagation();">${ICO_PHONE}</a>`+
+    `<a class="contact-btn wa" href="https://wa.me/${esc(n.replace(/\+/g,''))}" target="_blank" rel="noopener" title="WhatsApp${esc(who)}" onclick="event.stopPropagation();">${ICO_WA}</a>`+
+  `</span>`;
+}
 const aaWaIcon=()=>'<svg viewBox="0 0 24 24" width="15" height="15" style="vertical-align:-2px" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-.3-.2-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6.1-.1.3-.3.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.3 5.2 4.6.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3M12 2a10 10 0 0 0-8.6 15l-1.4 5 5.1-1.3A10 10 0 1 0 12 2"/></svg>';
 
 window.toast=function(msg){const t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);};
@@ -3811,8 +3845,8 @@ function aaRenderRoster(mod){
   if(!st.roster.length){box.innerHTML='<div class="pay-empty">No students match these filters.</div>';aEl(mod,'saveBar').style.display='none';return;}
   if(!rows.length){box.innerHTML='<div class="pay-empty">No students match your search.</div>';aEl(mod,'saveBar').style.display='';aaUpdateMarkedCount(mod);return;}
   box.innerHTML=`<table class="pay-table"><thead><tr><th>Student</th><th>Tutor</th><th>Batch</th><th>Status</th></tr></thead><tbody>${
-    rows.map(s=>`<tr data-sid="${esc(s.ID)}">
-        <td><strong>${esc(s.Name||'—')}</strong><br><span class="pay-sid2">${esc(s.ID)}</span></td>
+    rows.map(s=>`<tr data-sid="${esc(s.ID)}" class="${String(s.ID)===String(selectedStudentId)?'row-selected':''}">
+        <td class="pay-stu-link" title="Open ${esc(s.Name||'')}'s profile" onclick="aaGoProfile('${jsq(mod)}','${jsq(s.ID)}')"><strong>${esc(s.Name||'—')}</strong>${contactBtns(s.Contact,s.Name)}<br><span class="pay-sid2">${esc(s.ID)}</span><span class="pay-stu-go">View profile ›</span></td>
         <td>${esc(s.Tutor||'—')}</td>
         <td>${esc(s.Batch||'—')}</td>
         <td class="aa-status-td">${aaStatusCellHtml(mod,s)}</td>
@@ -3828,6 +3862,17 @@ window.aaSetStatus=function(mod,id,status){
 };
 window.aaSetCount=function(mod,id,n){const m=aaState[mod].mark[id];if(!m)return;m.count=n;aaUpdateRow(mod,id);};
 
+function aaUnsavedCount(mod){
+  const st=aaState[mod];
+  return st.roster.filter(s=>st.mark[s.ID]&&st.mark[s.ID].status).length;
+}
+// Opening a profile from the Mark screen throws away anything marked but not saved,
+// so confirm before navigating rather than losing a tutor's work silently.
+window.aaGoProfile=function(mod,id){
+  const n=aaUnsavedCount(mod);
+  if(n&&!confirm(`You have ${n} student${n===1?'':'s'} marked but not saved. Leaving this screen will discard ${n===1?'it':'them'}. Continue?`))return;
+  openProfile(id);
+};
 window.aaSave=async function(mod){
   const c=AA[mod],st=aaState[mod];
   const date=aEl(mod,'mDate').value;
@@ -3950,7 +3995,7 @@ window.aaRenderTrend=function(mod){
     const hits=(byStudent[id]||[]).sort((a,b)=>a.date.localeCompare(b.date));
     const days=hits.reduce((t,h)=>t+h.count,0);
     const pct=expected?Math.round(days/expected*100):0;
-    return {id,name:s.Name||'',tutor:s.Tutor||'',days,dates:hits,pct,tier:aaTier(pct)};
+    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',days,dates:hits,pct,tier:aaTier(pct)};
   });
   aEl(mod,'tMeta').textContent=`· ${st.summary.length} student${st.summary.length===1?'':'s'} · expected ${expected} ${c.unit}`;
   if(!st.summary.length){card.innerHTML='<div class="pay-empty">No students match this selection.</div>';return;}
@@ -3961,8 +4006,8 @@ window.aaRenderTrend=function(mod){
   }).join(' '):'<span class="aa-nodates">—</span>';
   card.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Student</th><th>Tutor</th><th>${esc(c.daysLabel)}</th><th>${esc(c.datesLabel)}</th><th>%</th><th></th>
-    </tr></thead><tbody>${st.summary.map((s,i)=>`<tr>
-      <td><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span></td>
+    </tr></thead><tbody>${st.summary.map((s,i)=>`<tr data-sid="${esc(s.id)}" class="${String(s.id)===String(selectedStudentId)?'row-selected':''}">
+      <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong>${contactBtns(s.contact,s.name)}<br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
       <td>${esc(s.tutor||'—')}</td>
       <td>${s.days}</td>
       <td class="aa-dates-col">${fmtDates(s.dates)}</td>
