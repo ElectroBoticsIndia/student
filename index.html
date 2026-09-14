@@ -446,7 +446,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .notice-empty{font-size:13px;color:var(--text-light);line-height:1.6}
 .notice-existing{margin:14px 0 0;max-height:190px;overflow-y:auto}
 
-/* Profile: this-month glance cards */
+/* Profile: glance cards */
+.glance-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.glance-head-title{font-family:var(--font-mono);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-dim)}
 .glance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:24px}
 .glance-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;text-align:left;transition:all .18s;display:flex;flex-direction:column;gap:8px;font-family:var(--font-body)}
 .glance-card:hover{border-color:var(--accent);box-shadow:var(--shadow-lg);transform:translateY(-2px)}
@@ -981,7 +983,11 @@ table.avail td.occ{border:1px solid transparent}
       </div>
     </div>
 
-    <!-- This month at a glance: attendance · assignments · payments -->
+    <!-- At a glance: attendance · assignments · payments -->
+    <div class="glance-head" id="profGlanceHead" style="display:none;">
+      <span class="glance-head-title" id="profGlanceTitle">At a glance</span>
+      <select id="profYear" class="pay-mini" onchange="profSetYear(this.value)"></select>
+    </div>
     <div class="glance-grid" id="profGlance" style="display:none;"></div>
 
     <div class="roadmap" id="roadmap"></div>
@@ -1265,7 +1271,7 @@ async function enterParentMode(email){
 }
 
 function showChildPicker(kids){
-  $('leadsScreen').style.display='none';$('studentsScreen').style.display='none';$('profileScreen').style.display='none';
+  hideAllTabScreens();$('profileScreen').style.display='none';
   let pk=$('childPicker');
   if(!pk){pk=document.createElement('div');pk.id='childPicker';pk.className='login-screen';document.querySelector('.app').appendChild(pk);}
   pk.style.display='flex';
@@ -1344,6 +1350,9 @@ window.setTab=function(tab){
     setTimeout(initTrend,300);
   }
 };
+function hideAllTabScreens(){
+  ALL_TABS.forEach(t=>{const s=$(t+'Screen');if(s)s.style.display='none';});
+}
 window.toggleMigCard=function(bodyId,chevId){
   const body=$(bodyId);if(!body)return;
   const open=body.style.display==='none';
@@ -1867,7 +1876,7 @@ window.openProfile=async function(id){
   if(userRole!=='parent')profileReturnTab=activeTab;   // Back goes where you came from
   const s=studentsData.find(x=>x.ID===id);if(!s)return;
   currentStudentName=s.Name||'';
-  $('leadsScreen').style.display='none';$('studentsScreen').style.display='none';$('staffTabs').style.display='none';
+  hideAllTabScreens();$('staffTabs').style.display='none';
   const cp=$('childPicker');if(cp)cp.style.display='none';
   $('profileScreen').style.display='';
   window.scrollTo(0,0);
@@ -1893,6 +1902,7 @@ window.openProfile=async function(id){
   $('profNoticeCard').style.display='none';
   const prow=document.querySelector('.prof-row');if(prow)prow.classList.remove('has-notice');
   $('profGlance').style.display='none';$('profGlance').innerHTML='';
+  const gh=$('profGlanceHead');if(gh)gh.style.display='none';
   $('roadmap').innerHTML='<div class="roadmap-loading"><div class="spinner"></div>Loading progress…</div>';
   await loadRefData();
   try{
@@ -2046,27 +2056,51 @@ function glMonthRows(records,positive,selY){
   return by;
 }
 async function loadProfileGlance(s){
-  const grid=$('profGlance');if(!grid||!s)return;
-  const now=new Date(),selY=now.getFullYear(),selM=now.getMonth()+1;
-  grid.style.display='';
+  const grid=$('profGlance'),head=$('profGlanceHead');if(!grid||!s)return;
+  const now=new Date(),thisY=now.getFullYear();
+  head.style.display='';grid.style.display='';
   grid.innerHTML='<div class="glance-card"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div>';
   const sid=String(s.ID).trim();
-  const q1=query(collection(db,'attendance'),where('StudentID','==',sid));
-  const q2=query(collection(db,'assignments'),where('StudentID','==',sid));
-  const q3=query(collection(db,'payments'),where('Student ID','==',sid),where('Year','==',payY(selY)));
+  // Everything for this student, unfiltered by year — a student's history is small, and
+  // this way switching year is instant with no refetch and no extra rules surface.
   const grab=async(qy)=>{try{const snap=await getDocs(qy);return snap.docs.map(d=>d.data());}catch(e){console.warn('glance',e);return null;}};
-  const [att,asg,pay]=await Promise.all([grab(q1),grab(q2),grab(q3)]);
-  profGlanceData={
-    year:selY,month:selM,student:s,
-    att:att?glMonthRows(att,'present',selY):null,
-    asg:asg?glMonthRows(asg,'submitted',selY):null,
-    pay:pay,dues:pay?payDues(s,selY,selM,payCtxFrom(pay)):null
-  };
+  const [att,asg,pay]=await Promise.all([
+    grab(query(collection(db,'attendance'),where('StudentID','==',sid))),
+    grab(query(collection(db,'assignments'),where('StudentID','==',sid))),
+    grab(query(collection(db,'payments'),where('Student ID','==',sid)))
+  ]);
+  // Offer every year from the data floor to now, newest first.
+  const years=[];for(let y=thisY;y>=DATA_START.y;y--)years.push(y);
+  const sel=$('profYear');
+  sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  sel.value=String(thisY);
+  profGlanceData={student:s,attRows:att,asgRows:asg,payRows:pay,years,selYear:thisY,thisYear:thisY};
   renderProfileGlance();
+}
+window.profSetYear=function(y){
+  if(!profGlanceData)return;
+  profGlanceData.selYear=parseInt(y,10)||profGlanceData.thisYear;
+  renderProfileGlance();
+};
+// Month the cards summarise: the current month for the current year, else the whole year.
+function glScope(g){
+  const now=new Date();
+  const isNow=g.selYear===g.thisYear;
+  return {isNow,month:isNow?(now.getMonth()+1):12};
 }
 function renderProfileGlance(){
   const grid=$('profGlance'),g=profGlanceData;if(!grid||!g)return;
-  const mName=PAY_MONTHS[g.month-1].slice(0,3)+' '+g.year;
+  const sc=glScope(g);
+  const s=g.student;
+  // Bucket the raw rows for the selected year, once per render.
+  g.month=sc.month;g.year=g.selYear;
+  g.att=g.attRows?glMonthRows(g.attRows,'present',g.selYear):null;
+  g.asg=g.asgRows?glMonthRows(g.asgRows,'submitted',g.selYear):null;
+  g.pay=g.payRows;
+  g.dues=g.payRows?payDues(s,g.selYear,sc.month,payCtxFrom(g.payRows)):null;
+  $('profGlanceTitle').textContent=sc.isNow?'This month at a glance':g.selYear+' at a glance';
+  const mName=PAY_MONTHS[sc.month-1].slice(0,3)+' '+g.selYear;
+  const period=sc.isNow?mName:String(g.selYear);
   const chev='<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
   const card=(key,label,dot,value,unit,sub)=>`<button class="glance-card" onclick="openGlance('${key}')">
       <div class="glance-top"><span class="glance-label">${esc(label)}</span><span class="glance-dot ${dot}"></span></div>
@@ -2074,27 +2108,35 @@ function renderProfileGlance(){
       <div class="glance-sub">${sub}</div>
       <div class="glance-foot">View by month ${chev}</div>
     </button>`;
+  // Totals: the current month for this year, the whole year otherwise.
+  const sumYear=(src)=>{let n=0,e=0;const from=glFromMonth(g.selYear,s);
+    for(let m=from;m<=sc.month;m++){n+=(src[m]||{count:0}).count;e+=glExpected(g.selYear,m,s);}return {n,e};};
   let html='';
-  // Attendance — the plain count leads; the expectation is the quieter second line.
-  const exp=glExpected(g.year,g.month,g.student);
-  const expLine=exp?`${exp} expected so far`:'not started yet';
   if(g.att===null)html+=card('att','Attendance','none','—','','Not available');
   else{
-    const e=g.att[g.month]||{count:0};
-    html+=card('att','Attendance',glTier(e.count,exp),e.count,e.count===1?'class':'classes',
-      `attended in ${esc(mName)}<br>${esc(expLine)}`);
+    const v=sc.isNow?{n:(g.att[sc.month]||{count:0}).count,e:glExpected(g.selYear,sc.month,s)}:sumYear(g.att);
+    html+=card('att','Attendance',glTier(v.n,v.e),v.n,v.n===1?'class':'classes',
+      `attended in ${esc(period)}<br>${v.e?esc(v.e+' expected'+(sc.isNow?' so far':'')):'not started yet'}`);
   }
   if(g.asg===null)html+=card('asg','Assignments','none','—','','Not available');
   else{
-    const e=g.asg[g.month]||{count:0};
-    html+=card('asg','Assignments',glTier(e.count,exp),e.count,e.count===1?'demo':'demos',
-      `submitted in ${esc(mName)}<br>${esc(expLine)}`);
+    const v=sc.isNow?{n:(g.asg[sc.month]||{count:0}).count,e:glExpected(g.selYear,sc.month,s)}:sumYear(g.asg);
+    html+=card('asg','Assignments',glTier(v.n,v.e),v.n,v.n===1?'demo':'demos',
+      `submitted in ${esc(period)}<br>${v.e?esc(v.e+' expected'+(sc.isNow?' so far':'')):'not started yet'}`);
   }
   if(!g.dues)html+=card('pay','Payments','none','—','','Not available');
-  else if(!g.dues.count)html+=card('pay','Payments','good','All clear','',`nothing pending for ${g.year}`);
+  else if(!g.dues.count)html+=card('pay','Payments','good','All clear','',`nothing pending for ${g.selYear}`);
   else html+=card('pay','Payments','bad',esc(g.dues.totalText||'Due'),'',
-      `${g.dues.count} item${g.dues.count===1?'':'s'} pending<br>up to ${esc(mName)}`);
+      `${g.dues.count} item${g.dues.count===1?'':'s'} pending<br>up to ${esc(period)}`);
   grid.innerHTML=html;
+}
+// First month worth showing for a student in a year: the data floor, or later if they joined later.
+function glFromMonth(year,student){
+  let from=dataStartMonth(year);
+  const jm=parseJoinYM(student&&student['Join Date']);
+  if(jm&&jm.y===year&&jm.mo>from)from=jm.mo;
+  if(jm&&jm.y>year)from=13;
+  return from;
 }
 window.closeGlance=function(){$('glanceModal').classList.remove('open');};
 window.openGlance=function(key){
@@ -2106,9 +2148,7 @@ window.openGlance=function(key){
   const src=key==='att'?g.att:g.asg;
   if(!src){body.innerHTML='<div class="pay-empty">Not available right now.</div>';$('glanceModal').classList.add('open');return;}
   const word=key==='att'?'attended':'submitted';
-  const jm=parseJoinYM(g.student&&g.student['Join Date']);
-  let from=dataStartMonth(g.year);
-  if(jm&&jm.y===g.year&&jm.mo>from)from=jm.mo;
+  const from=glFromMonth(g.year,g.student);
   let rows='';
   for(let m=from;m<=g.month;m++){
     const e=src[m]||{count:0,dates:[]};
