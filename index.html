@@ -3452,8 +3452,18 @@ window.renderTrendChart=function(){
    Getting this backwards is what made received revenue read 657% of expected. */
 const PAY_CURRENCY='INR';                            // what actually lands in the account
 const FX_DEFAULTS={INR:1,USD:88,CHF:105,CAD:64,GBP:112};   // fallback if nothing is saved yet
-const FX_API='https://api.frankfurter.app/latest?from=INR&to=USD,CHF,CAD,GBP';
-let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null};
+// Live rates. Tried in order — the first one that answers with usable rates wins.
+// More than one source because a single free endpoint going down (or moving host,
+// as frankfurter did) otherwise takes automatic conversion with it.
+const FX_APIS=[
+  {name:'frankfurter.dev',url:'https://api.frankfurter.dev/v1/latest?base=INR&symbols=USD,CHF,CAD,GBP',
+   pick:j=>(j&&j.rates)||null, date:j=>(j&&j.date)||''},
+  {name:'frankfurter.app',url:'https://api.frankfurter.app/latest?from=INR&to=USD,CHF,CAD,GBP',
+   pick:j=>(j&&j.rates)||null, date:j=>(j&&j.date)||''},
+  {name:'er-api.com',url:'https://open.er-api.com/v6/latest/INR',
+   pick:j=>(j&&j.result==='success'&&j.rates)||null, date:j=>(j&&j.time_last_update_utc)||''}
+];
+let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null,fxSource:'',fxError:''};
 let frozenRates={};        // "2026_8" -> {rates:{...}, frozenAt, frozenBy}
 let settingsLoaded=false, fxLiveTried=false;
 
@@ -3479,21 +3489,33 @@ async function loadSettings(){
 }
 // Live rates, best effort. A failure is never silent — the dashboard says which source it used.
 async function fetchFxRates(){
-  try{
-    const res=await fetch(FX_API,{cache:'no-store'});
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    const j=await res.json();
-    const out={INR:1};
-    ['USD','CHF','CAD','GBP'].forEach(c=>{const v=j&&j.rates&&j.rates[c];if(v>0)out[c]=1/v;});
-    if(Object.keys(out).length<2)throw new Error('no rates returned');
-    appSettings.fx={...appSettings.fx,...out};
-    appSettings.fxUpdatedAt=new Date().toISOString();
-    appSettings.fxLive=true;
-    return {ok:true,date:(j&&j.date)||''};
-  }catch(e){
-    console.warn('fx fetch',e);appSettings.fxLive=false;
-    return {ok:false,error:e.message||String(e)};
+  const tried=[];
+  for(const api of FX_APIS){
+    try{
+      const ctl=typeof AbortController!=='undefined'?new AbortController():null;
+      const timer=ctl?setTimeout(()=>ctl.abort(),8000):null;   // a hung host must not stall the tab
+      const res=await fetch(api.url,{cache:'no-store',signal:ctl?ctl.signal:undefined});
+      if(timer)clearTimeout(timer);
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      const j=await res.json();
+      const rates=api.pick(j);
+      if(!rates)throw new Error('no rates in response');
+      // Every source quotes "units of X per 1 INR"; we store rupees per unit.
+      const out={INR:1};
+      ['USD','CHF','CAD','GBP'].forEach(c=>{const v=Number(rates[c]);if(v>0)out[c]=1/v;});
+      if(Object.keys(out).length<2)throw new Error('no usable rates');
+      appSettings.fx={...appSettings.fx,...out};
+      appSettings.fxUpdatedAt=new Date().toISOString();
+      appSettings.fxLive=true;appSettings.fxSource=api.name;appSettings.fxError='';
+      return {ok:true,date:api.date(j),source:api.name};
+    }catch(e){
+      const why=(e&&e.name==='AbortError')?'timed out':(e&&e.message)||String(e);
+      tried.push(api.name+': '+why);
+      console.warn('fx fetch',api.name,e);
+    }
   }
+  appSettings.fxLive=false;appSettings.fxSource='';appSettings.fxError=tried.join(' · ');
+  return {ok:false,error:tried.join(' · ')};
 }
 const fxKey=(y,m)=>`${payY(y)}_${payM(m)}`;
 // Rupees per unit of `cur` for a given month: the frozen rate if that month has one,
@@ -3522,9 +3544,15 @@ window.renderSettings=async function(){
   $('fxModeManual').classList.toggle('active',appSettings.fxMode!=='live');
   $('fxFetchBtn').style.display=appSettings.fxMode==='live'?'':'none';
   const when=appSettings.fxUpdatedAt?new Date(appSettings.fxUpdatedAt).toLocaleString():'never';
-  $('fxStatus').textContent=appSettings.fxMode==='live'
-    ? `Last fetched: ${when}${appSettings.fxLive===false?' · last attempt failed, using manual values':''}`
-    : 'Live fetching is off — the values below are used everywhere.';
+  if(appSettings.fxMode!=='live'){
+    $('fxStatus').textContent='Live fetching is off — the values below are used everywhere.';
+  }else if(appSettings.fxLive===false){
+    // Say exactly which host refused and why — otherwise "failed" gets blamed on Firebase.
+    $('fxStatus').innerHTML=`Last fetched: ${esc(when)} · <span style="color:var(--red)">live fetch failed, using the values below</span>`
+      +(appSettings.fxError?`<br><span style="opacity:.75">${esc(appSettings.fxError)}</span>`:'');
+  }else{
+    $('fxStatus').textContent=`Last fetched: ${when}`+(appSettings.fxSource?` · via ${appSettings.fxSource}`:'');
+  }
   $('fxGrid').innerHTML=['USD','CHF','CAD','GBP'].map(c=>`
     <div class="set-cur">
       <span class="set-cur-code">1 ${c} =</span>${appSettings.fxLive&&appSettings.fxMode==='live'?'<span class="set-cur-live">live</span>':''}
@@ -3544,7 +3572,8 @@ window.fetchFxNow=async function(){
   const el=$('fxStatus');el.innerHTML='<span class="spinner"></span> Fetching…';
   const r=await fetchFxRates();
   renderSettings();
-  toast(r.ok?('Rates updated'+(r.date?' ('+r.date+')':'')):'Could not fetch live rates — manual values are in use');
+  toast(r.ok?('Rates updated'+(r.source?' via '+r.source:'')+(r.date?' ('+r.date+')':''))
+            :'Could not fetch live rates — manual values are in use');
 };
 window.saveSettings=async function(){
   const msg=$('setMsg');msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
