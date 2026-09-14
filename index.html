@@ -423,6 +423,38 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .contact-btn.wa{color:#25d366}
 .contact-btn.wa:hover{border-color:#25d366;background:#eafaf0}
 .contact-btn.off{color:var(--border);cursor:default;background:var(--surface-alt)}
+/* Fee revenue dashboard */
+.rev-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;background:var(--surface-alt);color:var(--text-light);border:1px solid var(--border);border-radius:20px;padding:2px 8px;letter-spacing:1px;text-transform:uppercase}
+.rev-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:16px 20px 4px}
+.rev-tile{border:1px solid var(--border);border-radius:12px;padding:14px 16px;background:var(--surface-alt)}
+.rev-tile-lbl{font-family:var(--font-mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim)}
+.rev-tile-val{font-size:24px;font-weight:700;color:var(--text);line-height:1.2;margin-top:6px}
+.rev-tile-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:4px;line-height:1.5}
+.rev-tile.good .rev-tile-val{color:var(--green)}
+.rev-tile.short .rev-tile-val{color:var(--red)}
+.rev-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:10px 20px 16px}
+.rev-reg{border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:12px;padding:14px 16px;background:var(--surface)}
+.rev-reg.intl{border-left-color:var(--amber)}
+.rev-reg-lbl{font-family:var(--font-mono);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim)}
+.rev-reg-val{font-size:21px;font-weight:700;color:var(--text);margin-top:6px}
+.rev-reg-sub{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:4px;line-height:1.6}
+.rev-bar{height:7px;border-radius:6px;background:var(--surface-alt);overflow:hidden;margin-top:9px}
+.rev-bar span{display:block;height:100%;border-radius:6px;background:var(--green)}
+.rev-pct{font-family:var(--font-mono);font-size:11px;font-weight:700;border-radius:20px;padding:3px 9px;white-space:nowrap}
+.rev-pct.good{background:var(--green-bg);color:#5a7a00}
+.rev-pct.watch{background:var(--amber-bg);color:#8a6a00}
+.rev-pct.bad{background:var(--red-light);color:#c0472a}
+.rev-frozen{font-family:var(--font-mono);font-size:9px;color:var(--text-light)}
+@media(max-width:820px){.rev-tiles{grid-template-columns:1fr}.rev-split{grid-template-columns:1fr}}
+.set-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.set-label{font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);min-width:110px}
+.set-note{font-family:var(--font-mono);font-size:11px;color:var(--text-light);line-height:1.6}
+.set-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:6px}
+.set-cur{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface-alt)}
+.set-cur-code{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent-dark);letter-spacing:1px}
+.set-cur-live{font-family:var(--font-mono);font-size:10px;color:var(--green);margin-left:6px}
+.set-cur input{width:100%;box-sizing:border-box;margin-top:8px;font-family:var(--font-mono);font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
+.set-cur input:focus{border-color:var(--accent)}
 .cur-chip{font-family:var(--font-mono);font-size:10px;font-weight:700;background:var(--accent-light);color:var(--accent-dark);border-radius:20px;padding:2px 8px;margin-left:6px;letter-spacing:.5px}
 /* Payments: Classes + Pending columns */
 .pay-cls{display:flex;flex-direction:column;gap:4px;min-width:120px}
@@ -669,6 +701,7 @@ table.avail td.occ{border:1px solid transparent}
     <button class="dash-tab" data-tab="assignments" onclick="setTab('assignments')">Assignments</button>
     <button class="dash-tab" data-tab="payments" onclick="setTab('payments')">Payments</button>
     <button class="dash-tab" data-tab="leads" onclick="setTab('leads')">Leads</button>
+    <button class="dash-tab" data-tab="settings" onclick="setTab('settings')">Settings</button>
   </div>
 
   <div id="leadsScreen" style="display:none;">
@@ -858,6 +891,24 @@ table.avail td.occ{border:1px solid transparent}
       <div class="enroll-scroll" style="overflow-x:auto;padding:0 16px 16px;"><div class="trend-canvas-wrap" style="height:320px;min-width:520px;position:relative;"><canvas id="chartTrend"></canvas></div></div>
     </div>
 
+    <!-- ═══ FEE REVENUE (indicative) ═══ -->
+    <div class="chart-card" id="revenueCard" style="padding:0;overflow:hidden;">
+      <div class="stu-header">
+        <div class="stu-title-wrap"><span class="table-title">Fee Revenue <span class="rev-tag">indicative</span> <span id="revMeta" class="trend-summary"></span></span></div>
+        <div class="stu-actions">
+          <div class="trend-toggle">
+            <button class="trend-tab active" id="revTabBoth" onclick="setRevRegion('both')">Both</button>
+            <button class="trend-tab" id="revTabIndia" onclick="setRevRegion('india')">India</button>
+            <button class="trend-tab" id="revTabIntl" onclick="setRevRegion('intl')">International</button>
+          </div>
+        </div>
+      </div>
+      <div class="aa-sub" id="revNote"></div>
+      <div class="rev-tiles" id="revTiles"></div>
+      <div class="rev-split" id="revSplit"></div>
+      <div class="avail-scroll" style="padding:0 20px 16px;"><div id="revTable"></div></div>
+    </div>
+
     <div class="chart-card" id="payMigCard" style="display:none;">
       <div class="mig-head" onclick="toggleMigCard('payMigBody','migChevPay')">
         <div class="chart-title">Payments Migration (admin)</div>
@@ -917,6 +968,55 @@ table.avail td.occ{border:1px solid transparent}
     <div class="modal-card" style="max-width:460px;">
       <div class="modal-head"><h3 id="compHistTitle">Components History</h3><button class="modal-close" onclick="closeComponentHistory()">&times;</button></div>
       <div class="modal-body"><div class="hist-list" id="compHistList"></div><div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeComponentHistory()">Close</button></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ SETTINGS (admin) ═══ -->
+  <div id="settingsScreen" style="display:none;">
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Currency &amp; Exchange Rates</span></div></div>
+      <div class="aa-sub">Foreign fees are converted to ₹ on the revenue dashboard so India and International can be compared. Live rates are used for the current month; each completed month keeps the rate it was frozen at, so past figures don't move.</div>
+      <div style="padding:4px 20px 20px;">
+        <div class="set-row">
+          <label class="set-label">Rate source</label>
+          <div class="trend-toggle">
+            <button class="trend-tab" id="fxModeLive" onclick="setFxMode('live')">Live rates</button>
+            <button class="trend-tab" id="fxModeManual" onclick="setFxMode('manual')">Manual only</button>
+          </div>
+          <button class="btn-primary" id="fxFetchBtn" onclick="fetchFxNow()">Fetch now</button>
+          <span class="set-note" id="fxStatus"></span>
+        </div>
+        <div class="set-grid" id="fxGrid"></div>
+        <div class="set-note" style="margin-top:12px;">Manual values are the fallback whenever a live fetch fails or is turned off. Enter how many rupees one unit is worth.</div>
+        <div class="stu-mig-actions" style="margin-top:14px;">
+          <button class="btn-primary" onclick="saveSettings()">Save settings</button>
+          <span class="msg" id="setMsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Frozen Monthly Rates</span></div></div>
+      <div class="aa-sub">A completed month is frozen at the rate in force when you freeze it. Totals keep recalculating from live payment data, so a late payment still counts — only the conversion rate is fixed.</div>
+      <div style="padding:4px 20px 20px;">
+        <div class="stu-mig-actions" style="margin-bottom:12px;">
+          <button class="btn-primary" onclick="freezeCompletedMonths()">Freeze completed months</button>
+          <span class="msg" id="freezeMsg"></span>
+        </div>
+        <div id="frozenList"></div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Data Start</span></div></div>
+      <div class="aa-sub">Nothing was recorded before this month, so attendance, assignments and payments are never shown earlier. Move it back if you ever backfill older history.</div>
+      <div style="padding:4px 20px 20px;">
+        <div class="set-row">
+          <label class="set-label">First month with data</label>
+          <select id="setDataMonth" class="pay-mini"></select>
+          <select id="setDataYear" class="pay-mini"></select>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1319,9 +1419,9 @@ function accountMenuHtml(){
 const isAdmin=()=>userRole==='admin';
 const isStaff=()=>userRole==='admin'||userRole==='tutor';
 const canManageStudents=()=>isAdmin();          // add / edit the student record itself
-const ADMIN_ONLY_TABS=['payments','leads'];
+const ADMIN_ONLY_TABS=['payments','leads','settings'];
 const allowedTab=(t)=>isAdmin()||!ADMIN_ONLY_TABS.includes(t);
-const ALL_TABS=['leads','students','payments','risk','tutor','summary','attendance','assignments'];
+const ALL_TABS=['leads','students','payments','risk','tutor','summary','attendance','assignments','settings'];
 
 function applyRoleUi(){
   // Tabs a tutor must not reach at all
@@ -1358,6 +1458,7 @@ window.setTab=function(tab){
   if(tab==='tutor')loadTutor();
   if(tab==='summary')loadSummary();
   if(tab==='leads')ensureStudents();
+  if(tab==='settings')renderSettings();
   if(tab==='attendance')initAttendance();
   if(tab==='assignments')initAssignments();
   if(tab==='payments'){
@@ -2675,7 +2776,7 @@ window.initPayments=function(){
     const y=now.getFullYear();const years=[];for(let yy=y-3;yy<=y;yy++)years.push(yy);
     ySel.innerHTML=years.map(yy=>`<option value="${yy}"${yy===y?' selected':''}>${yy}</option>`).join('');
   }
-  if(!paymentsLoaded)loadPayments(); else buildPayments();
+  if(!paymentsLoaded)loadPayments(); else {buildPayments();buildRevenue();}
 }
 window.loadPayments=async function(){
   const list=$('paymentsList');
@@ -2690,7 +2791,10 @@ window.loadPayments=async function(){
   }catch(e){console.error('loadPayments',e);paymentsData=[];payIndex=null;}
   // Attendance feeds the Classes column.
   if(!attendanceLoaded){try{const snap=await getDocs(collection(db,'attendance'));attendanceData=snap.docs.map(d=>d.data());attendanceLoaded=true;}catch(e){console.warn('attendance',e);attendanceData=[];}}
-  payLoading=false;buildPayments();
+  payLoading=false;
+  await loadSettings();
+  if(appSettings.fxMode==='live'&&!fxLiveTried){fxLiveTried=true;await fetchFxRates();}
+  buildPayments();buildRevenue();
 }
 // One pass over attendance per render: StudentID -> {count, dates[]} for the selected month.
 function buildPayAttIndex(year,month){
@@ -2727,9 +2831,10 @@ const payAmt=(v)=>{const n=parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,''
    ever backfilled further. */
 const DATA_START={y:2026,mo:6};   // June 2026
 function dataStartMonth(selY){
-  if(selY>DATA_START.y)return 1;
-  if(selY<DATA_START.y)return 13;   // nothing at all for that year
-  return DATA_START.mo;
+  const d=(typeof appSettings!=='undefined'&&appSettings&&appSettings.dataStart)?appSettings.dataStart:DATA_START;
+  if(selY>d.y)return 1;
+  if(selY<d.y)return 13;   // nothing at all for that year
+  return d.mo;
 }
 const CURRENCIES=['INR','USD','CHF','CAD'];
 const CURRENCY_BY_COUNTRY=[
@@ -3224,6 +3329,267 @@ window.renderTrendChart=function(){
   if(scroller)requestAnimationFrame(()=>{scroller.scrollLeft=scroller.scrollWidth;});
 };
 
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SETTINGS · EXCHANGE RATES · REVENUE
+   Rates: live for the current month, frozen per completed month. Only the
+   RATE is frozen — totals keep recomputing from live payment data, so a
+   September fee paid in October still lands in September's figure.
+   ═══════════════════════════════════════════════════════════════════════ */
+const FX_DEFAULTS={INR:1,USD:88,CHF:105,CAD:64};     // fallback if nothing is saved yet
+const FX_API='https://api.frankfurter.app/latest?from=INR&to=USD,CHF,CAD';
+let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null};
+let frozenRates={};        // "2026_8" -> {rates:{...}, frozenAt, frozenBy}
+let settingsLoaded=false, fxLiveTried=false;
+
+async function loadSettings(){
+  if(settingsLoaded)return;
+  try{
+    const snap=await getDoc(doc(db,'settings','app'));
+    if(snap.exists()){
+      const d=snap.data()||{};
+      appSettings.fx={...FX_DEFAULTS,...(d.fx||{})};
+      appSettings.fxMode=d.fxMode||'live';
+      appSettings.fxUpdatedAt=d.fxUpdatedAt||'';
+      if(d.dataStart&&/^\d{4}-\d{1,2}$/.test(d.dataStart)){
+        const p=d.dataStart.split('-');appSettings.dataStart={y:+p[0],mo:+p[1]};
+      }
+    }
+  }catch(e){console.warn('loadSettings',e);}
+  try{
+    const snap=await getDocs(collection(db,'fxMonthly'));
+    snap.docs.forEach(d=>{frozenRates[d.id]=d.data();});
+  }catch(e){console.warn('frozen rates',e);}
+  settingsLoaded=true;
+}
+// Live rates, best effort. A failure is never silent — the dashboard says which source it used.
+async function fetchFxRates(){
+  try{
+    const res=await fetch(FX_API,{cache:'no-store'});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    const out={INR:1};
+    ['USD','CHF','CAD'].forEach(c=>{const v=j&&j.rates&&j.rates[c];if(v>0)out[c]=1/v;});
+    if(Object.keys(out).length<2)throw new Error('no rates returned');
+    appSettings.fx={...appSettings.fx,...out};
+    appSettings.fxUpdatedAt=new Date().toISOString();
+    appSettings.fxLive=true;
+    return {ok:true,date:(j&&j.date)||''};
+  }catch(e){
+    console.warn('fx fetch',e);appSettings.fxLive=false;
+    return {ok:false,error:e.message||String(e)};
+  }
+}
+const fxKey=(y,m)=>`${payY(y)}_${payM(m)}`;
+// Rupees per unit of `cur` for a given month: the frozen rate if that month has one,
+// otherwise whatever is current.
+function fxFor(cur,year,month){
+  const c=String(cur||'INR').toUpperCase();
+  if(c==='INR')return 1;
+  const fr=frozenRates[fxKey(year,month)];
+  if(fr&&fr.rates&&fr.rates[c]>0)return fr.rates[c];
+  const v=appSettings.fx[c];
+  return v>0?v:(FX_DEFAULTS[c]||1);
+}
+const toINR=(amt,cur,year,month)=>(Number(amt)||0)*fxFor(cur,year,month);
+const inr=(n)=>'₹'+Math.round(Number(n)||0).toLocaleString('en-IN');
+const isMonthComplete=(y,m)=>{const now=new Date();return y<now.getFullYear()||(y===now.getFullYear()&&m<now.getMonth()+1);};
+
+/* ── Settings screen ── */
+window.setFxMode=function(mode){appSettings.fxMode=mode;renderSettings();};
+window.renderSettings=async function(){
+  await loadSettings();
+  $('fxModeLive').classList.toggle('active',appSettings.fxMode==='live');
+  $('fxModeManual').classList.toggle('active',appSettings.fxMode!=='live');
+  $('fxFetchBtn').style.display=appSettings.fxMode==='live'?'':'none';
+  const when=appSettings.fxUpdatedAt?new Date(appSettings.fxUpdatedAt).toLocaleString():'never';
+  $('fxStatus').textContent=appSettings.fxMode==='live'
+    ? `Last fetched: ${when}${appSettings.fxLive===false?' · last attempt failed, using manual values':''}`
+    : 'Live fetching is off — the values below are used everywhere.';
+  $('fxGrid').innerHTML=['USD','CHF','CAD'].map(c=>`
+    <div class="set-cur">
+      <span class="set-cur-code">1 ${c} =</span>${appSettings.fxLive&&appSettings.fxMode==='live'?'<span class="set-cur-live">live</span>':''}
+      <input type="text" inputmode="decimal" id="fx_${c}" value="${esc(String(Math.round((appSettings.fx[c]||0)*100)/100))}" onchange="onFxInput('${c}',this.value)">
+    </div>`).join('');
+  // Data start pickers
+  const ds=appSettings.dataStart||DATA_START;
+  const mSel=$('setDataMonth'),ySel=$('setDataYear');
+  mSel.innerHTML=PAY_MONTHS.map((m,i)=>`<option value="${i+1}"${i+1===ds.mo?' selected':''}>${m}</option>`).join('');
+  const nowY=new Date().getFullYear();let yy='';
+  for(let y=nowY;y>=nowY-5;y--)yy+=`<option value="${y}"${y===ds.y?' selected':''}>${y}</option>`;
+  ySel.innerHTML=yy;
+  renderFrozenList();
+};
+window.onFxInput=function(c,v){const n=parseFloat(String(v).replace(/[^0-9.]/g,''));if(n>0)appSettings.fx[c]=n;};
+window.fetchFxNow=async function(){
+  const el=$('fxStatus');el.innerHTML='<span class="spinner"></span> Fetching…';
+  const r=await fetchFxRates();
+  renderSettings();
+  toast(r.ok?('Rates updated'+(r.date?' ('+r.date+')':'')):'Could not fetch live rates — manual values are in use');
+};
+window.saveSettings=async function(){
+  const msg=$('setMsg');msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  appSettings.dataStart={y:+$('setDataYear').value,mo:+$('setDataMonth').value};
+  try{
+    await setDoc(doc(db,'settings','app'),{
+      fx:appSettings.fx,fxMode:appSettings.fxMode,fxUpdatedAt:appSettings.fxUpdatedAt||'',
+      dataStart:`${appSettings.dataStart.y}-${appSettings.dataStart.mo}`,
+      updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''
+    },{merge:true});
+    msg.textContent='Saved.';msg.className='msg ok';
+    if(paymentsLoaded)buildRevenue();
+  }catch(e){console.error('saveSettings',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';}
+};
+function renderFrozenList(){
+  const box=$('frozenList');if(!box)return;
+  const keys=Object.keys(frozenRates).sort().reverse();
+  if(!keys.length){box.innerHTML='<div class="pay-empty">No months frozen yet. Completed months use the current rate until you freeze them.</div>';return;}
+  box.innerHTML=`<table class="pay-table"><thead><tr><th>Month</th><th>USD</th><th>CHF</th><th>CAD</th><th>Frozen</th></tr></thead><tbody>${
+    keys.map(k=>{
+      const f=frozenRates[k],p=k.split('_');
+      const when=f.frozenAt&&f.frozenAt.toDate?f.frozenAt.toDate().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+      const r=(c)=>f.rates&&f.rates[c]?('₹'+(Math.round(f.rates[c]*100)/100)):'—';
+      return `<tr><td><strong>${esc(PAY_MONTHS[(+p[1])-1])} ${esc(p[0])}</strong></td><td>${r('USD')}</td><td>${r('CHF')}</td><td>${r('CAD')}</td><td><span class="pay-sid2">${esc(when)}</span></td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+window.freezeCompletedMonths=async function(){
+  if(!isAdmin())return;
+  const msg=$('freezeMsg');
+  const year=+($('payYear')||{}).value||new Date().getFullYear();
+  if(appSettings.fxMode==='live'&&!fxLiveTried){await fetchFxRates();fxLiveTried=true;}
+  const start=(appSettings.dataStart||DATA_START);
+  const todo=[];
+  for(let m=1;m<=12;m++){
+    if(year<start.y||(year===start.y&&m<start.mo))continue;
+    if(!isMonthComplete(year,m))continue;
+    if(frozenRates[fxKey(year,m)])continue;
+    todo.push(m);
+  }
+  if(!todo.length){msg.textContent='Nothing new to freeze for '+year+'.';msg.className='msg ok';return;}
+  msg.innerHTML='<span class="spinner"></span> Freezing '+todo.length+'…';msg.className='msg busy';
+  const rates={...appSettings.fx};
+  let done=0;
+  for(const m of todo){
+    try{
+      const snap=revenueForMonth(year,m);
+      await setDoc(doc(db,'fxMonthly',fxKey(year,m)),{
+        year:payY(year),month:payM(m),rates,
+        snapshot:{expectedINR:snap.expINR,receivedINR:snap.recINR,
+                  indiaReceivedINR:snap.india.recINR,intlReceivedINR:snap.intl.recINR},
+        frozenAt:serverTimestamp(),frozenBy:(currentUser&&currentUser.email)||''
+      },{merge:true});
+      frozenRates[fxKey(year,m)]={rates,frozenAt:{toDate:()=>new Date()}};
+      done++;
+    }catch(e){console.error('freeze',m,e);}
+  }
+  msg.textContent=`Froze ${done} month(s) at the current rate.`;msg.className='msg ok';
+  renderFrozenList();
+  if(paymentsLoaded)buildRevenue();
+};
+
+/* ── Fee revenue: expected vs received, per month, India vs International ──
+   Expected = monthly fee of every student active that month who had joined by then,
+   excluding months marked Ignore (a deliberate decision not to charge).
+   Received = Amount on Fee rows marked Paid for that month.
+   Kit and Components are not counted. Foreign amounts convert at that month's rate. */
+let revRegion='both';
+window.setRevRegion=function(r){
+  revRegion=r;
+  ['both','india','intl'].forEach(x=>$('revTab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('active',x===revRegion));
+  buildRevenue();
+};
+const revBlank=()=>({exp:0,expINR:0,rec:0,recINR:0,native:{},students:0,paidCount:0});
+function revenueForMonth(year,month){
+  if(!payIndex)buildPayIndex();
+  const india=revBlank(),intl=revBlank();
+  const monthEnd=new Date(year,month,0,23,59,59);
+  studentsData.forEach(s=>{
+    const sid=String(s.ID||'').trim();if(!sid)return;
+    const join=parseD(s['Join Date']);
+    if(join&&join>monthEnd)return;                       // hadn't joined yet
+    const st=String(s.Status||'Active').toLowerCase();
+    const left=parseD(s['Inactive Date']);
+    if(st!=='active'&&!left)return;                      // inactive, no leave date: excluded
+    if(left&&left<=new Date(year,month-1,1))return;      // left before this month began
+    const bucket=isIndia(s.Country)?india:intl;
+    const cur=studentCurrency(s);
+    const rec=payRecord(sid,year,month,'Fee');
+    const status=rec?String(rec.Status||'').toLowerCase():'';
+    if(status==='ignore')return;                         // waived — not money we were owed
+    bucket.students++;
+    const fee=payAmt(s['Monthly Fee']);
+    if(fee!==null){bucket.exp+=fee;bucket.expINR+=toINR(fee,cur,year,month);}
+    if(status==='paid'){
+      const amt=payAmt(rec.Amount)!==null?payAmt(rec.Amount):(fee||0);
+      const c=String(rec.Currency||cur).toUpperCase();
+      bucket.rec+=amt;bucket.recINR+=toINR(amt,c,year,month);
+      bucket.native[c]=(bucket.native[c]||0)+amt;
+      bucket.paidCount++;
+    }
+  });
+  const sum=(k)=>india[k]+intl[k];
+  return {year,month,india,intl,
+    expINR:sum('expINR'),recINR:sum('recINR'),students:sum('students'),paidCount:sum('paidCount'),
+    frozen:!!frozenRates[fxKey(year,month)]};
+}
+const revPick=(r)=>revRegion==='india'?r.india:(revRegion==='intl'?r.intl:{expINR:r.expINR,recINR:r.recINR,students:r.students,paidCount:r.paidCount});
+const revTier=(p)=>p>=90?'good':(p>=70?'watch':'bad');
+window.buildRevenue=function(){
+  const card=$('revenueCard');if(!card)return;
+  const year=+$('payYear').value;
+  const start=(appSettings.dataStart||DATA_START);
+  const now=new Date();
+  const lastMonth=(year===now.getFullYear())?(now.getMonth()+1):12;
+  let from=1;
+  if(year<start.y){$('revTable').innerHTML='<div class="pay-empty">No data recorded for '+year+'.</div>';$('revTiles').innerHTML='';$('revSplit').innerHTML='';return;}
+  if(year===start.y)from=start.mo;
+  const months=[];
+  for(let m=from;m<=lastMonth;m++)months.push(revenueForMonth(year,m));
+  const tot=months.reduce((a,r)=>{const v=revPick(r);a.exp+=v.expINR;a.rec+=v.recINR;return a;},{exp:0,rec:0});
+  const totIndia=months.reduce((a,r)=>{a.exp+=r.india.expINR;a.rec+=r.india.recINR;return a;},{exp:0,rec:0});
+  const totIntl=months.reduce((a,r)=>{a.exp+=r.intl.expINR;a.rec+=r.intl.recINR;return a;},{exp:0,rec:0});
+  const nativeIntl={};months.forEach(r=>Object.keys(r.intl.native).forEach(c=>{nativeIntl[c]=(nativeIntl[c]||0)+r.intl.native[c];}));
+  const pct=tot.exp>0?Math.round(tot.rec/tot.exp*100):0;
+  const short=Math.max(0,tot.exp-tot.rec);
+
+  $('revMeta').textContent=`· ${PAY_MONTHS[from-1].slice(0,3)}–${PAY_MONTHS[lastMonth-1].slice(0,3)} ${year}`;
+  const live=appSettings.fxMode==='live'&&appSettings.fxLive;
+  const rateBits=['USD','CHF','CAD'].filter(c=>appSettings.fx[c]).map(c=>`1 ${c} = ₹${Math.round(appSettings.fx[c]*100)/100}`).join(' · ');
+  $('revNote').innerHTML=`Fees only — kit and components are excluded. Foreign amounts converted to ₹ at ${live?'live':'manual'} rates (${esc(rateBits)}). Completed months that have been frozen keep the rate they were frozen at, so past figures don't move.`;
+
+  $('revTiles').innerHTML=`
+    <div class="rev-tile"><div class="rev-tile-lbl">Expected</div><div class="rev-tile-val">${inr(tot.exp)}</div><div class="rev-tile-sub">${months.length} month${months.length===1?'':'s'} of fees due</div></div>
+    <div class="rev-tile good"><div class="rev-tile-lbl">Received</div><div class="rev-tile-val">${inr(tot.rec)}</div><div class="rev-tile-sub">${pct}% of what was expected</div></div>
+    <div class="rev-tile short"><div class="rev-tile-lbl">Still to collect</div><div class="rev-tile-val">${inr(short)}</div><div class="rev-tile-sub">${short>0?'across '+months.filter(r=>{const v=revPick(r);return v.expINR-v.recINR>0.5;}).length+' month(s)':'nothing outstanding'}</div></div>`;
+
+  const regBlock=(cls,label,t,nativeStr)=>{
+    const p=t.exp>0?Math.round(t.rec/t.exp*100):0;
+    return `<div class="rev-reg ${cls}">
+      <div class="rev-reg-lbl">${esc(label)}</div>
+      <div class="rev-reg-val">${inr(t.rec)}</div>
+      <div class="rev-reg-sub">received of ${inr(t.exp)} expected${nativeStr?'<br>'+esc(nativeStr):''}</div>
+      <div class="rev-bar"><span style="width:${Math.min(100,p)}%"></span></div>
+    </div>`;
+  };
+  const nativeStr=Object.keys(nativeIntl).sort().map(c=>money(nativeIntl[c],c)).join(' + ');
+  $('revSplit').innerHTML=regBlock('','India batches',totIndia,'')+regBlock('intl','International batches',totIntl,nativeStr);
+
+  $('revTable').innerHTML=`<table class="pay-table"><thead><tr>
+    <th>Month</th><th>Expected</th><th>Received</th><th>Shortfall</th><th>Collected</th><th></th>
+    </tr></thead><tbody>${months.slice().reverse().map(r=>{
+      const v=revPick(r);
+      const p=v.expINR>0?Math.round(v.recINR/v.expINR*100):0;
+      const sh=Math.max(0,v.expINR-v.recINR);
+      return `<tr>
+        <td><strong>${esc(PAY_MONTHS[r.month-1])}</strong> <span class="pay-sid2">${year}</span></td>
+        <td>${inr(v.expINR)}<br><span class="pay-sid2">${v.students} student${v.students===1?'':'s'}</span></td>
+        <td>${inr(v.recINR)}<br><span class="pay-sid2">${v.paidCount} paid</span></td>
+        <td>${sh>0.5?inr(sh):'—'}</td>
+        <td><span class="rev-pct ${revTier(p)}">${p}%</span></td>
+        <td>${r.frozen?'<span class="rev-frozen">rate frozen</span>':''}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+};
 
 // ═══════════ AT-RISK ═══════════
 let assignmentsData=[], assignmentsLoaded=false, riskData=null;
