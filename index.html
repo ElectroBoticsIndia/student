@@ -477,6 +477,9 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .set-cur-live{font-family:var(--font-mono);font-size:10px;color:var(--green);margin-left:6px}
 .set-cur input{width:100%;box-sizing:border-box;margin-top:8px;font-family:var(--font-mono);font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);outline:none}
 .set-cur input:focus{border-color:var(--accent)}
+.pay-amt-row{display:flex;gap:8px;align-items:stretch}
+.pay-amt-row select{flex:none;min-width:96px}
+.pay-amt-row input{flex:1;min-width:0}
 .cur-chip{font-family:var(--font-mono);font-size:10px;font-weight:700;background:var(--accent-light);color:var(--accent-dark);border-radius:20px;padding:2px 8px;margin-left:6px;letter-spacing:.5px}
 /* Payments: Classes + Pending columns */
 .pay-cls{display:flex;flex-direction:column;gap:4px;min-width:120px}
@@ -953,7 +956,13 @@ table.avail td.occ{border:1px solid transparent}
       <div class="modal-head"><h3 id="paymentModalTitle">Add Payment</h3><button class="modal-close" onclick="closePaymentForm()">&times;</button></div>
       <div class="modal-body">
         <div class="pay-modal-sub" id="paymentModalSub"></div>
-        <div class="form-row"><label>Amount <span id="pay_Cur" class="cur-chip">INR</span></label><input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500"></div>
+        <div class="form-row"><label>Amount received</label>
+          <div class="pay-amt-row">
+            <select id="pay_Currency" class="pay-mini" onchange="onPayCurrencyChange()"></select>
+            <input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500">
+          </div>
+          <small id="pay_CurHint"></small>
+        </div>
         <div class="form-row" id="pay_DateRow"><label>Paid Date</label><input type="date" id="pay_Date"></div>
         <div class="form-row" id="pay_MethodRow"><label>Method</label><input type="text" id="pay_Method" placeholder="UPI / Cash / Bank" list="payMethodList"><datalist id="payMethodList"><option value="UPI"><option value="Cash"><option value="Bank Transfer"><option value="Card"></datalist></div>
         <div class="form-row"><label>Note</label><input type="text" id="pay_Note" placeholder="Optional"></div>
@@ -1266,6 +1275,7 @@ table.avail td.occ{border:1px solid transparent}
           <option value="USD">USD — US Dollar ($)</option>
           <option value="CHF">CHF — Swiss Franc</option>
           <option value="CAD">CAD — Canadian Dollar (CA$)</option>
+          <option value="GBP">GBP — Pound Sterling (£)</option>
           <option value="__other">Other…</option>
         </select>
         <input type="text" id="s_CurrencyOther" placeholder="3-letter code, e.g. AED" maxlength="3" style="display:none;margin-top:8px;text-transform:uppercase;">
@@ -2872,7 +2882,7 @@ function dataStartMonth(selY){
   if(selY<d.y)return 13;   // nothing at all for that year
   return d.mo;
 }
-const CURRENCIES=['INR','USD','CHF','CAD'];
+const CURRENCIES=['INR','USD','CHF','CAD','GBP'];
 const CURRENCY_BY_COUNTRY=[
   [/india/i,'INR'],[/switzerland|swiss/i,'CHF'],
   [/united states|u\.?s\.?a?\b|america/i,'USD'],[/canada/i,'CAD']
@@ -2890,7 +2900,7 @@ function studentCurrency(s){
 }
 // en-US for CAD and CHF gives the unambiguous "CA$1,500" / "CHF 1,500"; en-CA would
 // render CAD as a bare "$1,500", indistinguishable from USD in a mixed list.
-const CUR_LOCALE={INR:'en-IN',USD:'en-US',CHF:'en-US',CAD:'en-US'};
+const CUR_LOCALE={INR:'en-IN',USD:'en-US',CHF:'en-US',CAD:'en-US',GBP:'en-GB'};
 function money(n,cur){
   const code=String(cur||'INR').trim().toUpperCase()||'INR';
   const v=Math.round(Number(n)||0);
@@ -2930,7 +2940,8 @@ function payDues(s,selY,selM,ctx){
   const startMonth=m;
   // A recorded Amount is already rupees; a missing one is the quoted fee converted.
   const dueINR=(rec,mm)=>{
-    if(rec&&payAmt(rec.Amount)!==null)return payAmt(rec.Amount);
+    const v=payRowINR(rec,selY,mm);          // uses the currency recorded on that row
+    if(v!==null)return v;
     if(monthly===null)return null;
     return toINR(monthly,cur,selY,mm);
   };
@@ -2948,7 +2959,7 @@ function payDues(s,selY,selM,ctx){
     const st=String(p.Status||'').toLowerCase();if(st==='paid'||st==='ignore')return;
     const py=parseInt(payY(p.Year),10),pm=parseInt(payM(p.Month),10);
     if(py!==selY||!pm||pm>selM)return;
-    const amt=payAmt(p.Amount);   // kit / components are recorded in rupees too
+    const amt=payRowINR(p,selY,pm);   // converted from whatever currency it was recorded in
     if(amt===null)unknown=true;else total+=amt;
     items.push({type:t,label:t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,amount:amt,month:pm});
     extras.push(t+' '+PAY_MONTHS[pm-1].slice(0,3));
@@ -2997,7 +3008,7 @@ async function payWrite(body){
   const {action,type,studentId,year,month}=body;const id=payDocId(studentId,year,month,type||'Fee');
   try{
     if(action==='deletePayment'){await deleteDoc(doc(db,'payments',id));return true;}
-    const data={'Student ID':String(studentId),Year:payY(year),Month:payM(month),Type:type||'Fee',Status:body.status||'Paid',Amount:body.amount||'',Currency:PAY_CURRENCY,'Paid Date':body.paidDate||'',Method:body.method||'',Note:body.note||'',MarkedBy:(currentUser&&currentUser.email)||'',updatedAt:serverTimestamp()};
+    const data={'Student ID':String(studentId),Year:payY(year),Month:payM(month),Type:type||'Fee',Status:body.status||'Paid',Amount:body.amount||'',Currency:String(body.currency||PAY_CURRENCY).toUpperCase(),'Paid Date':body.paidDate||'',Method:body.method||'',Note:body.note||'',MarkedBy:(currentUser&&currentUser.email)||'',updatedAt:serverTimestamp()};
     await setDoc(doc(db,'payments',id),data,{merge:true});return true;
   }catch(e){console.error('payWrite',e);return false;}
 }
@@ -3040,7 +3051,7 @@ window.buildPayments=function(){
     </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,compRec,compSt})=>{
       const fee=s['Monthly Fee']||'';
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
-      const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?esc(inr(payAmt(rec.Amount)||0)):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
+      const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?esc(money(payAmt(rec.Amount)||0,payRowCur(rec))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
       const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,compRec,compSt);
       let action='';
       if(st==='pending'){
@@ -3074,6 +3085,7 @@ window.closePaymentForm=function(){$('paymentModal').classList.remove('open');};
 window.savePaymentForm=async function(){
   const msg=$('pay_Msg'),btn=$('pay_SaveBtn');
   const c=payCurrentCtx;const amount=$('pay_Amount').value.trim(),note=$('pay_Note').value.trim();
+  const curSel=($('pay_Currency')||{}).value||'INR';
   if(c.mode==='due'){
     // Flagging a due: the amount is what makes it countable in Pending, so require it.
     const n=parseFloat(amount.replace(/[^0-9.]/g,''));
@@ -3083,14 +3095,14 @@ window.savePaymentForm=async function(){
     }
     $('pay_Amount').classList.remove('invalid');
     btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
-    const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Pending',amount,paidDate:'',method:'',note});
-    if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Pending',Amount:amount,'Paid Date':'',Method:'',Note:note});closePaymentForm();buildPayments();}
+    const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Pending',amount,currency:curSel,paidDate:'',method:'',note});
+    if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Pending',Amount:amount,Currency:curSel,'Paid Date':'',Method:'',Note:note});closePaymentForm();buildPayments();buildRevenue();}
     else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
     return;
   }
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
-  const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Paid',amount,paidDate:$('pay_Date').value,method:$('pay_Method').value.trim(),note});
-  if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:amount,'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:note});closePaymentForm();buildPayments();}
+  const ok=await payWrite({action:'savePayment',type:c.type,studentId:c.studentId,year:c.year,month:c.month,status:'Paid',amount,currency:curSel,paidDate:$('pay_Date').value,method:$('pay_Method').value.trim(),note});
+  if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:amount,Currency:curSel,'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:note});closePaymentForm();buildPayments();buildRevenue();}
   else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
 };
 window.markPaymentIgnore=async function(sid,btn){
@@ -3151,12 +3163,12 @@ window.downloadPaymentsExcel=function(){
 };
 function renderKitCell(s,kitRec,kitSt){
   if(!kitRec)return `<button class="pay-act pay-act-kit" onclick="flagKit('${jsq(s.ID)}',this)" title="Flag kit payment">+ Kit</button>`;
-  if(kitSt==='paid'){const kd=`${kitRec.Amount?esc(inr(payAmt(kitRec.Amount)||0)):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${jsq(s.ID)}',this)">Undo</button></div>`;}
+  if(kitSt==='paid'){const kd=`${kitRec.Amount?esc(money(payAmt(kitRec.Amount)||0,payRowCur(kitRec))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${jsq(s.ID)}',this)">Undo</button></div>`;}
   return `<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openKitForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${jsq(s.ID)}',this)">Remove</button></div></div>`;
 }
 function renderCompCell(s,compRec,compSt){
   if(!compRec)return `<button class="pay-act pay-act-kit" onclick="flagComponents('${jsq(s.ID)}',this)" title="Flag components payment">+ Components</button>`;
-  if(compSt==='paid'){const cd=`${compRec.Amount?esc(inr(payAmt(compRec.Amount)||0)):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${jsq(s.ID)}','${jsq(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
+  if(compSt==='paid'){const cd=`${compRec.Amount?esc(money(payAmt(compRec.Amount)||0,payRowCur(compRec))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${jsq(s.ID)}','${jsq(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
   return `<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${jsq(s.ID)}',this)">Remove</button></div></div>`;
 }
 window.migPayments=async function(){
@@ -3180,18 +3192,35 @@ window.migPayments=async function(){
 // ── Kit flow ──
 // "+ Kit" / "+ Components" now ask for the amount, so the Pending column and the
 // reminder message can account for them instead of showing an unpriced due.
-// Amounts are always entered in rupees — that is what reaches the account. For a student
-// quoted in another currency the chip also shows the rupee equivalent of their fee.
-function payShowCurrency(sid){
+/* The currency of a payment is CHOSEN at entry, not inferred. It defaults to the
+   currency the student is quoted in, but INR is always one click away for the common
+   case of an overseas family transferring rupees to the Indian account. Inferring it
+   is what previously turned rupee amounts into foreign ones and inflated revenue. */
+function payShowCurrency(sid,preset){
   const st=studentsData.find(x=>String(x.ID)===String(sid));
-  const el=$('pay_Cur');if(!el)return;
-  const cur=studentCurrency(st);
-  const fee=payAmt(st&&st['Monthly Fee']);
-  const now=new Date();
-  el.textContent=(cur!=='INR'&&fee!==null)
-    ? `INR · quoted ${money(fee,cur)} ≈ ${inr(toINR(fee,cur,now.getFullYear(),now.getMonth()+1))}`
-    : 'INR';
+  const sel=$('pay_Currency');if(!sel)return;
+  const quoted=studentCurrency(st);
+  const opts=[...new Set(CURRENCIES.concat([quoted,'INR']))];
+  sel.innerHTML=opts.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  sel.value=preset||quoted;
+  payCurHint(sid);
 }
+window.onPayCurrencyChange=function(){payCurHint(payCurrentCtx&&payCurrentCtx.studentId);};
+function payCurHint(sid){
+  const st=studentsData.find(x=>String(x.ID)===String(sid));
+  const el=$('pay_CurHint');if(!el)return;
+  const quoted=studentCurrency(st),chosen=($('pay_Currency')||{}).value||'INR';
+  const fee=payAmt(st&&st['Monthly Fee']);
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth()+1;
+  const bits=[];
+  if(fee!==null)bits.push(`Fee quoted ${money(fee,quoted)}`+(quoted!=='INR'?` ≈ ${inr(toINR(fee,quoted,y,m))}`:''));
+  if(chosen!=='INR')bits.push(`Entering ${chosen} — converted at ₹${Math.round(fxFor(chosen,y,m)*100)/100} for reporting`);
+  else if(quoted!=='INR')bits.push('Entering rupees — the amount actually received');
+  el.textContent=bits.join(' · ');
+}
+const payRowCur=(rec)=>String((rec&&rec.Currency)||'INR').toUpperCase();
+// A payment row's value in rupees, using the currency recorded on that row.
+const payRowINR=(rec,y,m)=>{const a=payAmt(rec&&rec.Amount);return a===null?null:toINR(a,payRowCur(rec),y,m);};
 function openDueForm(sid,type){
   const s=studentsData.find(x=>x.ID===sid);
   payShowCurrency(sid);
@@ -3207,9 +3236,9 @@ function openDueForm(sid,type){
 }
 window.flagKit=function(sid){openDueForm(sid,'Kit');};
 window.openKitForm=function(sid,name){
-  payShowCurrency(sid);
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Kit',mode:'paid'};
   const ex=payRecord(sid,year,month,'Kit');const isPaid=ex&&String(ex.Status||'').toLowerCase()==='paid';
+  payShowCurrency(sid,ex&&ex.Currency);
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
   $('paymentModalTitle').textContent=isPaid?'Edit Kit Payment':'Kit Payment';
@@ -3227,9 +3256,9 @@ window.revertKit=async function(sid,btn){
 // ── Components flow ──
 window.flagComponents=function(sid){openDueForm(sid,'Components');};
 window.openComponentsForm=function(sid,name){
-  payShowCurrency(sid);
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Components',mode:'paid'};
   const ex=payRecord(sid,year,month,'Components');const isPaid=ex&&String(ex.Status||'').toLowerCase()==='paid';
+  payShowCurrency(sid,ex&&ex.Currency);
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
   $('paymentModalTitle').textContent=isPaid?'Edit Components Payment':'Components Payment';
@@ -3277,7 +3306,7 @@ function renderComponentHistory(sid){
   if(!items.length){box.innerHTML='<div class="pay-empty">No past component payments logged.</div>';return;}
   box.innerHTML=items.map(h=>{
     const when=h['Logged At']&&h['Logged At'].toDate?h['Logged At'].toDate().toLocaleString():'';
-    return `<div class="hist-item"><div class="hist-meta">${h.Amount?esc(inr(payAmt(h.Amount)||0)):''}${h['Paid Date']?(' · paid '+esc(String(h['Paid Date']))):''}${h.Month&&h.Year?(' · '+esc(String(h.Month))+'/'+esc(String(h.Year))):''}</div>${h.Note?`<div class="hist-text">${esc(String(h.Note))}</div>`:''}<div class="hist-meta" style="opacity:.7;">logged ${esc(when)}${h.LoggedBy?(' · '+esc(String(h.LoggedBy))):''}</div></div>`;
+    return `<div class="hist-item"><div class="hist-meta">${h.Amount?esc(money(payAmt(h.Amount)||0,String(h.Currency||'INR').toUpperCase())):''}${h['Paid Date']?(' · paid '+esc(String(h['Paid Date']))):''}${h.Month&&h.Year?(' · '+esc(String(h.Month))+'/'+esc(String(h.Year))):''}</div>${h.Note?`<div class="hist-text">${esc(String(h.Note))}</div>`:''}<div class="hist-meta" style="opacity:.7;">logged ${esc(when)}${h.LoggedBy?(' · '+esc(String(h.LoggedBy))):''}</div></div>`;
   }).join('');
 }
 
@@ -3386,8 +3415,8 @@ window.renderTrendChart=function(){
      • only the quoted fee is converted, to say what is owed in rupees.
    Getting this backwards is what made received revenue read 657% of expected. */
 const PAY_CURRENCY='INR';                            // what actually lands in the account
-const FX_DEFAULTS={INR:1,USD:88,CHF:105,CAD:64};     // fallback if nothing is saved yet
-const FX_API='https://api.frankfurter.app/latest?from=INR&to=USD,CHF,CAD';
+const FX_DEFAULTS={INR:1,USD:88,CHF:105,CAD:64,GBP:112};   // fallback if nothing is saved yet
+const FX_API='https://api.frankfurter.app/latest?from=INR&to=USD,CHF,CAD,GBP';
 let appSettings={fx:{...FX_DEFAULTS},fxMode:'live',fxUpdatedAt:'',dataStart:null};
 let frozenRates={};        // "2026_8" -> {rates:{...}, frozenAt, frozenBy}
 let settingsLoaded=false, fxLiveTried=false;
@@ -3419,7 +3448,7 @@ async function fetchFxRates(){
     if(!res.ok)throw new Error('HTTP '+res.status);
     const j=await res.json();
     const out={INR:1};
-    ['USD','CHF','CAD'].forEach(c=>{const v=j&&j.rates&&j.rates[c];if(v>0)out[c]=1/v;});
+    ['USD','CHF','CAD','GBP'].forEach(c=>{const v=j&&j.rates&&j.rates[c];if(v>0)out[c]=1/v;});
     if(Object.keys(out).length<2)throw new Error('no rates returned');
     appSettings.fx={...appSettings.fx,...out};
     appSettings.fxUpdatedAt=new Date().toISOString();
@@ -3460,7 +3489,7 @@ window.renderSettings=async function(){
   $('fxStatus').textContent=appSettings.fxMode==='live'
     ? `Last fetched: ${when}${appSettings.fxLive===false?' · last attempt failed, using manual values':''}`
     : 'Live fetching is off — the values below are used everywhere.';
-  $('fxGrid').innerHTML=['USD','CHF','CAD'].map(c=>`
+  $('fxGrid').innerHTML=['USD','CHF','CAD','GBP'].map(c=>`
     <div class="set-cur">
       <span class="set-cur-code">1 ${c} =</span>${appSettings.fxLive&&appSettings.fxMode==='live'?'<span class="set-cur-live">live</span>':''}
       <input type="text" inputmode="decimal" id="fx_${c}" value="${esc(String(Math.round((appSettings.fx[c]||0)*100)/100))}" onchange="onFxInput('${c}',this.value)">
@@ -3498,12 +3527,12 @@ function renderFrozenList(){
   const box=$('frozenList');if(!box)return;
   const keys=Object.keys(frozenRates).sort().reverse();
   if(!keys.length){box.innerHTML='<div class="pay-empty">No months frozen yet. Completed months use the current rate until you freeze them.</div>';return;}
-  box.innerHTML=`<table class="pay-table"><thead><tr><th>Month</th><th>USD</th><th>CHF</th><th>CAD</th><th>Frozen</th></tr></thead><tbody>${
+  box.innerHTML=`<table class="pay-table"><thead><tr><th>Month</th><th>USD</th><th>CHF</th><th>CAD</th><th>GBP</th><th>Frozen</th></tr></thead><tbody>${
     keys.map(k=>{
       const f=frozenRates[k],p=k.split('_');
       const when=f.frozenAt&&f.frozenAt.toDate?f.frozenAt.toDate().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
       const r=(c)=>f.rates&&f.rates[c]?('₹'+(Math.round(f.rates[c]*100)/100)):'—';
-      return `<tr><td><strong>${esc(PAY_MONTHS[(+p[1])-1])} ${esc(p[0])}</strong></td><td>${r('USD')}</td><td>${r('CHF')}</td><td>${r('CAD')}</td><td><span class="pay-sid2">${esc(when)}</span></td></tr>`;
+      return `<tr><td><strong>${esc(PAY_MONTHS[(+p[1])-1])} ${esc(p[0])}</strong></td><td>${r('USD')}</td><td>${r('CHF')}</td><td>${r('CAD')}</td><td>${r('GBP')}</td><td><span class="pay-sid2">${esc(when)}</span></td></tr>`;
     }).join('')}</tbody></table>`;
 }
 // One-time repair: payment rows carrying a non-INR currency hold rupee amounts that were
@@ -3615,10 +3644,12 @@ function revenueForMonth(year,month){
     const fee=payAmt(s['Monthly Fee']);
     if(fee!==null){const e=toINR(fee,cur,year,month);bucket.exp+=fee;bucket.expINR+=e;cRow.expINR+=e;}
     if(status==='paid'){
-      // Recorded amounts are rupees — never converted. Only the quoted fee converts.
-      const amt=payAmt(rec.Amount)!==null?payAmt(rec.Amount):toINR(fee||0,cur,year,month);
+      // Each row converts from the currency it was actually recorded in.
+      const rowCur=payRowCur(rec);
+      const raw=payAmt(rec.Amount);
+      const amt=raw!==null?toINR(raw,rowCur,year,month):toINR(fee||0,cur,year,month);
       bucket.rec+=amt;bucket.recINR+=amt;
-      bucket.native[cur]=(bucket.native[cur]||0)+amt;
+      bucket.native[rowCur]=(bucket.native[rowCur]||0)+(raw!==null?raw:0);
       bucket.paidCount++;cRow.recINR+=amt;cRow.paidCount++;
     }
   });
@@ -3649,9 +3680,9 @@ window.buildRevenue=function(){
 
   $('revMeta').textContent=`· ${PAY_MONTHS[from-1].slice(0,3)}–${PAY_MONTHS[lastMonth-1].slice(0,3)} ${year}`;
   const live=appSettings.fxMode==='live'&&appSettings.fxLive;
-  const rateBits=['USD','CHF','CAD'].filter(c=>appSettings.fx[c]).map(c=>`1 ${c} = ₹${Math.round(appSettings.fx[c]*100)/100}`).join(' · ');
+  const rateBits=['USD','CHF','CAD','GBP'].filter(c=>appSettings.fx[c]).map(c=>`1 ${c} = ₹${Math.round(appSettings.fx[c]*100)/100}`).join(' · ');
   const miss=[...fxMissing].filter(c=>c&&c!=='INR');
-  $('revNote').innerHTML=`Fees only — kit and components are excluded. Payments are received in ₹ and counted as recorded; only the <em>quoted</em> fee of an overseas student is converted, at ${live?'live':'manual'} rates (${esc(rateBits)}). Frozen months keep the rate they were frozen at.`
+  $('revNote').innerHTML=`Fees only — kit and components are excluded. Each payment is recorded in the currency it was received in and converted to ₹ at ${live?'live':'manual'} rates (${esc(rateBits)}); the quoted fee is converted the same way. Frozen months keep the rate they were frozen at.`
     +(miss.length?`<br><strong style="color:var(--red)">No exchange rate set for ${esc(miss.join(', '))}</strong> — add it in Settings, or those fees are counted at 1:1.`:'');
 
   $('revTiles').innerHTML=`
@@ -3668,8 +3699,7 @@ window.buildRevenue=function(){
       <div class="rev-bar"><span style="width:${Math.min(100,p)}%"></span></div>
     </div>`;
   };
-  const quotedCurs=[...new Set(months.flatMap(r=>Object.keys(r.intl.native)))].filter(c=>c&&c!=='INR').sort();
-  const nativeStr=quotedCurs.length?('fees quoted in '+quotedCurs.join(', ')+', received in ₹'):'';
+  const nativeStr=Object.keys(nativeIntl).sort().map(c=>money(nativeIntl[c],c)).join(' + ');
   $('revSplit').innerHTML=regBlock('','India batches',totIndia,'')+regBlock('intl','International batches',totIntl,nativeStr);
 
   revMonths=months;
