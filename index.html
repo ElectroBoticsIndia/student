@@ -521,7 +521,9 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .aa-roster-top{display:flex;justify-content:flex-end;padding:8px 20px 0;min-height:22px}
 .aa-load{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .aa-load.err{color:var(--red)}
-.aa-savebar{display:flex;justify-content:flex-end;padding:12px 20px 16px;border-top:1px solid var(--border)}
+.aa-savebar{display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:12px 20px 16px;border-top:1px solid var(--border)}
+.aa-marked{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
+.aa-marked.on{color:var(--accent-dark);font-weight:700}
 .aa-name{font-weight:600}
 .aa-status-cell{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .aa-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none}
@@ -3432,14 +3434,14 @@ const AA={
   attendance:{p:'att',col:'attendance',
     pos:'present',neg:'absent',posLbl:'Present',negLbl:'Absent',posShort:'Pres.',negShort:'Abs.',
     markHeading:'Mark attendance',trendHeading:'Attendance trends',
-    markSub:"Filter by country, batch, or tutor (any combination), then set status only for the students you need. Unmarked students aren't saved.",
+    markSub:"Every active student is listed. Narrow with the filters or the search box, then set status only for the students you need \u2014 unmarked students aren't saved.",
     saveBtn:'Save attendance',daysLabel:'Days attended',datesLabel:'Attended dates',
     unit:'classes',verb:'attended',shareOne:'Attendance update',shareAll:'Attendance summary',
     migTitle:'Attendance Migration',sheetName:'Attendance'},
   assignments:{p:'asg',col:'assignments',
     pos:'submitted',neg:'not submitted',posLbl:'Submitted',negLbl:'Not submitted',posShort:'Sub.',negShort:'Not sub.',
     markHeading:'Demo submissions',trendHeading:'Submission trends',
-    markSub:"Filter by country, batch, or tutor (any combination), then set submission status only for the students you need. Unmarked students aren't saved.",
+    markSub:"Every active student is listed. Narrow with the filters or the search box, then set submission status only for the students you need \u2014 unmarked students aren't saved.",
     saveBtn:'Save submissions',daysLabel:'Days submitted',datesLabel:'Submitted dates',
     unit:'submissions',verb:'submitted',shareOne:'Demo submission update',shareAll:'Demo submission summary',
     migTitle:'Assignments Migration',sheetName:'Assignments'}
@@ -3487,8 +3489,9 @@ function buildAaScreen(mod){
         <button class="filter-clear" onclick="aaClearMarkFilters('${mod}')">Clear</button>
       </div>
       <div class="aa-roster-top"><span class="aa-load" id="${p}_rosterLoad" style="display:none;"></span></div>
-      <div class="avail-scroll" style="padding:0 20px 4px;"><div id="${p}_roster"><div class="pay-empty">Pick a country, batch, or tutor to load students.</div></div></div>
+      <div class="avail-scroll" style="padding:0 20px 4px;"><div id="${p}_roster"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
       <div class="aa-savebar" id="${p}_saveBar" style="display:none;">
+        <span class="aa-marked" id="${p}_markedCount"></span>
         <button class="btn-primary" id="${p}_saveBtn" onclick="aaSave('${mod}')">${esc(c.saveBtn)}</button>
       </div>
     </div>
@@ -3728,12 +3731,8 @@ window.aaLoadRoster=async function(mod){
   const country=aEl(mod,'mCountry').value,batch=aEl(mod,'mBatch').value,tutor=aEl(mod,'mTutor').value;
   const date=aEl(mod,'mDate').value;
   const box=aEl(mod,'roster');
-  if(!country&&!batch&&!tutor){
-    st.roster=[];st.mark={};
-    const cnt=aEl(mod,'markCount');if(cnt)cnt.textContent='';   // don't leave a stale count behind
-    box.innerHTML='<div class="pay-empty">Pick a country, batch, or tutor to load students.</div>';
-    aEl(mod,'saveBar').style.display='none';aaRosterLoading(mod,false);return;
-  }
+  // Every active student by default — filters and search narrow it, the way the
+  // Students and Payments tables behave.
   st.roster=aaActive().filter(s=>{
     if(country&&(s.Country||'')!==country)return false;
     if(batch&&(s.Batch||'')!==batch)return false;
@@ -3776,40 +3775,58 @@ function aaSearchHit(s,q){
 const aaQuery=(mod,which)=>String((aEl(mod,which)||{}).value||'').trim().toLowerCase();
 // Typing in the Mark search must not refetch saved marks — just re-render the roster.
 window.aaRenderRosterNow=function(mod){aaRenderRoster(mod);};
+function aaStatusCellHtml(mod,s){
+  const c=AA[mod],st=aaState[mod];
+  const m=st.mark[s.ID]||{status:null,count:1};const n=m.count||1;
+  const sid=jsq(s.ID);
+  const count=`<div class="aa-count" style="${m.status===c.pos?'':'visibility:hidden'}">
+      <button class="${n===1?'on':''}" onclick="event.stopPropagation();aaSetCount('${mod}','${sid}',1)">×1</button>
+      <button class="${n===2?'on':''}" onclick="event.stopPropagation();aaSetCount('${mod}','${sid}',2)">×2</button>
+    </div>`;
+  return `<div class="aa-status-cell"><div class="aa-seg">
+      <button class="pos ${m.status===c.pos?'on':''}" onclick="aaSetStatus('${mod}','${sid}','${c.pos}')"><span class="lbl-full">${c.posLbl}</span><span class="lbl-short">${c.posShort}</span></button>
+      <button class="neg ${m.status===c.neg?'on':''}" onclick="aaSetStatus('${mod}','${sid}','${c.neg}')"><span class="lbl-full">${c.negLbl}</span><span class="lbl-short">${c.negShort}</span></button>
+    </div>${count}</div>`;
+}
+// Repaint a single row instead of the whole table — with the full roster on screen that
+// is the difference between an instant tap and a visible stall on every click.
+function aaUpdateRow(mod,id){
+  const s=aaState[mod].roster.find(x=>String(x.ID)===String(id));if(!s)return;
+  const sel=(window.CSS&&CSS.escape)?CSS.escape(String(id)):String(id);
+  const cell=document.querySelector(`#${AA[mod].p}_roster tr[data-sid="${sel}"] .aa-status-td`);
+  if(cell)cell.innerHTML=aaStatusCellHtml(mod,s);
+  aaUpdateMarkedCount(mod);
+}
+function aaUpdateMarkedCount(mod){
+  const st=aaState[mod],el=aEl(mod,'markedCount');if(!el)return;
+  const n=st.roster.filter(s=>st.mark[s.ID]&&st.mark[s.ID].status).length;
+  el.textContent=n?`${n} marked`:'nothing marked yet';
+  el.className='aa-marked'+(n?' on':'');
+}
 function aaRenderRoster(mod){
-  const c=AA[mod],st=aaState[mod],box=aEl(mod,'roster');
+  const st=aaState[mod],box=aEl(mod,'roster');
   const q=aaQuery(mod,'mSearch');
   const rows=st.roster.filter(s=>aaSearchHit(s,q));
   const cnt=aEl(mod,'markCount');if(cnt)cnt.textContent=st.roster.length?('('+rows.length+')'):'';
-  if(!st.roster.length){box.innerHTML='<div class="pay-empty">No students for this selection.</div>';aEl(mod,'saveBar').style.display='none';return;}
-  if(!rows.length){box.innerHTML='<div class="pay-empty">No students match your search.</div>';aEl(mod,'saveBar').style.display='';return;}
+  if(!st.roster.length){box.innerHTML='<div class="pay-empty">No students match these filters.</div>';aEl(mod,'saveBar').style.display='none';return;}
+  if(!rows.length){box.innerHTML='<div class="pay-empty">No students match your search.</div>';aEl(mod,'saveBar').style.display='';aaUpdateMarkedCount(mod);return;}
   box.innerHTML=`<table class="pay-table"><thead><tr><th>Student</th><th>Tutor</th><th>Batch</th><th>Status</th></tr></thead><tbody>${
-    rows.map(s=>{
-      const m=st.mark[s.ID]||{status:null,count:1};const n=m.count||1;
-      const sid=esc(s.ID);
-      const count=`<div class="aa-count" style="${m.status===c.pos?'':'visibility:hidden'}">
-        <button class="${n===1?'on':''}" onclick="event.stopPropagation();aaSetCount('${mod}','${sid}',1)">×1</button>
-        <button class="${n===2?'on':''}" onclick="event.stopPropagation();aaSetCount('${mod}','${sid}',2)">×2</button>
-      </div>`;
-      return `<tr>
-        <td><strong>${esc(s.Name||'—')}</strong><br><span class="pay-sid2">${sid}</span></td>
+    rows.map(s=>`<tr data-sid="${esc(s.ID)}">
+        <td><strong>${esc(s.Name||'—')}</strong><br><span class="pay-sid2">${esc(s.ID)}</span></td>
         <td>${esc(s.Tutor||'—')}</td>
         <td>${esc(s.Batch||'—')}</td>
-        <td><div class="aa-status-cell"><div class="aa-seg">
-          <button class="pos ${m.status===c.pos?'on':''}" onclick="aaSetStatus('${mod}','${sid}','${c.pos}')"><span class="lbl-full">${c.posLbl}</span><span class="lbl-short">${c.posShort}</span></button>
-          <button class="neg ${m.status===c.neg?'on':''}" onclick="aaSetStatus('${mod}','${sid}','${c.neg}')"><span class="lbl-full">${c.negLbl}</span><span class="lbl-short">${c.negShort}</span></button>
-        </div>${count}</div></td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
+        <td class="aa-status-td">${aaStatusCellHtml(mod,s)}</td>
+      </tr>`).join('')}</tbody></table>`;
   aEl(mod,'saveBar').style.display='';
+  aaUpdateMarkedCount(mod);
 }
 window.aaSetStatus=function(mod,id,status){
   const c=AA[mod],st=aaState[mod],m=st.mark[id];if(!m)return;
   m.status=(m.status===status)?null:status;   // tapping the active status clears it
   if(m.status!==c.pos)m.count=1;
-  aaRenderRoster(mod);
+  aaUpdateRow(mod,id);
 };
-window.aaSetCount=function(mod,id,n){const m=aaState[mod].mark[id];if(!m)return;m.count=n;aaRenderRoster(mod);};
+window.aaSetCount=function(mod,id,n){const m=aaState[mod].mark[id];if(!m)return;m.count=n;aaUpdateRow(mod,id);};
 
 window.aaSave=async function(mod){
   const c=AA[mod],st=aaState[mod];
