@@ -1406,11 +1406,10 @@ window.renderLeads=function(){
     LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${jsq(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
   if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
   list.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
+    <th>Name</th><th>Country</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
     </tr></thead><tbody>${rows.map(l=>`<tr>
-      <td><strong>${esc(l.Name||'—')}</strong></td>
+      <td><strong>${esc(l.Name||'—')}</strong>${contactBtns(l.Contact,l.Name)}${l.Contact?`<br><span class="pay-sid2">${esc(l.Contact)}</span>`:''}</td>
       <td>${esc(l.Country||'—')}</td>
-      <td>${l.Contact?`<a href="tel:${esc(String(l.Contact).replace(/[^0-9+]/g,''))}" class="lead-tel">${esc(l.Contact)}</a>`:'—'}</td>
       <td>${esc(l['Preferred Batch']||'—')}</td>
       <td>${esc(l.Source||'—')}</td>
       <td><span class="lead-badge ${statusClass(l.Status)}">${esc(l.Status||'Enquiry')}</span></td>
@@ -3834,8 +3833,9 @@ function aaUpdateRow(mod,id){
 function aaUpdateMarkedCount(mod){
   const st=aaState[mod],el=aEl(mod,'markedCount');if(!el)return;
   const n=st.roster.filter(s=>st.mark[s.ID]&&st.mark[s.ID].status).length;
-  el.textContent=n?`${n} marked`:'nothing marked yet';
-  el.className='aa-marked'+(n?' on':'');
+  const u=aaUnsavedCount(mod);
+  el.textContent=!n?'nothing marked yet':(u?`${n} marked · ${u} unsaved`:`${n} marked · all saved`);
+  el.className='aa-marked'+(u?' on':'');
 }
 function aaRenderRoster(mod){
   const st=aaState[mod],box=aEl(mod,'roster');
@@ -3862,9 +3862,18 @@ window.aaSetStatus=function(mod,id,status){
 };
 window.aaSetCount=function(mod,id,n){const m=aaState[mod].mark[id];if(!m)return;m.count=n;aaUpdateRow(mod,id);};
 
+// Marks that differ from what is already saved for this date. st.mark is seeded FROM
+// the saved marks (st.prefill), so counting everything with a status would flag a fully
+// saved day as unsaved.
 function aaUnsavedCount(mod){
-  const st=aaState[mod];
-  return st.roster.filter(s=>st.mark[s.ID]&&st.mark[s.ID].status).length;
+  const st=aaState[mod],saved=st.prefill||{};
+  return st.roster.filter(s=>{
+    const m=st.mark[s.ID];
+    if(!m||!m.status)return false;                 // nothing set — Save writes nothing
+    const p=saved[s.ID];
+    if(!p||!p.status)return true;                  // newly marked
+    return p.status!==m.status||(p.count||1)!==(m.count||1);   // changed since saving
+  }).length;
 }
 // Opening a profile from the Mark screen throws away anything marked but not saved,
 // so confirm before navigating rather than losing a tutor's work silently.
