@@ -94,6 +94,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .lead-stat-btn.active{outline:2px solid var(--accent);outline-offset:1px}
 
 .lead-badge{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block}
+/* Lead ageing */
+.lead-age{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-block;white-space:nowrap}
+.lead-age.green{background:var(--green-bg);color:#5a7a00}
+.lead-age.amber{background:var(--amber-bg);color:#8a6a00}
+.lead-age.red{background:var(--red-light);color:#c0472a}
+.lead-age.none{background:var(--surface-alt);color:var(--text-light);font-weight:600}
+.lead-age-closed{color:var(--text-light)}
+.lead-age-idle{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:3px;white-space:nowrap}
+.lead-age-chip .lead-age-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.lead-age-dot.green{background:var(--green)}.lead-age-dot.amber{background:var(--amber)}.lead-age-dot.red{background:var(--red)}
+.lead-age-dot.none{background:var(--text-light)}
 .lead-badge-new{background:var(--accent-light);color:var(--accent-dark)}
 .lead-badge-progress{background:#fdf1d6;color:#9a7200}
 .lead-badge-converted{background:#eef6d8;color:#5a7a00}
@@ -777,9 +788,9 @@ table.avail td.occ{border:1px solid transparent}
         <span class="mig-chev" id="migChevLeads">▾</span>
       </div>
       <div id="migBody" style="display:none;margin-top:12px;">
-      <div class="note">Paste your exported Leads as CSV (with headers) or a JSON array to import into Firestore for testing. Your production Google Sheet is untouched. Re-imports with the same Lead ID update rather than duplicate.</div>
+      <div class="note">Paste your exported Leads as CSV (with headers) or a JSON array to import into Firestore for testing. Your production Google Sheet is untouched. Re-imports with the same Lead ID update rather than duplicate. Include an <strong>Enquiry Date</strong> column (or <em>Lead Date</em> / <em>Date</em>) so ageing carries over — without it every imported lead starts at zero days old.</div>
       <div class="mig-box">
-        <textarea id="migInput" placeholder="Name,Country,Contact,Preferred Batch,Source,Status,Notes,Lead ID&#10;Arjun,India,9198...,Sun 9:30,Google,Enquiry,,L001"></textarea>
+        <textarea id="migInput" placeholder="Name,Enquiry Date,Country,Contact,Preferred Batch,Source,Status,Notes,Lead ID&#10;Arjun,2026-08-14,India,9198...,Sun 9:30,Google,Enquiry,,L001"></textarea>
         <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
           <button class="btn-primary" onclick="runMigration()">Import to Firestore</button>
           <span class="msg" id="migMsg" style="margin:0;text-align:left;"></span>
@@ -1337,6 +1348,8 @@ table.avail td.occ{border:1px solid transparent}
     <div class="modal-head"><h3 id="leadModalTitle">Add Lead</h3><button class="modal-close" onclick="closeLeadForm()">&times;</button></div>
     <div class="modal-body">
       <div class="form-row"><label>Student Name <span class="req">*</span></label><input type="text" id="l_Name" placeholder="Student name"></div>
+      <div class="form-row"><label>Enquiry Date</label><input type="date" id="l_Enquiry">
+        <small>When the enquiry actually came in — ageing counts from here, not from when it was typed in.</small></div>
       <div class="form-row"><label>Country</label><input type="text" id="l_Country" placeholder="Country" list="countryList"><datalist id="countryList"></datalist></div>
       <div class="form-row"><label>Mobile Contact <span class="req">*</span></label><input type="text" id="l_Contact" placeholder="With country code, e.g. 9198…"></div>
       <div class="form-row"><label>Preferred Batch</label>
@@ -1597,8 +1610,71 @@ function fillDatalists(){
   const b=[...new Set(leadsData.map(l=>l['Preferred Batch']).filter(Boolean))].sort();
   $('countryList').innerHTML=c.map(x=>`<option value="${esc(x)}">`).join('');
 }
+/* ── Lead ageing ────────────────────────────────────────────────────────────
+   Age counts from the day the enquiry came in. "Enquiry Date" is authoritative;
+   createdAt is the fallback, but it is only the day the lead was TYPED IN — and
+   every migrated lead carries the import timestamp — so a lead with no explicit
+   enquiry date is marked as such rather than silently reading 0 days old. */
+const LEAD_AGE_AMBER=7, LEAD_AGE_RED=14;
+const LEAD_CLOSED=['Converted','Dropped'];          // closed leads stop ageing
+const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const tsToDate=(v)=>{
+  if(!v)return null;
+  if(v.toDate)try{return v.toDate();}catch(e){return null;}
+  if(v instanceof Date)return v;
+  const d=new Date(v);return isNaN(d)?null:d;
+};
+function leadEnquiryISO(l){
+  const explicit=String((l&&l['Enquiry Date'])||'').trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(explicit))return explicit;
+  const c=tsToDate(l&&l.createdAt);
+  if(!c)return '';
+  return c.getFullYear()+'-'+String(c.getMonth()+1).padStart(2,'0')+'-'+String(c.getDate()).padStart(2,'0');
+}
+const daysSince=(iso)=>{
+  if(!iso)return null;
+  const d=new Date(iso+'T00:00:00');if(isNaN(d))return null;
+  const now=new Date();const t=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  return Math.max(0,Math.round((t-d)/86400000));
+};
+function leadAge(l){
+  const closed=LEAD_CLOSED.includes(String((l&&l.Status)||''));
+  const dated=/^\d{4}-\d{2}-\d{2}$/.test(String((l&&l['Enquiry Date'])||'').trim());
+  const iso=leadEnquiryISO(l);
+  const days=daysSince(iso);
+  /* An age derived from createdAt is NOT trustworthy — every migrated lead carries the
+     import timestamp, so they would all show as brand new and green. Undated leads get
+     their own band so they are visibly unrated and easy to find and fix. */
+  const band=closed?'closed':(!dated||days===null)?'none'
+    :(days>LEAD_AGE_RED?'red':days>LEAD_AGE_AMBER?'amber':'green');
+  const u=tsToDate(l&&l.updatedAt);
+  const uIso=u?u.getFullYear()+'-'+String(u.getMonth()+1).padStart(2,'0')+'-'+String(u.getDate()).padStart(2,'0'):'';
+  return {closed,dated,iso,days,band,idle:daysSince(uIso)};
+}
+const LEAD_AGE_BANDS=[['green','Fresh'],['amber','Ageing'],['red','Stale'],['none','No date']];
+const LEAD_BAND_RANK={red:0,amber:1,green:2,none:3,closed:4};
+const LEAD_BAND_HINT={
+  green:`Open leads up to ${LEAD_AGE_AMBER} days old`,
+  amber:`Open leads ${LEAD_AGE_AMBER+1}–${LEAD_AGE_RED} days old`,
+  red:`Open leads over ${LEAD_AGE_RED} days old`,
+  none:'Open leads with no enquiry date — edit each one to set it, then it starts ageing properly'
+};
+let leadAgeFilter='';
+window.setLeadAgeFilter=function(b){leadAgeFilter=(leadAgeFilter===b?'':b);renderLeads();};
 window.setStatusFilter=function(s){statusFilter=s;$('statusFilter').value=s;renderLeads();};
-window.clearLeadFilters=function(){$('leadSearch').value='';$('statusFilter').value='';statusFilter='';renderLeads();};
+window.clearLeadFilters=function(){$('leadSearch').value='';$('statusFilter').value='';statusFilter='';leadAgeFilter='';renderLeads();};
+window.clearLeadChips=function(){statusFilter='';$('statusFilter').value='';leadAgeFilter='';renderLeads();};
+function leadAgeCell(l){
+  const a=leadAge(l);
+  const idle=(!a.closed&&a.idle!==null&&a.idle>0)?`<div class="lead-age-idle">touched ${a.idle}d ago</div>`:'';
+  if(a.closed)return '<span class="lead-age-closed">—</span>';
+  if(a.band==='none'){
+    // Show the derived age so it isn't useless, but mark it unverified with a leading ~.
+    const txt=a.days===null?'no date':'~'+a.days+'d';
+    return `<span class="lead-age none" title="No enquiry date recorded — edit the lead to set one">${txt}</span>${idle}`;
+  }
+  return `<span class="lead-age ${a.band}" title="Enquiry ${esc(a.iso)}">${a.days}d</span>${idle}`;
+}
 
 window.renderLeads=function(){
   const list=$('leadsList'),summary=$('leadSummary');
@@ -1606,17 +1682,31 @@ window.renderLeads=function(){
   const fStatus=$('statusFilter').value;statusFilter=fStatus;
   let rows=leadsData.slice();
   if(fStatus)rows=rows.filter(l=>String(l.Status||'')===fStatus);
+  if(leadAgeFilter)rows=rows.filter(l=>leadAge(l).band===leadAgeFilter);
   if(q)rows=rows.filter(l=>['Name','Country','Contact','Preferred Batch','Source','Status','Notes','Lead ID'].some(k=>String(l[k]||'').toLowerCase().includes(q)));
+  /* Oldest open lead first — this table is a work queue, and newest-first buried the
+     leads most in need of a call at the bottom of the page. Closed leads sink. */
+  rows.sort((a,b)=>{
+    const A=leadAge(a),B=leadAge(b);
+    const ra=LEAD_BAND_RANK[A.band],rb=LEAD_BAND_RANK[B.band];
+    if(ra!==rb)return ra-rb;
+    return (B.days||0)-(A.days||0);
+  });
   const hc=$('leadHeadCount');if(hc)hc.textContent='('+rows.length+')';
   const counts={};LEAD_STATUSES.forEach(s=>counts[s]=0);
   leadsData.forEach(l=>{const s=String(l.Status||'Enquiry');if(counts[s]!==undefined)counts[s]++;});
-  summary.innerHTML=`<button class="lead-stat lead-stat-btn${fStatus===''?' active':''}" onclick="setStatusFilter('')">${leadsData.length} All</button>`+
-    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${jsq(s)}')">${counts[s]} ${esc(s)}</button>`).join('');
+  const ageCounts={green:0,amber:0,red:0,none:0};
+  leadsData.forEach(l=>{const b=leadAge(l).band;if(ageCounts[b]!==undefined)ageCounts[b]++;});
+  summary.innerHTML=`<button class="lead-stat lead-stat-btn${fStatus===''&&!leadAgeFilter?' active':''}" onclick="clearLeadChips()">${leadsData.length} All</button>`+
+    LEAD_STATUSES.filter(s=>counts[s]>0).map(s=>`<button class="lead-stat lead-stat-btn ${statusClass(s)}${fStatus===s?' active':''}" onclick="setStatusFilter('${jsq(s)}')">${counts[s]} ${esc(s)}</button>`).join('')
+    +LEAD_AGE_BANDS.filter(([b])=>ageCounts[b]>0).map(([b,label])=>
+      `<button class="lead-stat lead-stat-btn lead-age-chip age-${b}${leadAgeFilter===b?' active':''}" onclick="setLeadAgeFilter('${b}')" title="${esc(LEAD_BAND_HINT[b])}"><span class="lead-age-dot ${b}"></span>${ageCounts[b]} ${label}</button>`).join('');
   if(!rows.length){list.innerHTML='<div class="pay-empty">No leads yet. Click "+ Add Lead" to add one.</div>';return;}
   list.innerHTML=`<table class="pay-table"><thead><tr>
-    <th>Name</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
+    <th>Name</th><th>Age</th><th>Country</th><th>Contact</th><th>Preferred Batch</th><th>Source</th><th>Status</th><th>Notes</th><th>Action</th>
     </tr></thead><tbody>${rows.map(l=>`<tr>
       <td><strong>${esc(l.Name||'—')}</strong></td>
+      <td>${leadAgeCell(l)}</td>
       <td>${esc(l.Country||'—')}</td>
       <td>${l.Contact?`<a href="tel:${esc(digitsOnly(l.Contact))}" class="lead-tel">${esc(l.Contact)}</a>`:'—'}</td>
       <td>${esc(l['Preferred Batch']||'—')}</td>
@@ -1636,6 +1726,9 @@ window.openLeadForm=function(id){
   $('l_Contact').value=lead?(lead.Contact||''):'';
   $('l_Notes').value=lead?(lead.Notes||''):'';
   $('l_Status').value=lead?(lead.Status||'Enquiry'):'Enquiry';
+  // Existing leads show the date ageing is already using, so editing one never silently
+  // resets its age; a new lead defaults to today.
+  $('l_Enquiry').value=lead?leadEnquiryISO(lead):todayISO();
   // Source and Preferred Batch use the same combo control as the student form: pick from
   // the list, or choose "+ Add new…" to type one that isn't there yet.
   fillCombo('l_Source',PRESET_SOURCES.concat(leadsData.map(l=>l.Source)));
@@ -1656,6 +1749,7 @@ window.saveLead=async function(){
   if(!contact){msg.textContent='Please enter the mobile contact.';msg.className='msg err';return;}
   const data={Name:name,Country:$('l_Country').value.trim(),Contact:contact,'Preferred Batch':$('l_Batch').value.trim(),
     Source:currentSource(),Status:$('l_Status').value,Notes:$('l_Notes').value.trim(),
+    'Enquiry Date':String($('l_Enquiry').value||'').trim(),
     updatedAt:serverTimestamp(),updatedBy:currentUser.email};
   btn.disabled=true;msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
   try{
@@ -1782,6 +1876,8 @@ window.runMigration=async function(){
         'Lead ID':leadId,Name:r.Name||'',Country:r.Country||'',Contact:String(r.Contact||''),
         'Preferred Batch':r['Preferred Batch']||r.Batch||'',Source:r.Source||'',Status:r.Status||'Enquiry',
         Notes:r.Notes||'','Converted Student ID':r['Converted Student ID']||'',
+        // Without this every migrated lead would age from the import date and read 0 days old.
+        'Enquiry Date':aaNormDate(r['Enquiry Date']||r['Lead Date']||r.Date||'','auto'),
         createdAt:serverTimestamp(),migratedAt:serverTimestamp(),migratedBy:currentUser.email
       },{merge:true});
       done++;
