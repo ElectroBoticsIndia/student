@@ -967,7 +967,7 @@ table.avail td.occ{border:1px solid transparent}
         <div class="form-row"><label>Amount received</label>
           <div class="pay-amt-row">
             <select id="pay_Currency" class="pay-mini" onchange="onPayCurrencyChange()"></select>
-            <input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500">
+            <input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500" oninput="this.dataset.auto=''">
           </div>
           <small id="pay_CurHint"></small>
         </div>
@@ -2387,10 +2387,15 @@ function glPaymentsHtml(g){
     if(st==='paid'){cls='paid';txt='Paid'+(rec['Paid Date']?' · '+rec['Paid Date']:'');}
     else if(st==='ignore'){cls='skip';txt='Not applicable';}
     const fee=payAmt(s['Monthly Fee']);
-    const amt=rec&&payAmt(rec.Amount)!==null?payAmt(rec.Amount):(fee===null?null:toINR(fee,cur,g.year,m));
+    // A recorded payment is shown in the currency it was RECEIVED in — a student can
+    // pay CAD one month and rupees the next. Only an unrecorded month falls back to
+    // the fee as quoted. Nothing here is converted to rupees.
+    const recAmt=rec?payAmt(rec.Amount):null;
+    const amt=recAmt!==null?recAmt:fee;
+    const aCur=recAmt!==null?payRowCur(rec):cur;
     rows+=`<div class="gl-row" style="grid-template-columns:64px 1fr auto;">
       <span class="gl-month">${esc(PAY_MONTHS[m-1].slice(0,3))}</span>
-      <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${amt!==null?esc(inr(amt)):'—'}</span>
+      <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${amt!==null?esc(money(amt,aCur)):'—'}</span>
       <span class="gl-status ${cls}">${esc(txt)}</span>
     </div>`;
   }
@@ -2900,6 +2905,7 @@ function dataStartMonth(selY){
 const CURRENCIES=['INR','USD','CHF','CAD','GBP'];
 const CURRENCY_BY_COUNTRY=[
   [/india/i,'INR'],[/switzerland|swiss/i,'CHF'],
+  [/united kingdom|\bu\.?k\.?\b|england|scotland|\bwales\b|northern ireland|britain|british/i,'GBP'],
   [/united states|u\.?s\.?a?\b|america/i,'USD'],[/canada/i,'CAD']
 ];
 function currencyForCountry(country){
@@ -3107,12 +3113,17 @@ function fillPaySelect(id,allLabel,items,current){
 }
 let payCurrentCtx=null;
 window.openPaymentForm=function(sid,name,fee){
-  payShowCurrency(sid);
+  payShowCurrency(sid,null,true);
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Fee',mode:'paid'};
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
   $('paymentModalTitle').textContent='Add Payment';$('paymentModalSub').textContent=`${name} · Fee · ${PAY_MONTHS[month-1]} ${year}`;
-  $('pay_Amount').value=fee||'';const t=new Date();$('pay_Date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  // The suggested amount follows the currency the dropdown just defaulted to, so the
+  // number and the code beside it always belong together.
+  const amtEl=$('pay_Amount');
+  amtEl.value=payFeeSuggestion(sid,($('pay_Currency')||{}).value||'INR');
+  amtEl.dataset.auto='1';
+  const t=new Date();$('pay_Date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
   $('pay_Method').value='';$('pay_Note').value='';$('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
 };
 window.closePaymentForm=function(){$('paymentModal').classList.remove('open');};
@@ -3189,10 +3200,17 @@ window.downloadPaymentsExcel=function(){
     const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
     const att=attIdx[String(s.ID).trim()],due=payDues(s,selY,selM);
     const dueBits=due.items.map(it=>it.label+(it.amount!==null?' '+money(it.amount,it.currency):''));
-    return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'','Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'','Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Paid Date':fee?fee['Paid Date']:'','Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:'',
+    // Each recorded amount is exported with the currency it was received in — a bare
+    // number is unreadable once a student has paid in more than one.
+    const rowCur=(r)=>r&&payAmt(r.Amount)!==null?payRowCur(r):'';
+    return {'ID':s.ID,'Name':s.Name,'Level':s['Current Level']||'','Tutor':s.Tutor||'','Country':s.Country||'','Batch':s.Batch||'',
+      'Quoted Currency':studentCurrency(s),'Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'',
+      'Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Currency':rowCur(fee),'Fee Paid Date':fee?fee['Paid Date']:'',
+      'Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Kit Currency':rowCur(kit),
+      'Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:'','Components Currency':rowCur(comp),
       'Classes Attended':att?att.count:0,
       'Days Attended':att?att.dates.map(d=>d.date+(d.count>1?' x'+d.count:'')).join(', '):'',
-      'Currency':studentCurrency(s),'Pending (billed)':due.totalText||'','Pending Amount (INR)':Math.round(due.total||0),'Pending Details':dueBits.join(' · ')};
+      'Pending (billed)':due.totalText||'','Pending Amount (INR)':Math.round(due.total||0),'Pending Details':dueBits.join(' · ')};
   });
   const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Payments');
   XLSX.writeFile(wb,`ElectroBotics_Payments_${PAY_MONTHS[month-1]}_${year}.xlsx`);
@@ -3232,16 +3250,65 @@ window.migPayments=async function(){
    currency the student is quoted in, but INR is always one click away for the common
    case of an overseas family transferring rupees to the Indian account. Inferring it
    is what previously turned rupee amounts into foreign ones and inflated revenue. */
-function payShowCurrency(sid,preset){
+/* The currency a student last actually paid in. A family that transfers rupees keeps
+   transferring rupees, and having to re-pick that every month is exactly how rows ended
+   up mis-tagged. Used only when RECORDING money received — flagging an amount due still
+   defaults to the currency the fee is quoted in, since that is what we are asking for. */
+function lastPaidCurrency(sid){
+  if(!payIndex)buildPayIndex();
+  const rows=(payByStudent&&payByStudent[String(sid||'').trim()])||[];
+  let best=null,bestKey=-1;
+  rows.forEach(p=>{
+    if(String(p.Status||'').toLowerCase()!=='paid')return;
+    if(payAmt(p.Amount)===null)return;
+    const key=(parseInt(payY(p.Year),10)||0)*12+(parseInt(payM(p.Month),10)||0);
+    if(key>bestKey){bestKey=key;best=payRowCur(p);}
+  });
+  return best;
+}
+function payShowCurrency(sid,preset,useLastPaid){
   const st=studentsData.find(x=>String(x.ID)===String(sid));
   const sel=$('pay_Currency');if(!sel)return;
   const quoted=studentCurrency(st);
   const opts=[...new Set(CURRENCIES.concat([quoted,'INR']))];
   sel.innerHTML=opts.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
-  sel.value=preset||quoted;
+  sel.value=preset||(useLastPaid?lastPaidCurrency(sid):'')||quoted;
   payCurHint(sid);
 }
-window.onPayCurrencyChange=function(){payCurHint(payCurrentCtx&&payCurrentCtx.studentId);};
+/* Most recent paid FEE amount for this student in a given currency. */
+function lastPaidAmountIn(sid,cur){
+  if(!payIndex)buildPayIndex();
+  const rows=(payByStudent&&payByStudent[String(sid||'').trim()])||[];
+  const want=String(cur||'').toUpperCase();
+  let best=null,bestKey=-1;
+  rows.forEach(p=>{
+    if((String(p.Type||'').trim()||'Fee')!=='Fee')return;
+    if(String(p.Status||'').toLowerCase()!=='paid')return;
+    const a=payAmt(p.Amount);if(a===null||payRowCur(p)!==want)return;
+    const key=(parseInt(payY(p.Year),10)||0)*12+(parseInt(payM(p.Month),10)||0);
+    if(key>bestKey){bestKey=key;best=a;}
+  });
+  return best;
+}
+/* What to suggest in the Amount box for the currency currently selected: the quoted fee
+   when that IS the quoted currency, otherwise whatever they last paid in it. Never a
+   quoted number wearing another currency's label — that is how ₹1,500 became $1,500. */
+function payFeeSuggestion(sid,cur){
+  const st=studentsData.find(x=>String(x.ID)===String(sid));
+  const quoted=studentCurrency(st),fee=payAmt(st&&st['Monthly Fee']);
+  if(String(cur||'').toUpperCase()===quoted)return fee===null?'':String(fee);
+  const prev=lastPaidAmountIn(sid,cur);
+  return prev===null?'':String(prev);
+}
+window.onPayCurrencyChange=function(){
+  const c=payCurrentCtx;
+  const el=$('pay_Amount');
+  // Re-suggest only while the box still holds a suggestion — never overwrite typing.
+  if(el&&el.dataset.auto==='1'&&c&&c.mode==='paid'&&c.type==='Fee'){
+    el.value=payFeeSuggestion(c.studentId,($('pay_Currency')||{}).value||'INR');
+  }
+  payCurHint(c&&c.studentId);
+};
 function payCurHint(sid){
   const st=studentsData.find(x=>String(x.ID)===String(sid));
   const el=$('pay_CurHint');if(!el)return;
