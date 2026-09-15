@@ -626,6 +626,8 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .aa-pct.green{background:var(--green-bg);color:#5a7a00}
 .aa-pct.amber{background:var(--amber-bg);color:#8a6a00}
 .aa-pct.red{background:var(--red-light);color:#c0472a}
+.aa-pct.none{background:var(--surface-alt);color:var(--text-light)}
+.aa-of{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .aa-wa-ico{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:#fff;color:#25d366;cursor:pointer;transition:all .2s}
 .aa-wa-ico:hover{border-color:#25d366;background:#eafaf0}
 .aa-head-btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;font-weight:700;padding:8px 14px;border:none;border-radius:8px;background:#25d366;color:#fff;cursor:pointer;transition:all .2s}
@@ -2251,22 +2253,45 @@ window.removeNotice=async function(id,fromModal){
 };
 
 // ── This month at a glance ──
-const GL_EXPECTED=4;   // a full month's worth of classes / assignments
-/* How many sessions should have happened in this month SO FAR — elapsed weeks, not a
-   flat 4. Two weeks into September, 2 of 2 is a full house, not 2 out of 4. Also
-   prorated for the month a student joined. */
+const GL_EXPECTED=4;   // fallback only: a nominal month's worth of classes
+/* A batch is named for the day it meets — "Sun 9:30 am", "Wed 6:00 pm" — so the number
+   of sessions a student could have had is simply how many of those weekdays fall inside
+   the window. Counting them beats dividing days by seven: a month with five Sundays
+   really does have five classes, and a student who joined on the 25th really did have
+   one. Batches with no recognisable day fall back to whole elapsed weeks. */
+const WEEKDAY_BY_ABBR={sun:0,mon:1,tue:2,wed:3,thu:4,fri:5,sat:6};
+function batchWeekday(batch){
+  const m=String(batch||'').trim().toLowerCase().match(/^([a-z]{3})/);
+  return (m&&WEEKDAY_BY_ABBR[m[1]]!==undefined)?WEEKDAY_BY_ABBR[m[1]]:null;
+}
+// How many times weekday `wd` falls between two dates, both ends included.
+function countWeekday(from,to,wd){
+  if(!(from instanceof Date)||!(to instanceof Date)||to<from)return 0;
+  const f=new Date(from.getFullYear(),from.getMonth(),from.getDate());
+  const t=new Date(to.getFullYear(),to.getMonth(),to.getDate());
+  const first=new Date(f);first.setDate(f.getDate()+((wd-f.getDay()+7)%7));
+  if(first>t)return 0;
+  return Math.floor((t-first)/(7*86400000))+1;
+}
+// Sessions a student could have had between two dates, given their batch day.
+function sessionsBetween(student,from,to){
+  if(to<from)return 0;
+  const wd=batchWeekday(student&&student.Batch);
+  if(wd!==null)return countWeekday(from,to,wd);
+  const days=Math.floor((to-from)/86400000)+1;
+  return Math.max(0,Math.round(days/7));
+}
+/* How many sessions should have happened in this month SO FAR: the student's own class
+   day, counted from the later of the month start and their join date, up to the earlier
+   of the month end and today. */
 function glExpected(year,month,student){
   const today=new Date();
-  const monthStart=new Date(year,month-1,1);
   const monthEnd=new Date(year,month,0);
-  let from=monthStart;
+  let from=new Date(year,month-1,1);
   const jd=parseD(student&&student['Join Date']);
   if(jd&&jd>from)from=jd;
-  let to=monthEnd;
-  if(today<to)to=today;
-  if(to<from)return 0;
-  const days=Math.floor((to-from)/86400000)+1;
-  return Math.max(1,Math.min(GL_EXPECTED,Math.ceil(days/7)));
+  const to=today<monthEnd?today:monthEnd;
+  return sessionsBetween(student,from,to);
 }
 function glTier(done,expected){
   if(!expected)return 'none';
@@ -2401,7 +2426,7 @@ window.openGlance=function(key){
     </div>`;
   }
   body.innerHTML=`<div class="gl-rows">${rows}</div>
-    <div class="gl-note">Each month is compared against the sessions expected by that point — the current month counts only the weeks that have passed. A holiday week or a mid-month join can still read lower without anything being wrong.</div>`;
+    <div class="gl-note">Expected counts this student’s own class days — their batch day, from their join date onwards, up to today. A cancelled class or a holiday can still read lower without anything being wrong.</div>`;
   $('glanceModal').classList.add('open');
 };
 function glPaymentsHtml(g){
@@ -4019,9 +4044,22 @@ async function loadRisk(){
   if(!assignmentsLoaded){try{const snap=await getDocs(collection(db,'assignments'));assignmentsData=snap.docs.map(d=>d.data());assignmentsLoaded=true;}catch(e){assignmentsData=[];}}
   computeRisk();renderRisk();
 }
+/* A student can only be judged on classes they could actually have had, so the rolling
+   window is clipped at their join date. Below RISK_MIN_SESSIONS they aren't rated at
+   all: the at-risk list is a queue of people to call, and someone in their first fortnight
+   who has missed one thing does not belong at the top of it. */
+const RISK_MIN_SESSIONS=2;
+function riskExpectedFor(s,cutoff,today){
+  const jd=parseD(s&&s['Join Date']);
+  let from=cutoff;
+  if(jd&&jd>from)from=jd;
+  if(today<from)return 0;
+  const n=sessionsBetween(s,from,today)*EXPECTED_PER_WEEK;
+  return n<RISK_MIN_SESSIONS?0:n;
+}
 function computeRisk(){
+  const today=new Date();
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-RISK_WINDOW_WEEKS*7);
-  const expected=RISK_WINDOW_WEEKS*EXPECTED_PER_WEEK;
   const active=studentsData.filter(s=>{const st=String(s.Status||'Active').toLowerCase();return st==='active'||st==='';});
   const att={};
   attendanceData.forEach(r=>{const d=parseD(r.Date);if(!d||d<cutoff)return;const id=String(r.StudentID||'').trim();if(!id)return;let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;const st=String(r.Status||'').toLowerCase();if(!att[id])att[id]={present:0,total:0};att[id].total+=c;if(st==='present')att[id].present+=c;});
@@ -4029,9 +4067,11 @@ function computeRisk(){
   assignmentsData.forEach(r=>{const d=parseD(r.Date);if(!d||d<cutoff)return;const id=String(r.StudentID||'').trim();if(!id)return;if(String(r.Status||'').toLowerCase()!=='submitted')return;let c=parseFloat(r.Count);if(isNaN(c)||c<=0)c=1;sub[id]=(sub[id]||0)+c;});
   let rows=active.map(s=>{
     const id=String(s.ID||'').trim();const a=att[id]||{present:0,total:0};
-    const attRate=a.total>0?a.present/a.total:null;
+    const expected=riskExpectedFor(s,cutoff,today);
+    // Too new to rate: neither rate is meaningful yet, so both read "no data".
+    const attRate=(expected>0&&a.total>0)?a.present/a.total:null;
     let subRate=expected>0?(sub[id]||0)/expected:null;if(subRate!==null&&subRate>1)subRate=1;
-    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
+    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',batch:s.Batch||'',country:s.Country||'',level:s['Current Level']||'',expected,att_rate:attRate,sub_rate:subRate,risk:riskBand(attRate,subRate)};
   });
   const order={red:0,yellow:1,green:2,nodata:3};
   const comb=r=>(r.att_rate===null?1:r.att_rate)+(r.sub_rate===null?1:r.sub_rate);
@@ -4042,7 +4082,7 @@ const rateLabel=(r)=>(r===null||r===undefined)?'No data':Math.round(r*100)+'%';
 function rateCls(r){if(r===null||r===undefined)return 'rate-na';const p=r*100;return p>=60?'rate-good':p>=50?'rate-watch':'rate-bad';}
 window.renderRisk=function(){
   if(!riskData)return;const c=riskData.counts;
-  $('riskWindow').textContent='· rolling 4 weeks';
+  $('riskWindow').textContent='· rolling 4 weeks · shortened for recent joiners';
   const rc=(band,label,n)=>`<button class="risk-stat-btn${riskCol.risk===band?' active':''}" onclick="setRiskCol('risk','${band}')"><span class="risk-dot ${band}"></span>${n} ${label}</button>`;
   $('riskSummary').innerHTML=`<button class="risk-stat-btn${riskCol.risk===''?' active':''}" onclick="setRiskCol('risk','')">All ${c.red+c.yellow+c.green+c.nodata}</button>`+rc('red','at risk',c.red)+rc('yellow','watch',c.yellow)+rc('green','on track',c.green)+rc('nodata','no data',c.nodata);
   const all=riskData.students;
@@ -4799,7 +4839,27 @@ async function aaLoadTrend(mod){
 }
 const aaTier=(p)=>p>=75?'green':(p>=50?'amber':'red');
 const aaEmoji=(p)=>{const t=aaTier(p);return t==='green'?'🟢':(t==='amber'?'🟡':'🔴');};
-function aaMonthsInSpan(mod){return aEl(mod,'tMonth').value?1:12;}
+/* Expected sessions for ONE student across the selected span. Summing the per-month
+   figure — which glExpected already clips to their join date, to the data-start month
+   and to today — replaces a flat 4-per-month. That flat number both punished anyone who
+   joined mid-month and made a whole-year view expect 48 sessions in September. */
+function aaExpectedFor(mod,s){
+  const yr=aEl(mod,'tYear').value,mo=aEl(mod,'tMonth').value;
+  const ds=(typeof appSettings!=='undefined'&&appSettings&&appSettings.dataStart)?appSettings.dataStart:DATA_START;
+  const thisY=new Date().getFullYear();
+  const years=[];
+  if(yr)years.push(parseInt(yr,10));
+  else for(let y=ds.y;y<=thisY;y++)years.push(y);
+  const first=mo?parseInt(mo,10):1,last=mo?parseInt(mo,10):12;
+  let total=0;
+  years.forEach(y=>{
+    for(let m=first;m<=last;m++){
+      if(y<ds.y||(y===ds.y&&m<ds.mo))continue;   // before we have any data
+      total+=glExpected(y,m,s);
+    }
+  });
+  return total;
+}
 function aaPeriodLabel(mod){
   const m=aEl(mod,'tMonth').value,y=aEl(mod,'tYear').value;
   const mName=m?AA_MONTHS_FULL[parseInt(m,10)-1]:'';
@@ -4835,15 +4895,15 @@ window.aaRenderTrend=function(mod){
     let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
     (byStudent[id]=byStudent[id]||[]).push({date:d,count:n});
   });
-  const span=aaMonthsInSpan(mod),expected=4*span;
   st.summary=list.map(s=>{
     const id=String(s.ID);
     const hits=(byStudent[id]||[]).sort((a,b)=>a.date.localeCompare(b.date));
     const days=hits.reduce((t,h)=>t+h.count,0);
-    const pct=expected?Math.round(days/expected*100):0;
-    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',days,dates:hits,pct,tier:aaTier(pct)};
+    const exp=aaExpectedFor(mod,s);          // this student's own expectation
+    const pct=exp?Math.round(days/exp*100):0;
+    return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',days,exp,dates:hits,pct,tier:exp?aaTier(pct):'none'};
   });
-  aEl(mod,'tMeta').textContent=`· ${st.summary.length} student${st.summary.length===1?'':'s'} · expected ${expected} ${c.unit}`;
+  aEl(mod,'tMeta').textContent=`· ${st.summary.length} student${st.summary.length===1?'':'s'} · ${aaPeriodLabel(mod)} · expected is per student, from their join date`;
   if(!st.summary.length){card.innerHTML='<div class="pay-empty">No students match this selection.</div>';return;}
   const fmtDates=(arr)=>arr.length?arr.map(d=>{
     return `<span class="aa-chip">${esc(chipDate(d.date))}${d.count>1?' ×'+d.count:''}</span>`;
@@ -4853,15 +4913,19 @@ window.aaRenderTrend=function(mod){
     </tr></thead><tbody>${st.summary.map((s,i)=>`<tr data-sid="${esc(s.id)}" class="${String(s.id)===String(selectedStudentId)?'row-selected':''}">
       <td class="pay-stu-link" title="Open ${esc(s.name)}'s profile" onclick="openProfile('${jsq(s.id)}')"><strong>${esc(s.name)}</strong><br><span class="pay-sid2">${esc(s.id)}</span><span class="pay-stu-go">View profile ›</span></td>
       <td>${esc(s.tutor||'—')}</td>
-      <td>${s.days}</td>
+      <td>${s.days}${s.exp?' <span class="aa-of">of '+s.exp+'</span>':''}</td>
       <td class="aa-dates-col">${fmtDates(s.dates)}</td>
-      <td><span class="aa-pct ${s.tier}">${s.pct}%</span></td>
+      <td><span class="aa-pct ${s.tier}">${s.exp?s.pct+'%':'—'}</span></td>
       <td><button class="aa-wa-ico" title="Share on WhatsApp" onclick="aaShareOne('${mod}',${i})">${aaWaIcon()}</button></td>
     </tr>`).join('')}</tbody></table>`;
 };
 
 /* ── WhatsApp sharing (reuses the shared review modal) ── */
-function aaLine(mod,s){return `${s.name}: ${s.days} ${AA[mod].verb}, ${s.pct}% ${aaEmoji(s.pct)}`;}
+// Each line carries its own expectation now — there is no single number for the group.
+function aaLine(mod,s){
+  if(!s.exp)return `${s.name}: ${s.days} ${AA[mod].verb} (joined too recently to rate)`;
+  return `${s.name}: ${s.days} of ${s.exp} ${AA[mod].verb}, ${s.pct}% ${aaEmoji(s.pct)}`;
+}
 window.aaShareOne=function(mod,i){
   const c=AA[mod],s=aaState[mod].summary[i];if(!s)return;
   const stu=studentsData.find(x=>String(x.ID)===String(s.id));
@@ -4874,9 +4938,8 @@ window.aaShareAll=function(mod){
   const c=AA[mod],rows=aaState[mod].summary;
   if(!rows.length){toast('Nothing to share yet.');return;}
   waTargetPhone='';   // broadcast: opens WhatsApp with no recipient preset
-  const expected=4*aaMonthsInSpan(mod);
   $('waModalTitle').textContent=c.shareAll;
-  $('wa_Msg').value=`*${c.shareAll}*\nPeriod: ${aaPeriodLabel(mod)}\nExpected: ${expected} ${c.unit}\n\n`+rows.map(s=>aaLine(mod,s)).join('\n');
+  $('wa_Msg').value=`*${c.shareAll}*\nPeriod: ${aaPeriodLabel(mod)}\n\n`+rows.map(s=>aaLine(mod,s)).join('\n');
   $('waModal').classList.add('open');
 };
 window.copyWaModal=async function(){
