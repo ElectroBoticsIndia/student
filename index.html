@@ -77,7 +77,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-hei
 .charts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-bottom:24px}
 .chart-container{position:relative;min-height:280px}
 .chart-title{font-family:var(--font-mono);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent-dark);margin-bottom:0}
-#stuHeadCount,#leadHeadCount{color:var(--accent)}
+.chart-sub{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}
+.chart-sub b{color:var(--text);font-weight:700}
+#stuHeadCount,#leadHeadCount,#payHeadCount{color:var(--accent)}
 .pay-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .pay-controls{display:flex;gap:8px}
 .pay-controls select{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
@@ -631,6 +633,12 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .aa-count button{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:6px 9px;border:none;background:#fff;color:var(--text-dim);cursor:pointer;border-right:1px solid var(--border)}
 .aa-count button:last-child{border-right:none}
 .aa-count button.on{background:var(--amber);color:#fff}
+/* Clearing a mark, and the pending-deletion state that follows for a saved row */
+.aa-clear{flex:none;font-family:var(--font-mono);font-size:11px;font-weight:700;line-height:1;padding:6px 9px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-light);cursor:pointer;transition:all .18s}
+.aa-clear:hover{background:var(--red-light);color:var(--red);border-color:var(--red-light)}
+.aa-rm{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--red-light);color:#c0472a;white-space:nowrap}
+.aa-undo{font-family:var(--font-mono);font-size:11px;font-weight:700;padding:5px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-dim);cursor:pointer}
+.aa-undo:hover{background:var(--surface-alt);color:var(--text)}
 .aa-chip{display:inline-block;font-family:var(--font-mono);font-size:10px;background:var(--accent-light);color:var(--accent-dark);border-radius:20px;padding:2px 8px;margin:2px 3px 2px 0;white-space:nowrap}
 .aa-nodates{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .aa-pct{display:inline-block;font-family:var(--font-mono);font-size:11px;font-weight:700;border-radius:20px;padding:3px 9px;white-space:nowrap}
@@ -806,7 +814,7 @@ table.avail td.occ{border:1px solid transparent}
     <div class="stats-grid" id="statsGrid"></div>
     <div class="charts-grid">
       <div class="chart-card"><div class="chart-title">Students per Level</div><div class="chart-container"><canvas id="chartLevel"></canvas></div></div>
-      <div class="chart-card"><div class="chart-title">Students by Country</div><div class="chart-container"><canvas id="chartBatch"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Students by Country</div><div class="chart-sub" id="countrySplit"></div><div class="chart-container"><canvas id="chartBatch"></canvas></div></div>
       <div class="chart-card"><div class="chart-title">Students per Tutor</div><div class="chart-container"><canvas id="chartTutor"></canvas></div></div>
     </div>
     <div class="chart-card" style="padding:0;overflow:hidden;">
@@ -905,7 +913,7 @@ table.avail td.occ{border:1px solid transparent}
     <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header">
         <div class="stu-title-wrap">
-          <span class="table-title">Fee Payments</span>
+          <span class="table-title">Fee Payments <span id="payHeadCount"></span></span>
           <select id="payMonth" onchange="buildPayments();buildRevenue()" class="pay-mini"></select>
           <select id="payYear" onchange="loadPayments()" class="pay-mini"></select>
           <input type="text" id="payFilterName" class="stu-search" placeholder="Search name, ref, note…" oninput="buildPayments()">
@@ -986,7 +994,7 @@ table.avail td.occ{border:1px solid transparent}
       <div class="modal-head"><h3 id="paymentModalTitle">Add Payment</h3><button class="modal-close" onclick="closePaymentForm()">&times;</button></div>
       <div class="modal-body">
         <div class="pay-modal-sub" id="paymentModalSub"></div>
-        <div class="form-row"><label>Amount received</label>
+        <div class="form-row"><label id="pay_AmountLabel">Amount received</label>
           <div class="pay-amt-row">
             <select id="pay_Currency" class="pay-mini" onchange="onPayCurrencyChange()"></select>
             <input type="text" id="pay_Amount" inputmode="decimal" placeholder="e.g. 1500" oninput="this.dataset.auto=''">
@@ -1583,6 +1591,18 @@ window.toggleMigCard=function(bodyId,chevId){
 };
 window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
 document.addEventListener('click',()=>{const d=$('acctDrop');if(d)d.classList.remove('open');});
+/* Every dialog opens at the top. Both the overlay and the body scroll, and the browser
+   keeps whatever position was left behind last time — so a tall dialog reopened after
+   scrolling came up already scrolled down. The overlay only becomes scrollable once it
+   is displayed, hence the second reset on the next frame. */
+function showModal(id){
+  const ov=$(id);if(!ov)return;
+  ov.classList.add('open');
+  const body=ov.querySelector('.modal-body');
+  const top=()=>{ov.scrollTop=0;if(body)body.scrollTop=0;};
+  top();
+  if(window.requestAnimationFrame)requestAnimationFrame(top);
+}
 // Escape closes whichever dialog is on top. It clicks that dialog's own close button, so
 // each one runs its real cancel path rather than just having the overlay hidden.
 document.addEventListener('keydown',(e)=>{
@@ -1737,7 +1757,7 @@ window.openLeadForm=function(id){
   setComboValue('l_Batch',lead?(lead['Preferred Batch']||''):'');
   $('l_Msg').textContent='';$('l_SaveBtn').disabled=false;
   const del=$('l_DeleteBtn');del.style.display=editingLeadId?'':'none';del.disabled=false;
-  $('leadModal').classList.add('open');
+  showModal('leadModal');
 };
 window.closeLeadForm=function(){$('leadModal').classList.remove('open');editingLeadId=null;};
 function currentSource(){return String($('l_Source').value||'').trim();}
@@ -1807,7 +1827,7 @@ window.openHist=async function(id){
   $('h_Status').value=lead?(lead.Status||'Enquiry'):'Enquiry';
   $('h_Note').value='';$('h_Msg').textContent='';$('h_SaveBtn').disabled=false;
   $('histList').innerHTML='<div class="pay-empty"><span class="spinner"></span> Loading…</div>';
-  $('histModal').classList.add('open');
+  showModal('histModal');
   try{
     const snap=await getDocs(query(collection(db,'leads',id,'history'),orderBy('at','desc')));
     const items=snap.docs.map(d=>d.data());
@@ -2059,7 +2079,7 @@ window.openCertModal=function(i){
   $('certModalTitle').textContent='Certificate · '+level.name;
   $('certMsg').value=certMsg;
   $('certPreview').innerHTML='<div class="cert-loading"><span class="spinner"></span> Preparing certificate…</div>';
-  $('certModal').classList.add('open');
+  showModal('certModal');
   generateCertificate(level.certTemplate,name,completionDate,level,(canvas)=>{
     if(!canvas){$('certPreview').innerHTML='<div class="cert-err">Could not load the certificate template. Ensure the image is shared publicly on Google Drive.</div>';return;}
     canvas.toBlob(b=>{
@@ -2321,7 +2341,7 @@ window.openNoticeForm=function(){
     ? '<div class="notice-empty" style="margin-bottom:8px;">Currently showing:</div>'+profNotices.map(n=>
         `<div class="notice-item"><span class="notice-cat ${esc(String(n.category||'General').toLowerCase())}">${esc(n.category||'General')}</span><div class="notice-text">${esc(n.text||'')}</div><div class="notice-meta"><button class="notice-del" onclick="removeNotice('${jsq(n._id)}',true)">Remove</button></div></div>`).join('')
     : '';
-  $('noticeModal').classList.add('open');
+  showModal('noticeModal');
 };
 window.closeNoticeForm=function(){$('noticeModal').classList.remove('open');};
 window.saveNotice=async function(){
@@ -2498,9 +2518,9 @@ window.openGlance=function(key){
   const title={att:'Attendance',asg:'Assignments',pay:'Payments'}[key];
   $('glanceTitle').textContent=title+' · '+g.year;
   const body=$('glanceBody');
-  if(key==='pay'){body.innerHTML=glPaymentsHtml(g);$('glanceModal').classList.add('open');return;}
+  if(key==='pay'){body.innerHTML=glPaymentsHtml(g);showModal('glanceModal');return;}
   const src=key==='att'?g.att:g.asg;
-  if(!src){body.innerHTML='<div class="pay-empty">Not available right now.</div>';$('glanceModal').classList.add('open');return;}
+  if(!src){body.innerHTML='<div class="pay-empty">Not available right now.</div>';showModal('glanceModal');return;}
   const word=key==='att'?'attended':'submitted';
   const from=glFromMonth(g.year,g.student);
   let rows='';
@@ -2523,7 +2543,7 @@ window.openGlance=function(key){
   }
   body.innerHTML=`<div class="gl-rows">${rows}</div>
     <div class="gl-note">Expected counts this student’s own class days — their batch day, from their join date onwards, up to today. A cancelled class or a holiday can still read lower without anything being wrong.</div>`;
-  $('glanceModal').classList.add('open');
+  showModal('glanceModal');
 };
 function glPaymentsHtml(g){
   const s=g.student,ctx=payCtxFrom(g.pay||[]);
@@ -2719,7 +2739,7 @@ function openProjectForm(level,p){
   $('pj_Code').value=p?(p['Code Link']||''):'';
   $('pj_Msg').textContent='';$('pj_Msg').className='msg';
   $('pj_SaveBtn').disabled=false;$('pj_Name').classList.remove('invalid');
-  $('projectModal').classList.add('open');
+  showModal('projectModal');
   setTimeout(()=>{const el=$('pj_Name');if(el)el.focus();},60);
 }
 window.addProject=function(level){openProjectForm(level,null);};
@@ -2924,7 +2944,7 @@ window.openStudentForm=function(id,prefill){
   }
   onStuStatusChange();onStuReasonChange();updatePhotoPreview();
   $('s_Msg').textContent='';$('s_Msg').className='modal-msg';$('s_SaveBtn').disabled=false;
-  $('studentModal').classList.add('open');
+  showModal('studentModal');
 };
 window.closeStudentForm=function(){
   const id=editingStudentId;
@@ -3315,6 +3335,7 @@ window.buildPayments=function(){
   const chipsHtml=`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`+chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue);
   if(summary.innerHTML!==chipsHtml)summary.innerHTML=chipsHtml;
   payVisibleRows=rows;   // what the Excel download exports
+  const phc=$('payHeadCount');if(phc)phc.textContent='('+rows.length+')';
   if(!rows.length){list.innerHTML='<div class="pay-empty">No students match the current filters.</div>';return;}
   const waIco='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
@@ -3348,6 +3369,7 @@ window.openPaymentForm=function(sid,name,fee){
   const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Fee',mode:'paid'};
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
+  $('pay_AmountLabel').textContent='Amount received';
   $('paymentModalTitle').textContent='Add Payment';$('paymentModalSub').textContent=`${name} · Fee · ${PAY_MONTHS[month-1]} ${year}`;
   // The suggested amount follows the currency the dropdown just defaulted to, so the
   // number and the code beside it always belong together.
@@ -3355,7 +3377,7 @@ window.openPaymentForm=function(sid,name,fee){
   amtEl.value=payFeeSuggestion(sid,($('pay_Currency')||{}).value||'INR');
   amtEl.dataset.auto='1';
   const t=new Date();$('pay_Date').value=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
-  $('pay_Method').value='';$('pay_Note').value='';$('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
+  $('pay_Method').value='';$('pay_Note').value='';$('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;showModal('paymentModal');
 };
 window.closePaymentForm=function(){$('paymentModal').classList.remove('open');};
 window.savePaymentForm=async function(){
@@ -3415,7 +3437,7 @@ window.payWhatsApp=function(sid){
   }
   const msg=`Dear Parent,\n\nGentle reminder to make the fees payment for the month of ${month.slice(0,3)} ${year}.\n${dues}\nKindly share the screenshot of your transfer if done already.\n\nThank you,\nTeam ElectroBotics`;
   waTargetPhone=String(s.Contact||'').replace(/[^0-9+]/g,'');
-  $('waModalTitle').textContent='Reminder · '+s.Name;$('wa_Msg').value=msg;$('waModal').classList.add('open');
+  $('waModalTitle').textContent='Reminder · '+s.Name;$('wa_Msg').value=msg;showModal('waModal');
 };
 window.closeWaModal=function(){$('waModal').classList.remove('open');};
 window.sendWaModal=function(){const text=encodeURIComponent($('wa_Msg').value);const base=waTargetPhone?('https://wa.me/'+waTargetPhone+'?text='):'https://wa.me/?text=';window.open(base+text,'_blank');closeWaModal();};
@@ -3561,11 +3583,13 @@ function openDueForm(sid,type){
   const year=$('payYear').value,month=$('payMonth').value;
   payCurrentCtx={studentId:sid,year,month,type,mode:'due'};
   $('paymentModalTitle').textContent=type+' Due';
+  // Nothing has been received here — this is what the kit or components will cost.
+  $('pay_AmountLabel').textContent=type+' amount';
   $('paymentModalSub').textContent=`${s?s.Name:sid} · ${type} · ${PAY_MONTHS[month-1]} ${year}`;
   $('pay_Amount').value='';$('pay_Note').value='';
   $('pay_DateRow').style.display='none';$('pay_MethodRow').style.display='none';
   $('pay_SaveBtn').textContent='Flag as due';
-  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
+  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;showModal('paymentModal');
   setTimeout(()=>{try{$('pay_Amount').focus();}catch(e){}},60);
 }
 window.flagKit=function(sid){openDueForm(sid,'Kit');};
@@ -3575,12 +3599,13 @@ window.openKitForm=function(sid,name){
   payShowCurrency(sid,ex&&ex.Currency);
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
+  $('pay_AmountLabel').textContent='Amount received';
   $('paymentModalTitle').textContent=isPaid?'Edit Kit Payment':'Kit Payment';
   $('paymentModalSub').textContent=`${name} · Kit · ${PAY_MONTHS[month-1]} ${year}`;
   $('pay_Amount').value=ex&&ex.Amount?String(ex.Amount):'';
   const t=new Date();$('pay_Date').value=(ex&&ex['Paid Date'])?String(ex['Paid Date']):(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'));
   $('pay_Method').value=(ex&&ex.Method)||'';$('pay_Note').value=(ex&&ex.Note)||'';
-  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
+  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;showModal('paymentModal');
 };
 window.revertKit=async function(sid,btn){
   const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Remove the kit payment entry for this month?'))return;const done=payBtnBusy(btn);
@@ -3595,12 +3620,13 @@ window.openComponentsForm=function(sid,name){
   payShowCurrency(sid,ex&&ex.Currency);
   $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
   $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
+  $('pay_AmountLabel').textContent='Amount received';
   $('paymentModalTitle').textContent=isPaid?'Edit Components Payment':'Components Payment';
   $('paymentModalSub').textContent=`${name} · Components · ${PAY_MONTHS[month-1]} ${year}`;
   $('pay_Amount').value=ex&&ex.Amount?String(ex.Amount):'';
   const t=new Date();$('pay_Date').value=(ex&&ex['Paid Date'])?String(ex['Paid Date']):(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'));
   $('pay_Method').value=(ex&&ex.Method)||'';$('pay_Note').value=(ex&&ex.Note)||'';
-  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;$('paymentModal').classList.add('open');
+  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;showModal('paymentModal');
 };
 window.revertComponents=async function(sid,btn){
   const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Remove the components payment entry for this month?'))return;const done=payBtnBusy(btn);
@@ -3624,7 +3650,7 @@ let componentHistoryData=[];
 window.openComponentHistory=async function(sid,name){
   $('compHistTitle').textContent=`Components History · ${name}`;
   $('compHistList').innerHTML='<div class="pay-empty"><span class="spinner"></span> Loading…</div>';
-  $('compHistModal').classList.add('open');
+  showModal('compHistModal');
   try{
     const snap=await getDocs(query(collection(db,'componentHistory'),where('Student ID','==',String(sid))));
     componentHistoryData=snap.docs.map(d=>d.data());
@@ -4255,7 +4281,7 @@ window.renderTutorStats=function(){
 window.openTutorNotes=function(tutor,category){
   tutorNotesCtx={tutor,category};$('tutorNotesTitle').textContent=`${category} notes · ${tutor}`;
   $('tn_Input').value='';$('tn_Msg').textContent='';$('tn_SaveBtn').disabled=false;
-  renderTutorNotesList();$('tutorNotesModal').classList.add('open');
+  renderTutorNotesList();showModal('tutorNotesModal');
 };
 window.closeTutorNotes=function(){$('tutorNotesModal').classList.remove('open');};
 function renderTutorNotesList(){
@@ -4349,6 +4375,14 @@ function buildCharts(){
       scales:{x:{ticks:{font:{family:fontMono,size:9},color:'#8db5b9',maxRotation:45}},y:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'15%'}}}});
   const cMap={};active.forEach(s=>{const c=s.Country||'Unknown';cMap[c]=(cMap[c]||0)+1;});
   const sc=Object.entries(cMap).sort((a,b)=>b[1]-a[1]);const cLabels=sc.map(c=>c[0]),cData=sc.map(c=>c[1]);const tot=active.length;
+  // India vs international at a glance — the per-country bars don't add that up for you.
+  const nIndia=active.filter(s=>isIndia(s.Country)).length, nIntl=active.length-nIndia;
+  /* No colour swatches here: the bars are coloured per country, so a India/International
+     swatch would point at nothing in the chart. */
+  const csEl=$('countrySplit');
+  if(csEl)csEl.innerHTML=`<span>India <b>${nIndia}</b>${tot?' · '+Math.round(nIndia/tot*100)+'%':''}</span>`
+    +`<span>International <b>${nIntl}</b>${tot?' · '+Math.round(nIntl/tot*100)+'%':''}</span>`
+    +`<span>Total <b>${tot}</b></span>`;
   summaryCharts.batch=new Chart($('chartBatch'),{type:'bar',
     data:{labels:cLabels,datasets:[{data:cData,backgroundColor:colors.slice(0,cLabels.length),borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:48}},onClick:(e,els)=>{if(els.length)goStudentsFiltered('country',cLabels[els[0].index]);},
@@ -4759,9 +4793,14 @@ window.aaLoadRoster=async function(mod){
       const r=d.data();const sid=String(r.StudentID||'').trim();if(!sid)return;
       const status=String(r.Status||'').toLowerCase();
       let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
+      // Keep every document id we saw for this student+date. Removing an entry deletes
+      // the real documents rather than an id rebuilt from the naming convention, so a
+      // legacy or duplicate row can't survive the delete.
+      const ids=(marked[sid]&&marked[sid].ids)||[];
+      if(ids.indexOf(d.id)<0)ids.push(d.id);
       // Legacy rows can duplicate a student+date; the positive status wins.
-      if(marked[sid]&&marked[sid].status===c.pos&&status!==c.pos)return;
-      marked[sid]={status,count:n};
+      if(marked[sid]&&marked[sid].status===c.pos&&status!==c.pos){marked[sid].ids=ids;return;}
+      marked[sid]={status,count:n,ids};
     });
   }catch(e){
     console.error('aa prefill',e);
@@ -4785,14 +4824,24 @@ function aaStatusCellHtml(mod,s){
   const c=AA[mod],st=aaState[mod];
   const m=st.mark[s.ID]||{status:null,count:1};const n=m.count||1;
   const sid=jsq(s.ID);
+  const saved=(st.prefill||{})[s.ID];
+  // Was saved, is now cleared: Save will DELETE that row. Say so, and offer a way back.
+  if(!m.status&&saved&&saved.status){
+    return `<div class="aa-status-cell"><span class="aa-rm">Will be removed</span>
+      <button class="aa-undo" onclick="event.stopPropagation();aaRestoreMark('${mod}','${sid}')">Undo</button></div>`;
+  }
   const count=`<div class="aa-count" style="${m.status===c.pos?'':'visibility:hidden'}">
       <button class="${n===1?'on':''}" onclick="event.stopPropagation();aaSetCount('${mod}','${sid}',1)">×1</button>
       <button class="${n===2?'on':''}" onclick="event.stopPropagation();aaSetCount('${mod}','${sid}',2)">×2</button>
     </div>`;
+  // An explicit clear beats "tap the active button again" — nobody discovers that.
+  const clear=m.status
+    ? `<button class="aa-clear" title="${saved&&saved.status?'Remove this saved entry':'Clear this mark'}" onclick="event.stopPropagation();aaClearMark('${mod}','${sid}')">✕</button>`
+    : '';
   return `<div class="aa-status-cell"><div class="aa-seg">
       <button class="pos ${m.status===c.pos?'on':''}" onclick="aaSetStatus('${mod}','${sid}','${c.pos}')"><span class="lbl-full">${c.posLbl}</span><span class="lbl-short">${c.posShort}</span></button>
       <button class="neg ${m.status===c.neg?'on':''}" onclick="aaSetStatus('${mod}','${sid}','${c.neg}')"><span class="lbl-full">${c.negLbl}</span><span class="lbl-short">${c.negShort}</span></button>
-    </div>${count}</div>`;
+    </div>${count}${clear}</div>`;
 }
 // Repaint a single row instead of the whole table — with the full roster on screen that
 // is the difference between an instant tap and a visible stall on every click.
@@ -4806,9 +4855,13 @@ function aaUpdateRow(mod,id){
 function aaUpdateMarkedCount(mod){
   const st=aaState[mod],el=aEl(mod,'markedCount');if(!el)return;
   const n=st.roster.filter(s=>st.mark[s.ID]&&st.mark[s.ID].status).length;
-  const u=aaUnsavedCount(mod);
-  el.textContent=!n?'nothing marked yet':(u?`${n} marked · ${u} unsaved`:`${n} marked · all saved`);
-  el.className='aa-marked'+(u?' on':'');
+  const p=aaPending(mod);
+  const bits=[];
+  if(p.changed)bits.push(`${p.changed} unsaved`);
+  if(p.removed)bits.push(`${p.removed} to remove`);
+  el.textContent=(!n&&!p.removed)?'nothing marked yet'
+    :(bits.length?`${n} marked · ${bits.join(' · ')}`:`${n} marked · all saved`);
+  el.className='aa-marked'+(p.total?' on':'');
 }
 function aaRenderRoster(mod){
   const st=aaState[mod],box=aEl(mod,'roster');
@@ -4834,20 +4887,31 @@ window.aaSetStatus=function(mod,id,status){
   aaUpdateRow(mod,id);
 };
 window.aaSetCount=function(mod,id,n){const m=aaState[mod].mark[id];if(!m)return;m.count=n;aaUpdateRow(mod,id);};
+window.aaClearMark=function(mod,id){
+  const m=aaState[mod].mark[id];if(!m)return;
+  m.status=null;m.count=1;aaUpdateRow(mod,id);
+};
+window.aaRestoreMark=function(mod,id){
+  const st=aaState[mod],p=(st.prefill||{})[id];if(!p)return;
+  st.mark[id]={status:p.status,count:p.count||1};aaUpdateRow(mod,id);
+};
 
-// Marks that differ from what is already saved for this date. st.mark is seeded FROM
-// the saved marks (st.prefill), so counting everything with a status would flag a fully
-// saved day as unsaved.
-function aaUnsavedCount(mod){
+/* What Save would actually write for this date. st.mark is seeded FROM the saved marks
+   (st.prefill), so counting everything with a status would flag a fully saved day as
+   unsaved — and a mark the tutor CLEARED is a pending deletion, not "nothing to do". */
+function aaPending(mod){
   const st=aaState[mod],saved=st.prefill||{};
-  return st.roster.filter(s=>{
-    const m=st.mark[s.ID];
-    if(!m||!m.status)return false;                 // nothing set — Save writes nothing
-    const p=saved[s.ID];
-    if(!p||!p.status)return true;                  // newly marked
-    return p.status!==m.status||(p.count||1)!==(m.count||1);   // changed since saving
-  }).length;
+  let changed=0,removed=0;
+  st.roster.forEach(s=>{
+    const m=st.mark[s.ID],p=saved[s.ID];
+    const has=!!(m&&m.status), had=!!(p&&p.status);
+    if(!has){if(had)removed++;return;}             // cleared a saved row → delete it
+    if(!had){changed++;return;}                    // newly marked
+    if(p.status!==m.status||(p.count||1)!==(m.count||1))changed++;
+  });
+  return {changed,removed,total:changed+removed};
 }
+function aaUnsavedCount(mod){return aaPending(mod).total;}
 // Opening a profile from the Mark screen throws away anything marked but not saved,
 // so confirm before navigating rather than losing a tutor's work silently.
 window.aaGoProfile=function(mod,id){
@@ -4861,32 +4925,60 @@ window.aaSave=async function(mod){
   if(!date){toast('Pick a date first.');return;}
   const records=st.roster.filter(s=>st.mark[s.ID]&&st.mark[s.ID].status)
     .map(s=>({id:String(s.ID),status:st.mark[s.ID].status,count:st.mark[s.ID].count||1}));
-  if(!records.length){toast('Nothing marked to save.');return;}
+  // Rows that were saved for this date and have since been cleared: delete them. A
+  // tutor who marked the wrong date needs this to be a real write, not a no-op.
+  const removals=st.roster.filter(s=>{
+    const m=st.mark[s.ID],p=(st.prefill||{})[s.ID];
+    return (!m||!m.status)&&p&&p.status;
+  }).map(s=>({id:String(s.ID),ids:((st.prefill[s.ID]||{}).ids||[])}));
+  if(!records.length&&!removals.length){toast('No changes to save.');return;}
+  if(removals.length){
+    const what=`${removals.length} saved entr${removals.length===1?'y':'ies'} for ${date}`;
+    if(!confirm(records.length
+      ? `Delete ${what} and save ${records.length} change${records.length===1?'':'s'}?`
+      : `Delete ${what}? This cannot be undone.`))return;
+  }
   const btn=aEl(mod,'saveBtn');const prev=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Saving…';
-  let saved=0,failed=0;
+  let saved=0,gone=0,failed=false;
+  const conv=(sid)=>(sid+'_'+date).replace(/[\/#\.\[\]]/g,'_');
   try{
     let wb=writeBatch(db),n=0;
+    const flush=async()=>{if(n>0){await wb.commit();wb=writeBatch(db);n=0;}};
     for(const r of records){
-      const docId=(r.id+'_'+date).replace(/[\/#\.\[\]]/g,'_');
-      wb.set(doc(db,c.col,docId),{StudentID:r.id,Date:date,Status:r.status,Count:String(r.count),
+      wb.set(doc(db,c.col,conv(r.id)),{StudentID:r.id,Date:date,Status:r.status,Count:String(r.count),
         updatedAt:serverTimestamp(),updatedBy:(currentUser&&currentUser.email)||''},{merge:true});
       n++;saved++;
-      if(n>=400){await wb.commit();wb=writeBatch(db);n=0;}
+      if(n>=400)await flush();
     }
-    if(n>0)await wb.commit();
-  }catch(e){console.error('aa save',e);failed=records.length;saved=0;}
+    for(const r of removals){
+      // Delete the documents actually seen for this student+date; fall back to the
+      // conventional id if the prefill didn't record one.
+      const targets=r.ids.length?r.ids:[conv(r.id)];
+      for(const t of targets){wb.delete(doc(db,c.col,t));n++;if(n>=400)await flush();}
+      gone++;
+    }
+    await flush();
+  }catch(e){console.error('aa save',e);failed=true;}
   btn.disabled=false;btn.innerHTML=prev;
   if(failed){toast('Save failed — check your connection and try again.');return;}
   // Local patch: keep the prefill and the shared collection cache in step so
   // At-Risk / Trends reflect the save without a refetch.
   const key=mod+'|'+date;
   if(st.prefillKey!==key){st.prefillKey=key;st.prefill={};}
-  records.forEach(r=>{st.prefill[r.id]={status:r.status,count:r.count};});
-  aaPatchCache(mod,date,records);
-  toast(`Saved ${saved} student${saved>1?'s':''} for ${date}`);
+  records.forEach(r=>{
+    const old=st.prefill[r.id]||{};
+    st.prefill[r.id]={status:r.status,count:r.count,ids:old.ids&&old.ids.length?old.ids:[conv(r.id)]};
+  });
+  removals.forEach(r=>{delete st.prefill[r.id];});
+  aaPatchCache(mod,date,records,removals.map(r=>r.id));
+  aaRenderRoster(mod);   // removal pills become plain unmarked rows
+  const parts=[];
+  if(saved)parts.push(`Saved ${saved} student${saved>1?'s':''}`);
+  if(gone)parts.push(`removed ${gone} entr${gone===1?'y':'ies'}`);
+  toast(`${parts.join(', ')} for ${date}`);
 };
-function aaPatchCache(mod,date,records){
-  const ids=new Set(records.map(r=>r.id));
+function aaPatchCache(mod,date,records,removedIds){
+  const ids=new Set(records.map(r=>r.id).concat(removedIds||[]));
   const keep=(arr)=>arr.filter(r=>!(String(r.Date)===date&&ids.has(String(r.StudentID||'').trim())));
   const added=records.map(r=>({StudentID:r.id,Date:date,Status:r.status,Count:String(r.count)}));
   if(mod==='attendance'){ if(attendanceLoaded)attendanceData=keep(attendanceData).concat(added); }
@@ -5028,7 +5120,7 @@ window.aaShareOne=function(mod,i){
   waTargetPhone=stu?String(stu.Contact||'').replace(/[^0-9+]/g,''):'';
   $('waModalTitle').textContent=c.shareOne+' · '+s.name;
   $('wa_Msg').value=`*${c.shareOne}*\nPeriod: ${aaPeriodLabel(mod)}\n\n${aaLine(mod,s)}`;
-  $('waModal').classList.add('open');
+  showModal('waModal');
 };
 window.aaShareAll=function(mod){
   const c=AA[mod],rows=aaState[mod].summary;
@@ -5036,7 +5128,7 @@ window.aaShareAll=function(mod){
   waTargetPhone='';   // broadcast: opens WhatsApp with no recipient preset
   $('waModalTitle').textContent=c.shareAll;
   $('wa_Msg').value=`*${c.shareAll}*\nPeriod: ${aaPeriodLabel(mod)}\n\n`+rows.map(s=>aaLine(mod,s)).join('\n');
-  $('waModal').classList.add('open');
+  showModal('waModal');
 };
 window.copyWaModal=async function(){
   const ta=$('wa_Msg'),btn=$('wa_CopyBtn');
