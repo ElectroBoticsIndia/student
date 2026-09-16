@@ -4360,6 +4360,27 @@ function buildStats(){
     <div class="stat-card purple"><div class="stat-label">Active Rate</div><div class="stat-value">${total?Math.round(active/total*100):0}%</div><div class="stat-sub">${active} of ${total} students</div></div>
     <div class="stat-card amber"><div class="stat-label">Tutors</div><div class="stat-value">${tutors.size}</div><div class="stat-sub">${active&&tutors.size?Math.round(active/tutors.size):0} students avg</div></div>`;
 }
+/* Break a long axis label into lines of at most `max` characters, splitting on spaces and
+   on the " - " that separates a country from a locality. Returns a plain string when it
+   already fits, or an array of lines — Chart.js draws each entry on its own line. */
+function wrapLabel(s,max){
+  const t=String(s==null?'':s).trim();
+  if(t.length<=max)return t;
+  const words=t.replace(/\s*-\s*/g,' - ').split(/\s+/);
+  const lines=[];let cur='';
+  words.forEach(w=>{
+    const next=cur?cur+' '+w:w;
+    if(next.length<=max||!cur)cur=next;
+    else{lines.push(cur);cur=w;}
+  });
+  if(cur)lines.push(cur);
+  // A line ending in a dangling "-" reads as unfinished; carry it to the next line so it
+  // reads as a continuation: ["India", "- Nanganallur"].
+  for(let i=0;i<lines.length-1;i++){
+    if(/\s-$/.test(lines[i])){lines[i]=lines[i].replace(/\s-$/,'');lines[i+1]='- '+lines[i+1];}
+  }
+  return lines.length>1?lines:t;
+}
 function buildCharts(){
   if(typeof Chart==='undefined')return;
   if(window.ChartDataLabels&&Chart.register)try{Chart.register(window.ChartDataLabels);}catch(e){}
@@ -4381,13 +4402,18 @@ function buildCharts(){
      swatch would point at nothing in the chart. */
   const csEl=$('countrySplit');
   if(csEl)csEl.innerHTML=`<span>India <b>${nIndia}</b>${tot?' · '+Math.round(nIndia/tot*100)+'%':''}</span>`
-    +`<span>International <b>${nIntl}</b>${tot?' · '+Math.round(nIntl/tot*100)+'%':''}</span>`
-    +`<span>Total <b>${tot}</b></span>`;
+    +`<span>International <b>${nIntl}</b>${tot?' · '+Math.round(nIntl/tot*100)+'%':''}</span>`;
   summaryCharts.batch=new Chart($('chartBatch'),{type:'bar',
     data:{labels:cLabels,datasets:[{data:cData,backgroundColor:colors.slice(0,cLabels.length),borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:48}},onClick:(e,els)=>{if(els.length)goStudentsFiltered('country',cLabels[els[0].index]);},
       plugins:{legend:{display:false},tooltip:noTip,datalabels:{anchor:'end',align:'right',color:'#0a373a',clamp:true,clip:false,font:{family:fontMono,size:11,weight:700},formatter:v=>{const p=tot?Math.round(v/tot*100):0;return v+' ('+p+'%)';}}},
-      scales:{x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'30%'},y:{ticks:{font:{family:fontMono,size:11},color:'#5a8a8e',autoSkip:false}}}}});
+      scales:{x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'30%'},
+        /* Chart.js caps how wide a left axis may grow (roughly a third of the chart), so a
+           long country name like "India - Nanganallur" runs off the left edge of the canvas
+           and loses its first letters. Wrapping onto two lines keeps the whole name — an
+           array of strings is rendered as multiple lines. */
+        y:{ticks:{font:{family:fontMono,size:11},color:'#5a8a8e',autoSkip:false,
+          callback(v,i){return wrapLabel(cLabels[i]||this.getLabelForValue(v),14);}}}}}});
   const tMap={};active.forEach(s=>{const t=s.Tutor||'Unassigned';tMap[t]=(tMap[t]||0)+1;});
   const tLabels=Object.keys(tMap),tData=Object.values(tMap);
   summaryCharts.tutor=new Chart($('chartTutor'),{type:'bar',
