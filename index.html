@@ -425,6 +425,25 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .pay-act-history:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .pay-act-wa{color:#128c4b;border-color:#cde8d8;display:inline-flex;align-items:center;justify-content:center;padding:6px 9px}.pay-act-wa:hover{background:#25d366;color:#fff;border-color:#25d366}
 .pay-kit-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+/* Component bills — read from the inventory app */
+.pay-comp-none{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
+.bill-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.bill-card:last-of-type{margin-bottom:0}
+.bill-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.bill-no{font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text)}
+.bill-when{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-top:2px}
+.bill-lines{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 8px}
+.bill-lines td{padding:4px 0;border-bottom:1px solid var(--border)}
+.bill-lines tr:last-child td{border-bottom:none}
+.bill-lines .q{font-family:var(--font-mono);color:var(--text-dim);white-space:nowrap;text-align:right;padding-left:10px}
+.bill-lines .a{font-family:var(--font-mono);font-weight:700;white-space:nowrap;text-align:right;padding-left:12px}
+.bill-tot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:8px;border-top:1px dashed var(--border)}
+.bill-tot-v{font-family:var(--font-mono);font-size:15px;font-weight:700;color:var(--text)}
+.bill-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.bill-legacy{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.bill-legacy-t{font-family:var(--font-mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-light);margin-bottom:8px}
+.bill-legacy-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--font-mono);font-size:11px;color:var(--text-dim);padding:6px 0;border-bottom:1px solid var(--border)}
+.bill-legacy-row:last-child{border-bottom:none}
 .pay-kit-actions{display:flex;gap:5px;flex-wrap:wrap}
 .pay-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .pay-actions-main{display:inline-flex;align-items:center;gap:6px}
@@ -1194,6 +1213,22 @@ table.avail td.occ{border:1px solid transparent}
     <div class="modal-body">
       <div id="glanceBody"></div>
       <div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeGlance()">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Component bills (read from the inventory app's inv_sales) -->
+<div class="modal-overlay" id="billsModal">
+  <div class="modal-card" style="max-width:560px;">
+    <div class="modal-head"><h3 id="billsModalTitle">Component bills</h3><button class="modal-close" onclick="closeBills()">&times;</button></div>
+    <div class="modal-body">
+      <div class="pay-modal-sub" id="billsModalSub"></div>
+      <div id="billsBody"></div>
+      <div class="wa-actions">
+        <button class="wa-btn wa-cancel" onclick="closeBills()">Close</button>
+        <button class="wa-btn pf-save" id="bills_WaBtn" onclick="billsWhatsApp()" style="background:#25d366;border-color:#25d366;">WhatsApp</button>
+      </div>
+      <div class="msg" id="billsMsg"></div>
     </div>
   </div>
 </div>
@@ -2438,17 +2473,20 @@ async function loadProfileGlance(s){
   // Everything for this student, unfiltered by year — a student's history is small, and
   // this way switching year is instant with no refetch and no extra rules surface.
   const grab=async(qy)=>{try{const snap=await getDocs(qy);return snap.docs.map(d=>d.data());}catch(e){console.warn('glance',e);return null;}};
-  const [att,asg,pay]=await Promise.all([
+  const [att,asg,pay,sales]=await Promise.all([
     grab(query(collection(db,'attendance'),where('StudentID','==',sid))),
     grab(query(collection(db,'assignments'),where('StudentID','==',sid))),
-    grab(query(collection(db,'payments'),where('Student ID','==',sid)))
+    grab(query(collection(db,'payments'),where('Student ID','==',sid))),
+    // Component bills live in the inventory app. A single-field equality query, so
+    // a parent's rule can be checked per document without a composite index.
+    grab(query(collection(db,'inv_sales'),where('studentId','==',sid)))
   ]);
   // Offer every year from the data floor to now, newest first.
   const years=[];for(let y=thisY;y>=DATA_START.y;y--)years.push(y);
   const sel=$('profYear');
   sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
   sel.value=String(thisY);
-  profGlanceData={student:s,attRows:att,asgRows:asg,payRows:pay,years,selYear:thisY,thisYear:thisY};
+  profGlanceData={student:s,attRows:att,asgRows:asg,payRows:pay,saleRows:sales||[],years,selYear:thisY,thisYear:thisY};
   renderProfileGlance();
 }
 window.profSetYear=function(y){
@@ -2471,7 +2509,14 @@ function renderProfileGlance(){
   g.att=g.attRows?glMonthRows(g.attRows,'present',g.selYear):null;
   g.asg=g.asgRows?glMonthRows(g.asgRows,'submitted',g.selYear):null;
   g.pay=g.payRows;
+  /* payDues reads component bills from the module-level invSales, which the Payments
+     screen fills. On a profile opened directly that list is empty or belongs to another
+     year, so point it at this student's own bills for the duration of the call. */
+  const keepSales=invSales,keepYear=invSalesYear;
+  invSales=(g.saleRows||[]);invSalesYear=String(g.selYear);
   g.dues=g.payRows?payDues(s,g.selYear,sc.month,payCtxFrom(g.payRows)):null;
+  g.sales=(g.saleRows||[]).filter(b=>parseInt(String(b.date||'').slice(0,4),10)===g.selYear);
+  invSales=keepSales;invSalesYear=keepYear;
   $('profGlanceTitle').textContent=sc.isNow?'This month at a glance':g.selYear+' at a glance';
   const mName=PAY_MONTHS[sc.month-1].slice(0,3)+' '+g.selYear;
   const period=sc.isNow?mName:String(g.selYear);
@@ -2569,21 +2614,34 @@ function glPaymentsHtml(g){
       <span class="gl-status ${cls}">${esc(txt)}</span>
     </div>`;
   }
-  const extras=((ctx.by&&ctx.by[String(s.ID).trim()])||[]).filter(p=>(String(p.Type||'').trim()||'Fee')!=='Fee')
-    .sort((a,b)=>parseInt(payM(a.Month),10)-parseInt(payM(b.Month),10));
+  // Kit still comes from payments; Components are the inventory app's bills, one row
+  // each, so two purchases in a month read as two lines rather than one merged total.
+  const glRow=(mon,label,cls,txt)=>`<div class="gl-row" style="grid-template-columns:64px 1fr auto;">
+          <span class="gl-month">${esc(mon)}</span>
+          <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${label}</span>
+          <span class="gl-status ${cls}">${esc(txt)}</span>
+        </div>`;
+  const extras=((ctx.by&&ctx.by[String(s.ID).trim()])||[])
+    .filter(p=>{const t=(String(p.Type||'').trim()||'Fee');return t!=='Fee'&&t!=='Components';})
+    .map(p=>{
+      const st=String(p.Status||'').toLowerCase(),amt=payAmt(p.Amount);
+      return {m:parseInt(payM(p.Month),10)||1,
+        html:glRow(PAY_MONTHS[(parseInt(payM(p.Month),10)||1)-1].slice(0,3),
+          esc(String(p.Type||''))+(amt!==null?' · '+esc(money(amt,payRowCur(p))):''),
+          st==='paid'?'paid':(st==='ignore'?'skip':'due'),
+          st==='paid'?'Paid':(st==='ignore'?'Not applicable':'Pending'))};
+    })
+    .concat((g.sales||[]).map(b=>{
+      const pm=saleMonth(b)||1,paid=saleIsPaid(b);
+      return {m:pm,html:glRow(PAY_MONTHS[pm-1].slice(0,3),
+        'Components · '+esc(inr(Number(b.total)||0))+' <span style="opacity:.7">'+esc(b.billNo||b._id)+'</span>',
+        paid?'paid':'due', paid?'Paid':'Pending')};
+    }))
+    .sort((a,b)=>a.m-b.m);
   let extraHtml='';
   if(extras.length){
     extraHtml='<div class="gl-note" style="margin-top:18px;margin-bottom:6px;">Kit &amp; components</div><div class="gl-rows">'+
-      extras.map(p=>{
-        const st=String(p.Status||'').toLowerCase();
-        const cls=st==='paid'?'paid':(st==='ignore'?'skip':'due');
-        const txt=st==='paid'?'Paid':(st==='ignore'?'Not applicable':'Pending');
-        const amt=payAmt(p.Amount);
-        return `<div class="gl-row" style="grid-template-columns:64px 1fr auto;">
-          <span class="gl-month">${esc(PAY_MONTHS[(parseInt(payM(p.Month),10)||1)-1].slice(0,3))}</span>
-          <span class="gl-n" style="font-weight:600;color:var(--text-dim);">${esc(String(p.Type||''))}${amt!==null?' · '+esc(money(amt,payRowCur(p))):''}</span>
-          <span class="gl-status ${cls}">${esc(txt)}</span>
-        </div>`;}).join('')+'</div>';
+      extras.map(x=>x.html).join('')+'</div>';
   }
   const d=g.dues;
   const total=(d&&d.count)
@@ -3108,12 +3166,63 @@ window.loadPayments=async function(){
     const snap=await getDocs(query(collection(db,'payments'),where('Year','==',String(year))));
     paymentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));paymentsLoaded=true;payIndex=null;
   }catch(e){console.error('loadPayments',e);paymentsData=[];payIndex=null;}
+  await loadInvSales(year);
   // Attendance feeds the Classes column.
   if(!attendanceLoaded){try{const snap=await getDocs(collection(db,'attendance'));attendanceData=snap.docs.map(d=>d.data());attendanceLoaded=true;}catch(e){console.warn('attendance',e);attendanceData=[];}}
   payLoading=false;
   await loadSettings();
   if(appSettings.fxMode==='live'&&!fxLiveTried){fxLiveTried=true;await fetchFxRates();}
   buildPayments();buildRevenue();
+}
+/* ── Component sales live in the INVENTORY app ──────────────────────────────
+   inv_sales is the single source of truth for what was sold and what is owed.
+   This app reads it, and writes only the payment fields back. Nothing here
+   creates or deletes a sale — a bill can only be raised where the stock is.
+
+   Field shapes are the inventory app's, verbatim:
+     doc id         docId(billNo) — EB-B-0001 lives at EB-B-1
+     studentId      the student's ID, NOT normalised
+     date           'YYYY-MM-DD'
+     total          a number
+     paymentStatus  'paid' | 'pending', LOWERCASE
+     lines[]        {itemCode, name, qty, rate, amount}
+   Any drift in these is silent on both sides, so they are asserted in tests. */
+let invSales=[], invSalesYear=null, invSalesOk=true;
+/** Collapse digit runs to unpadded integers, the inventory app's docId(). */
+const invDocId=(code)=>String(code==null?'':code).trim().toUpperCase()
+  .replace(/\s+/g,' ').replace(/\d+/g,(d)=>String(parseInt(d,10)));
+const saleStatus=(b)=>String((b&&b.paymentStatus)||'pending').trim().toLowerCase();
+const saleIsPaid=(b)=>saleStatus(b)==='paid';
+const saleMonth=(b)=>{const m=String((b&&b.date)||'').slice(5,7);return parseInt(m,10)||0;};
+async function loadInvSales(year){
+  const y=String(year);
+  if(invSalesYear===y&&invSalesOk)return;
+  try{
+    // One single-field range on `date` — no composite index needed, and the year
+    // is the same window the Pending column reports arrears over.
+    const snap=await getDocs(query(collection(db,'inv_sales'),
+      where('date','>=',y+'-01-01'),where('date','<=',y+'-12-31')));
+    invSales=snap.docs.map(d=>({_id:d.id,...d.data()}));
+    invSalesYear=y;invSalesOk=true;
+  }catch(e){
+    // A parent, or rules not yet published. Never fatal — the rest of the screen works.
+    console.warn('inv_sales unavailable',e);
+    invSales=[];invSalesYear=y;invSalesOk=false;
+  }
+}
+/** Every bill for a student in a given month of the loaded year, oldest first. */
+function salesFor(sid,month){
+  const id=String(sid||'').trim(),m=parseInt(month,10)||0;
+  return invSales.filter(b=>String(b.studentId||'').trim()===id&&(!m||saleMonth(b)===m))
+    .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.billNo||'').localeCompare(String(b.billNo||'')));
+}
+/** The month's rollup for the Components cell: how many bills, how much is still owed. */
+function salesRollup(sid,month){
+  const bills=salesFor(sid,month);
+  const unpaid=bills.filter(b=>!saleIsPaid(b));
+  return {bills,n:bills.length,paid:bills.length-unpaid.length,unpaid:unpaid.length,
+    due:unpaid.reduce((s,b)=>s+(Number(b.total)||0),0),
+    total:bills.reduce((s,b)=>s+(Number(b.total)||0),0)};
 }
 // One pass over attendance per render: StudentID -> {count, dates[]} for the selected month.
 function buildPayAttIndex(year,month){
@@ -3231,8 +3340,11 @@ function payDues(s,selY,selM,ctx){
     items.push({type:'Fee',label:'Fee '+PAY_MONTHS[m-1].slice(0,3)+' '+selY,amount:d.amount,currency:d.currency,amountINR:d.amountINR,month:m});
     feeMonths.push(PAY_MONTHS[m-1].slice(0,3));
   }
+  /* Kit still lives in payments. Components do NOT — a Components row there is a
+     pre-cutover record, shown as history and never counted as a live due, so the
+     inventory app's paySync being switched back on can't double-count a debt. */
   ((ctx.by&&ctx.by[sid])||[]).forEach(p=>{
-    const t=(String(p.Type||'').trim()||'Fee');if(t==='Fee')return;
+    const t=(String(p.Type||'').trim()||'Fee');if(t==='Fee'||t==='Components')return;
     const st=String(p.Status||'').toLowerCase();if(st==='paid'||st==='ignore')return;
     const py=parseInt(payY(p.Year),10),pm=parseInt(payM(p.Month),10);
     if(py!==selY||!pm||pm>selM)return;
@@ -3241,6 +3353,20 @@ function payDues(s,selY,selM,ctx){
     tally(d);
     items.push({type:t,label:t+' '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,amount:d.amount,currency:d.currency,amountINR:d.amountINR,month:pm});
     extras.push(t+' '+PAY_MONTHS[pm-1].slice(0,3));
+  });
+  // Unpaid component bills from the inventory app, up to the selected month.
+  // Bills are raised in rupees, so no conversion is involved.
+  invSales.forEach(b=>{
+    if(String(b.studentId||'').trim()!==sid)return;
+    if(saleIsPaid(b))return;
+    const pm=saleMonth(b);if(!pm||pm>selM)return;
+    if(parseInt(String(b.date||'').slice(0,4),10)!==selY)return;
+    const raw=Number(b.total);if(!(raw>0))return;
+    const d={amount:raw,currency:'INR',amountINR:raw};
+    tally(d);
+    items.push({type:'Components',label:'Components '+PAY_MONTHS[pm-1].slice(0,3)+' '+selY,
+      amount:raw,currency:'INR',amountINR:raw,month:pm,billNo:b.billNo||b._id});
+    extras.push('Components '+PAY_MONTHS[pm-1].slice(0,3));
   });
   items.sort((a,b)=>a.month-b.month||a.type.localeCompare(b.type));
   // What the parent is asked for, in the currency they are billed in.
@@ -3317,19 +3443,23 @@ window.buildPayments=function(){
   fillPaySelect('payFilterTutor','All',uniq('tutor','Tutor'),fTutor);
   fillPaySelect('payFilterBatch','All',uniq('batch','Batch'),fBatch);
   const nameQ=(payFilterVal('payFilterName')||'').trim().toLowerCase();
-  const payMatch=(s)=>{if(!nameQ)return true;if(String(s.Name||'').toLowerCase().includes(nameQ))return true;if(String(s.ID||'').toLowerCase().includes(nameQ))return true;if(String(s['Payment Ref']||'').toLowerCase().includes(nameQ))return true;for(const t of ['Fee','Kit','Components']){const r=payRecord(s.ID,year,month,t);if(r&&String(r.Note||'').toLowerCase().includes(nameQ))return true;}return false;};
+  const payMatch=(s)=>{if(!nameQ)return true;if(String(s.Name||'').toLowerCase().includes(nameQ))return true;if(String(s.ID||'').toLowerCase().includes(nameQ))return true;if(String(s['Payment Ref']||'').toLowerCase().includes(nameQ))return true;for(const t of ['Fee','Kit']){const r=payRecord(s.ID,year,month,t);if(r&&String(r.Note||'').toLowerCase().includes(nameQ))return true;}
+    // Searching a bill number finds the student it was raised for.
+    if(salesFor(s.ID,month).some(b=>String(b.billNo||b._id).toLowerCase().includes(nameQ)))return true;
+    return false;};
   let students=base.filter(s=>(!fCountry||(s.Country||'')===fCountry)&&(!fLevel||(s['Current Level']||'')===fLevel)&&(!fTutor||(s.Tutor||'')===fTutor)&&(!fBatch||(s.Batch||'')===fBatch)&&payMatch(s));
   let paid=0,ignore=0,pending=0,kitdue=0,compdue=0;
   let rows=students.map(s=>{
     const rec=payRecord(s.ID,year,month,'Fee');const st=rec?String(rec.Status||'').toLowerCase():'pending';
     if(st==='paid')paid++;else if(st==='ignore')ignore++;else pending++;
     const kitRec=payRecord(s.ID,year,month,'Kit');const kitSt=kitRec?String(kitRec.Status||'').toLowerCase():'';if(kitSt&&kitSt!=='paid')kitdue++;
-    const compRec=payRecord(s.ID,year,month,'Components');const compSt=compRec?String(compRec.Status||'').toLowerCase():'';if(compSt&&compSt!=='paid')compdue++;
-    return {s,rec,st,kitRec,kitSt,compRec,compSt};
+    // Components now come from inv_sales, not from a payments row.
+    const comp=salesRollup(s.ID,month);if(comp.unpaid)compdue++;
+    return {s,rec,st,kitRec,kitSt,comp};
   });
   const groupTotal=rows.length;const fStatus=payStatusFilter;
   if(fStatus==='kitdue')rows=rows.filter(r=>r.kitSt&&r.kitSt!=='paid');
-  else if(fStatus==='compdue')rows=rows.filter(r=>r.compSt&&r.compSt!=='paid');
+  else if(fStatus==='compdue')rows=rows.filter(r=>r.comp.unpaid>0);
   else if(fStatus)rows=rows.filter(r=>r.st===fStatus);
   const chip=(k,l,n)=>`<button class="pay-chip pay-chip-${k} ${payStatusFilter===k?'active':''}" onclick="setPayStatus('${k}')">${l} ${n}</button>`;
   const chipsHtml=`<button class="pay-chip pay-chip-all ${payStatusFilter===''?'active':''}" onclick="setPayStatus('')">All ${groupTotal}</button>`+chip('pending','Pending',pending)+chip('paid','Paid',paid)+chip('ignore','Ignore',ignore)+chip('kitdue','Kit due',kitdue)+chip('compdue','Components due',compdue);
@@ -3340,11 +3470,11 @@ window.buildPayments=function(){
   const waIco='<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.3L2 22l4.8-1.5A10 10 0 1012 2zm0 18a8 8 0 01-4.1-1.1l-.3-.2-2.8.9.9-2.8-.2-.3A8 8 0 1112 20zm4.6-5.9c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.5.1-.6.8-.8 1-.3.2-.5.1a6.5 6.5 0 01-1.9-1.2 7.2 7.2 0 01-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.4.2-.4v-.4c0-.1-.5-1.3-.7-1.7s-.4-.4-.5-.4h-.5a.9.9 0 00-.6.3 2.7 2.7 0 00-.9 2 4.7 4.7 0 001 2.5 10.7 10.7 0 004.1 3.6c.6.2 1 .4 1.4.5a3.3 3.3 0 001.5.1c.5-.1 1.5-.6 1.7-1.2s.2-1.1.1-1.2-.2-.2-.4-.3z"/></svg>';
   list.innerHTML=`<table class="pay-table"><thead><tr>
     <th>Student</th><th>Payment Ref</th><th>Status</th><th>Kit</th><th>Components</th><th>Classes</th><th>Pending</th><th>Action</th>
-    </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,compRec,compSt})=>{
+    </tr></thead><tbody>${rows.map(({s,rec,st,kitRec,kitSt,comp})=>{
       const fee=s['Monthly Fee']||'';
       const badge=st==='paid'?`<span class="pay-badge paid">Paid</span>`:st==='ignore'?`<span class="pay-badge ignore">Ignore</span>`:`<span class="pay-badge pending">Pending</span>`;
       const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?esc(money(payAmt(rec.Amount)||0,payRowCur(rec))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
-      const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,compRec,compSt);
+      const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,comp,selY,selM);
       let action='';
       if(st==='pending'){
         const wa=`<button class="pay-act pay-act-wa" title="WhatsApp reminder" onclick="payWhatsApp('${jsq(s.ID)}')">${waIco}</button>`;
@@ -3450,7 +3580,8 @@ window.downloadPaymentsExcel=function(){
   const attIdx=buildPayAttIndex(year,month);
   const selY=+year,selM=+month;
   const rows=payVisibleRows.map(({s})=>{
-    const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit'),comp=payRecord(s.ID,year,month,'Components');
+    const fee=payRecord(s.ID,year,month,'Fee'),kit=payRecord(s.ID,year,month,'Kit');
+    const comp=salesRollup(s.ID,selM);   // component bills come from the inventory app
     const att=attIdx[String(s.ID).trim()],due=payDues(s,selY,selM);
     const dueBits=due.items.map(it=>it.label+(it.amount!==null?' '+money(it.amount,it.currency):''));
     // Each recorded amount is exported with the currency it was received in — a bare
@@ -3460,7 +3591,9 @@ window.downloadPaymentsExcel=function(){
       'Quoted Currency':studentCurrency(s),'Monthly Fee':s['Monthly Fee']||'','Payment Ref':s['Payment Ref']||'',
       'Fee Status':fee?fee.Status:'Pending','Fee Amount':fee?fee.Amount:'','Fee Currency':rowCur(fee),'Fee Paid Date':fee?fee['Paid Date']:'',
       'Kit Status':kit?kit.Status:'','Kit Amount':kit?kit.Amount:'','Kit Currency':rowCur(kit),
-      'Components Status':comp?comp.Status:'','Components Amount':comp?comp.Amount:'','Components Currency':rowCur(comp),
+      'Component Bills':comp.n||'','Component Bills Paid':comp.n?comp.paid:'',
+      'Component Total':comp.n?Math.round(comp.total):'','Component Due':comp.n?Math.round(comp.due):'',
+      'Component Bill Nos':comp.bills.map(b=>(b.billNo||b._id)+(saleIsPaid(b)?'':' (due)')).join(', '),
       'Classes Attended':att?att.count:0,
       'Days Attended':att?att.dates.map(d=>d.date+(d.count>1?' x'+d.count:'')).join(', '):'',
       'Pending (billed)':due.totalText||'','Pending Amount (INR)':Math.round(due.total||0),'Pending Details':dueBits.join(' · ')};
@@ -3473,10 +3606,18 @@ function renderKitCell(s,kitRec,kitSt){
   if(kitSt==='paid'){const kd=`${kitRec.Amount?esc(money(payAmt(kitRec.Amount)||0,payRowCur(kitRec))):''}${kitRec['Paid Date']?(' · '+esc(String(kitRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Kit paid</span>${kd?`<div class="pay-detail">${kd}</div>`:''}<button class="pay-act pay-act-undo" onclick="revertKit('${jsq(s.ID)}',this)">Undo</button></div>`;}
   return `<div class="pay-kit-wrap"><span class="pay-badge pending">Kit due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openKitForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-ignore" onclick="revertKit('${jsq(s.ID)}',this)">Remove</button></div></div>`;
 }
-function renderCompCell(s,compRec,compSt){
-  if(!compRec)return `<button class="pay-act pay-act-kit" onclick="flagComponents('${jsq(s.ID)}',this)" title="Flag components payment">+ Components</button>`;
-  if(compSt==='paid'){const cd=`${compRec.Amount?esc(money(payAmt(compRec.Amount)||0,payRowCur(compRec))):''}${compRec['Paid Date']?(' · '+esc(String(compRec['Paid Date']))):''}`;return `<div class="pay-kit-wrap"><span class="pay-badge paid">Components paid</span>${cd?`<div class="pay-detail">${cd}</div>`:''}<div class="pay-kit-actions"><button class="pay-act pay-act-kit" onclick="newComponentPurchase('${jsq(s.ID)}','${jsq(s.Name)}',this)" title="Log & reopen for a new purchase">New purchase</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-undo" onclick="revertComponents('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
-  return `<div class="pay-kit-wrap"><span class="pay-badge pending">Components due</span><div class="pay-kit-actions"><button class="pay-act pay-act-paid" onclick="openComponentsForm('${jsq(s.ID)}','${jsq(s.Name)}')">Mark paid</button><button class="pay-act pay-act-history" onclick="openComponentHistory('${jsq(s.ID)}','${jsq(s.Name)}')">History</button><button class="pay-act pay-act-ignore" onclick="revertComponents('${jsq(s.ID)}',this)">Remove</button></div></div>`;
+/* Components are read-only here: the sale is raised in the inventory app, which
+   owns the stock. What this cell offers is the state, and a way into the bill. */
+function renderCompCell(s,comp,selY,selM){
+  if(!invSalesOk)return '<span class="pay-detail" title="inv_sales could not be read">—</span>';
+  if(!comp||!comp.n)return '<span class="pay-comp-none">No purchase</span>';
+  const btn=`<button class="pay-act pay-act-history" onclick="openBills('${jsq(s.ID)}',${selY},${selM})">Bill${comp.n>1?' ('+comp.n+')':''}</button>`;
+  if(!comp.unpaid)
+    return `<div class="pay-kit-wrap"><span class="pay-badge paid">${comp.n>1?comp.n+' bills paid':'Components paid'}</span>`
+      +`<div class="pay-detail">${esc(inr(comp.total))}</div><div class="pay-kit-actions">${btn}</div></div>`;
+  const label=comp.n>1?`${comp.paid} of ${comp.n} paid`:'Components due';
+  return `<div class="pay-kit-wrap"><span class="pay-badge pending">${esc(label)}</span>`
+    +`<div class="pay-detail">${esc(inr(comp.due))} due</div><div class="pay-kit-actions">${btn}</div></div>`;
 }
 window.migPayments=async function(){
   const records=parseCSV($('migPayments').value.trim());const msg=$('migPaymentsMsg');
@@ -3613,63 +3754,163 @@ window.revertKit=async function(sid,btn){
   if(ok){payRemoveLocal(sid,year,month,'Kit');payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
 // ── Components flow ──
-window.flagComponents=function(sid){openDueForm(sid,'Components');};
-window.openComponentsForm=function(sid,name){
-  const year=$('payYear').value,month=$('payMonth').value;payCurrentCtx={studentId:sid,year,month,type:'Components',mode:'paid'};
-  const ex=payRecord(sid,year,month,'Components');const isPaid=ex&&String(ex.Status||'').toLowerCase()==='paid';
-  payShowCurrency(sid,ex&&ex.Currency);
-  $('pay_DateRow').style.display='';$('pay_MethodRow').style.display='';
-  $('pay_SaveBtn').textContent='Mark paid';$('pay_Amount').classList.remove('invalid');
-  $('pay_AmountLabel').textContent='Amount received';
-  $('paymentModalTitle').textContent=isPaid?'Edit Components Payment':'Components Payment';
-  $('paymentModalSub').textContent=`${name} · Components · ${PAY_MONTHS[month-1]} ${year}`;
-  $('pay_Amount').value=ex&&ex.Amount?String(ex.Amount):'';
-  const t=new Date();$('pay_Date').value=(ex&&ex['Paid Date'])?String(ex['Paid Date']):(t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'));
-  $('pay_Method').value=(ex&&ex.Method)||'';$('pay_Note').value=(ex&&ex.Note)||'';
-  $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;showModal('paymentModal');
+/* ── Component bills ─────────────────────────────────────────────────────────
+   Read from inv_sales; this app never creates or deletes one. Admin can settle a
+   bill, which writes the payment fields straight back onto the inventory app's
+   document — same field names, same lowercase status, same doc-id shape, or the
+   two apps silently stop agreeing. */
+let billsCtx=null;   // {sid,name,year,month}
+window.openBills=function(sid,year,month){
+  const s=studentsData.find(x=>String(x.ID)===String(sid));
+  billsCtx={sid:String(sid),name:s?s.Name:String(sid),year:+year,month:+month};
+  $('billsModalTitle').textContent='Component bills';
+  $('billsModalSub').textContent=`${billsCtx.name} · ${PAY_MONTHS[billsCtx.month-1]} ${billsCtx.year}`;
+  $('billsMsg').textContent='';$('billsMsg').className='msg';
+  renderBillsBody();
+  showModal('billsModal');
+  loadLegacyComponents(billsCtx.sid);
 };
-window.revertComponents=async function(sid,btn){
-  const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Remove the components payment entry for this month?'))return;const done=payBtnBusy(btn);
-  const ok=await payWrite({action:'deletePayment',type:'Components',studentId:sid,year,month});
-  if(ok){payRemoveLocal(sid,year,month,'Components');payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
-};
-// "New purchase": archive the paid cycle to componentHistory, then reopen as due.
-window.newComponentPurchase=async function(sid,name,btn){
-  const year=$('payYear').value,month=$('payMonth').value;
-  const rec=payRecord(sid,year,month,'Components');
-  if(!rec||String(rec.Status||'').toLowerCase()!=='paid'){alert('No paid components to reopen.');return;}
-  if(!confirm('Log the current paid components and reopen as "due" for a new purchase?'))return;
-  const done=payBtnBusy(btn);
+window.closeBills=function(){$('billsModal').classList.remove('open');};
+function billLinesHtml(b){
+  const lines=Array.isArray(b.lines)?b.lines:[];
+  if(!lines.length)return '<div class="pay-detail">No line items recorded on this bill.</div>';
+  return '<table class="bill-lines"><tbody>'+lines.map(l=>
+    `<tr><td>${esc(l.name||l.itemCode||'')}</td>`
+    +`<td class="q">${esc(String(Number(l.qty)||0))} × ${esc(inr(Number(l.rate)||0))}</td>`
+    +`<td class="a">${esc(inr(Number(l.amount)||0))}</td></tr>`).join('')+'</tbody></table>';
+}
+function renderBillsBody(){
+  const box=$('billsBody');if(!box||!billsCtx)return;
+  if(!invSalesOk){
+    box.innerHTML='<div class="pay-empty">Component sales could not be read. Publish the updated Firestore rules, then reload.</div>';
+    return;
+  }
+  const bills=salesFor(billsCtx.sid,billsCtx.month);
+  box.innerHTML=(bills.length?bills.map(b=>{
+    const paid=saleIsPaid(b);
+    const act=isAdmin()
+      ? (paid
+          ? `<button class="pay-act pay-act-undo" onclick="setBillPaid('${jsq(b._id)}',false,this)">Mark unpaid</button>`
+          : `<button class="pay-act pay-act-paid" onclick="setBillPaid('${jsq(b._id)}',true,this)">Mark paid</button>`)
+      : '';
+    return `<div class="bill-card" data-bill="${esc(b._id)}">
+      <div class="bill-top">
+        <div><div class="bill-no">${esc(b.billNo||b._id)}</div>
+          <div class="bill-when">${esc(b.date||'')}${b.soldBy?' · '+esc(b.soldBy):''}</div></div>
+        <span class="pay-badge ${paid?'paid':'pending'}">${paid?'Paid':'Pending'}</span>
+      </div>
+      ${billLinesHtml(b)}
+      <div class="bill-tot"><span class="pay-detail">${paid?('Paid'+(b.paidOn?' · '+esc(b.paidOn):'')+(b.method?' · '+esc(b.method):'')):'Outstanding'}</span>
+        <span class="bill-tot-v">${esc(inr(Number(b.total)||0))}</span></div>
+      ${act?`<div class="bill-acts">${act}</div>`:''}
+    </div>`;
+  }).join(''):'<div class="pay-empty">No component bills for this month.</div>')
+  +'<div id="billsLegacy"></div>';
+  renderLegacyComponents();
+}
+/* Marking a bill paid writes ONLY the payment fields. The inventory app's own
+   savePayment also writes `notes` from its dialog; not touching it here means a
+   note left there survives being settled from this side. */
+window.setBillPaid=async function(billId,paid,btn){
+  if(!isAdmin())return;
+  const b=invSales.find(x=>String(x._id)===String(billId));if(!b)return;
+  const msg=$('billsMsg');
+  if(paid&&!confirm(`Mark ${b.billNo||billId} as paid? This updates the bill in the inventory app too.`))return;
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  msg.innerHTML='<span class="spinner"></span> Saving…';msg.className='msg busy';
+  const t=new Date();
+  const iso=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+  // Lowercase, exactly as the inventory app writes and tests it.
+  const patch=paid
+    ? {paymentStatus:'paid',paidOn:iso,paidBy:(currentUser&&currentUser.email||'').toLowerCase(),method:b.method||''}
+    : {paymentStatus:'pending',paidOn:'',paidBy:'',method:''};
   try{
-    await addDoc(collection(db,'componentHistory'),{'Student ID':sid,Year:payY(year),Month:payM(month),Amount:rec.Amount||'',Currency:rec.Currency||PAY_CURRENCY,'Paid Date':rec['Paid Date']||'',Method:rec.Method||'',Note:rec.Note||'',LoggedBy:(currentUser&&currentUser.email)||'','Logged At':serverTimestamp()});
-  }catch(e){console.error('newComponentPurchase',e);if(done)done();alert('Could not log the current purchase.');return;}
-  if(done)done();
-  openDueForm(sid,'Components');   // ask for the new purchase amount
+    // The document id collapses digit runs — EB-B-0001 lives at EB-B-1.
+    await setDoc(doc(db,'inv_sales',invDocId(b._id)),patch,{merge:true});
+  }catch(e){
+    console.error('setBillPaid',e);
+    msg.textContent='Could not update: '+(e.code||e.message);msg.className='msg err';
+    if(btn){btn.disabled=false;btn.textContent=paid?'Mark paid':'Mark unpaid';}
+    return;
+  }
+  Object.keys(patch).forEach(k=>{b[k]=patch[k];});
+  msg.textContent=paid?'Marked paid.':'Moved back to pending.';msg.className='msg ok';
+  renderBillsBody();
+  buildPayments();
+  if(billsCtx)highlightStudentRow(billsCtx.sid,{rerender:false});
 };
-let componentHistoryData=[];
-window.openComponentHistory=async function(sid,name){
-  $('compHistTitle').textContent=`Components History · ${name}`;
-  $('compHistList').innerHTML='<div class="pay-empty"><span class="spinner"></span> Loading…</div>';
-  showModal('compHistModal');
+/* The old payments/componentHistory rows, shown as history only. They are never
+   counted as live dues — so if the inventory app's paySync is ever switched back
+   on, the worst case is a duplicate line here, not a double-counted debt. */
+let legacyComp={sid:null,rows:[]};
+async function loadLegacyComponents(sid){
+  if(legacyComp.sid===String(sid))return;
+  legacyComp={sid:String(sid),rows:[]};
+  const rows=[];
   try{
     const snap=await getDocs(query(collection(db,'componentHistory'),where('Student ID','==',String(sid))));
-    componentHistoryData=snap.docs.map(d=>d.data());
-  }catch(e){console.warn('getComponentHistory',e);componentHistoryData=[];}
-  renderComponentHistory(sid);
-};
-window.closeComponentHistory=function(){$('compHistModal').classList.remove('open');};
-function renderComponentHistory(sid){
-  const box=$('compHistList');
-  const items=componentHistoryData.slice().sort((a,b)=>{
-    const ta=a['Logged At']&&a['Logged At'].toDate?a['Logged At'].toDate().getTime():0;
-    const tb=b['Logged At']&&b['Logged At'].toDate?b['Logged At'].toDate().getTime():0;return tb-ta;});
-  if(!items.length){box.innerHTML='<div class="pay-empty">No past component payments logged.</div>';return;}
-  box.innerHTML=items.map(h=>{
-    const when=h['Logged At']&&h['Logged At'].toDate?h['Logged At'].toDate().toLocaleString():'';
-    return `<div class="hist-item"><div class="hist-meta">${h.Amount?esc(money(payAmt(h.Amount)||0,String(h.Currency||'INR').toUpperCase())):''}${h['Paid Date']?(' · paid '+esc(String(h['Paid Date']))):''}${h.Month&&h.Year?(' · '+esc(String(h.Month))+'/'+esc(String(h.Year))):''}</div>${h.Note?`<div class="hist-text">${esc(String(h.Note))}</div>`:''}<div class="hist-meta" style="opacity:.7;">logged ${esc(when)}${h.LoggedBy?(' · '+esc(String(h.LoggedBy))):''}</div></div>`;
-  }).join('');
+    snap.docs.forEach(d=>{const h=d.data()||{};rows.push({
+      when:(h.Year&&h.Month)?(PAY_MONTHS[(parseInt(payM(h.Month),10)||1)-1]+' '+h.Year):'',
+      amount:payAmt(h.Amount),cur:String(h.Currency||'INR').toUpperCase(),
+      status:'Paid',note:String(h.Note||'')});});
+  }catch(e){console.warn('componentHistory',e);}
+  // Pre-cutover Components rows still sitting in payments for the loaded year.
+  (paymentsData||[]).forEach(p=>{
+    if(String(p['Student ID']||'').trim()!==String(sid))return;
+    if((String(p.Type||'').trim()||'Fee')!=='Components')return;
+    rows.push({when:PAY_MONTHS[(parseInt(payM(p.Month),10)||1)-1]+' '+payY(p.Year),
+      amount:payAmt(p.Amount),cur:payRowCur(p),
+      status:String(p.Status||'Pending'),note:String(p.Note||'')});
+  });
+  legacyComp.rows=rows;
+  renderLegacyComponents();
 }
-
+function renderLegacyComponents(){
+  const box=$('billsLegacy');if(!box)return;
+  if(!billsCtx||legacyComp.sid!==billsCtx.sid||!legacyComp.rows.length){box.innerHTML='';return;}
+  box.innerHTML='<div class="bill-legacy"><div class="bill-legacy-t">Earlier purchases</div>'
+    +'<div class="pay-detail" style="margin-bottom:8px;">Recorded before component sales moved to the inventory app — no line detail.</div>'
+    +legacyComp.rows.map(r=>`<div class="bill-legacy-row"><span>${esc(r.when)}${r.note?' · '+esc(r.note):''}</span>`
+      +`<span>${r.amount!==null?esc(money(r.amount,r.cur)):'—'} · ${esc(r.status)}</span></div>`).join('')
+    +'</div>';
+}
+window.billsWhatsApp=function(){
+  if(!billsCtx)return;
+  const s=studentsData.find(x=>String(x.ID)===String(billsCtx.sid));
+  const bills=salesFor(billsCtx.sid,billsCtx.month);
+  const unpaid=bills.filter(b=>!saleIsPaid(b));
+  const L=['Dear Parent,',''];
+  if(unpaid.length){
+    L.push(`This is regarding the components purchased for ${billsCtx.name} in ${PAY_MONTHS[billsCtx.month-1]} ${billsCtx.year}.`);
+    L.push('');
+    unpaid.forEach(b=>{
+      L.push(`${b.billNo||b._id} · ${b.date||''}`);
+      (Array.isArray(b.lines)?b.lines:[]).forEach(l=>{
+        L.push(`• ${l.name||l.itemCode} — ${Number(l.qty)||0} × ${inr(Number(l.rate)||0)} = ${inr(Number(l.amount)||0)}`);
+      });
+      L.push(`Total: ${inr(Number(b.total)||0)}`);L.push('');
+    });
+    if(unpaid.length>1){L.push(`Amount pending: ${inr(unpaid.reduce((n,b)=>n+(Number(b.total)||0),0))}`);L.push('');}
+    L.push('Kindly share the screenshot of your transfer if done already.');
+  }else if(bills.length){
+    L.push(`Component purchase details for ${billsCtx.name} — ${PAY_MONTHS[billsCtx.month-1]} ${billsCtx.year}.`);
+    L.push('');
+    bills.forEach(b=>{
+      L.push(`${b.billNo||b._id} · ${b.date||''} · ${inr(Number(b.total)||0)} · Paid`);
+      (Array.isArray(b.lines)?b.lines:[]).forEach(l=>{
+        L.push(`• ${l.name||l.itemCode} — ${Number(l.qty)||0} × ${inr(Number(l.rate)||0)}`);
+      });
+      L.push('');
+    });
+    L.push('Thank you for the payment.');
+  }else{ toast('No bills to share for this month.'); return; }
+  L.push('');L.push('Thank you,');L.push('Team ElectroBotics');
+  waTargetPhone=String((s&&s.Contact)||'').replace(/[^0-9+]/g,'');
+  $('waModalTitle').textContent='Components · '+billsCtx.name;
+  $('wa_Msg').value=L.join('\n');
+  closeBills();
+  showModal('waModal');
+};
 // ═══════════ ATTENDANCE & PAYMENT TREND ═══════════
 let attendanceData=[], attendanceLoaded=false, trendData=null, trendRegion='india', trendChart=null;
 const TREND_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
