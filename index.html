@@ -3598,13 +3598,32 @@ window.savePaymentForm=async function(){
   if(ok){payUpsertLocal(c.studentId,c.year,c.month,c.type,{Status:'Paid',Amount:amount,Currency:curSel,'Paid Date':$('pay_Date').value,Method:$('pay_Method').value.trim(),Note:note});closePaymentForm();payAfterChange(c.studentId);}
   else{msg.textContent='Could not save. Try again.';msg.className='msg err';btn.disabled=false;}
 };
+/* The Payments table is long and these buttons sit in adjacent rows, so a bare
+   "are you sure" is no help at all — the confirmation has to name the student and
+   the month it is about to change. */
+function payConfirm(sid,question,detail){
+  const st=studentsData.find(x=>String(x.ID)===String(sid));
+  const y=$('payYear').value,m=$('payMonth').value;
+  return confirm(`${question}\n\n${st?st.Name:sid} (${sid}) · ${PAY_MONTHS[m-1]} ${y}`
+    +(detail?`\n\n${detail}`:''));
+}
 window.markPaymentIgnore=async function(sid,btn){
+  if(!payConfirm(sid,'Mark this month\u2019s fee as Ignore?',
+    'It will be left out of dues, reminders and the revenue figures.'))return;
   const year=$('payYear').value,month=$('payMonth').value;const done=payBtnBusy(btn);
   const ok=await payWrite({action:'savePayment',studentId:sid,year,month,status:'Ignore'});
   if(ok){payUpsertLocal(sid,year,month,'Fee',{Status:'Ignore'});payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
 window.revertPayment=async function(sid,btn){
-  const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Revert this to Pending?'))return;const done=payBtnBusy(btn);
+  const year=$('payYear').value,month=$('payMonth').value;
+  // Say which state is being undone — removing a recorded payment and lifting an
+  // Ignore are the same button but very different consequences.
+  const cur=payRecord(sid,year,month,'Fee');
+  const was=String((cur&&cur.Status)||'').toLowerCase();
+  if(!payConfirm(sid,was==='ignore'?'Remove the Ignore and move this back to Pending?'
+                                   :'Remove the recorded payment and move this back to Pending?',
+    was==='paid'&&cur&&cur.Amount?`The recorded ${money(payAmt(cur.Amount)||0,payRowCur(cur))} will be deleted.`:''))return;
+  const done=payBtnBusy(btn);
   const ok=await payWrite({action:'deletePayment',studentId:sid,year,month});
   if(ok){payRemoveLocal(sid,year,month,'Fee');payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
@@ -3814,7 +3833,12 @@ window.openKitForm=function(sid,name){
   $('pay_Msg').textContent='';$('pay_SaveBtn').disabled=false;showModal('paymentModal');
 };
 window.revertKit=async function(sid,btn){
-  const year=$('payYear').value,month=$('payMonth').value;if(!confirm('Remove the kit payment entry for this month?'))return;const done=payBtnBusy(btn);
+  const year=$('payYear').value,month=$('payMonth').value;
+  const cur=payRecord(sid,year,month,'Kit');
+  const paid=String((cur&&cur.Status)||'').toLowerCase()==='paid';
+  if(!payConfirm(sid,paid?'Remove this kit payment?':'Remove the kit entry for this month?',
+    paid&&cur&&cur.Amount?`The recorded ${money(payAmt(cur.Amount)||0,payRowCur(cur))} will be deleted.`:''))return;
+  const done=payBtnBusy(btn);
   const ok=await payWrite({action:'deletePayment',type:'Kit',studentId:sid,year,month});
   if(ok){payRemoveLocal(sid,year,month,'Kit');payAfterChange(sid);}else{if(done)done();alert('Could not update.');}
 };
@@ -4039,15 +4063,14 @@ window.openReceipt=function(sid,year,month){
   $('rcptSheet').innerHTML=`
     <div class="rcpt-head">
       <div><div class="rcpt-brand">Electro<span>Botics</span></div>
-        <div class="rcpt-tag">Robotics &amp; Coding for Young Makers</div></div>
+        <div class="rcpt-tag">Inspiring young minds</div></div>
       <div class="rcpt-meta"><b>${esc(no)}</b><br>Issued ${esc(issued)}<br>${esc(PAY_MONTHS[selM-1])} ${selY}</div>
     </div>
     <div class="rcpt-to">
       <div><div class="rcpt-to-l">Billed to</div><div class="rcpt-to-v">${esc(s.Name||'')}</div>
         <div class="rcpt-to-s">${esc(s.ID)}${s.Batch?' · '+esc(s.Batch):''}${s['Current Level']?' · '+esc(s['Current Level']):''}</div></div>
       <div style="text-align:right"><div class="rcpt-to-l">Status</div>
-        <div class="rcpt-to-v" style="color:${t.dINR>0.5?'#c0472a':'#5a7a00'}">${t.dINR>0.5?'Payment due':'Settled'}</div>
-        ${s.Tutor?`<div class="rcpt-to-s">Tutor: ${esc(s.Tutor)}</div>`:''}</div>
+        <div class="rcpt-to-v" style="color:${t.dINR>0.5?'#c0472a':'#5a7a00'}">${t.dINR>0.5?'Payment due':'Settled'}</div></div>
     </div>
     ${lines.length?`<table class="rcpt-tbl"><thead><tr><th>Item</th><th class="r">Status</th><th class="r">Amount</th></tr></thead>
       <tbody>${lines.map(row).join('')}</tbody></table>`
