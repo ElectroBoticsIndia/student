@@ -125,10 +125,6 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .pay-table tbody tr.row-selected{background:var(--accent-light);box-shadow:inset 3px 0 0 var(--accent)}
 .pay-table tbody tr.row-selected td:first-child{position:relative}
 .pay-table tbody tr.row-selected:hover{background:var(--accent-light)}
-/* Collapsible migration-helper header (shared by Students / Payments / Leads) */
-.mig-head{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:10px}
-.mig-head .chart-title{margin-bottom:0}
-.mig-chev{font-family:var(--font-mono);color:var(--text-light);font-size:13px;flex:none}
 .btn-edit{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:#fff;color:var(--text-dim);cursor:pointer;transition:all .2s}
 .btn-edit:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .form-row small{font-family:var(--font-mono);font-size:10px;color:var(--text-light)}
@@ -244,15 +240,9 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .dash-tab{font-family:var(--font-mono);font-size:12px;font-weight:700;padding:10px 16px;border:none;background:transparent;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap}
 .dash-tab:hover{color:var(--text)}
 .dash-tab.active{color:var(--accent-dark);border-bottom-color:var(--accent)}
-.stu-mig{border:1px dashed var(--border);border-radius:10px;padding:14px;margin-top:12px}
-.stu-mig-label{display:block;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:6px}
-.stu-mig-hint{font-weight:400;color:var(--text-light);text-transform:none;letter-spacing:0}
-.stu-mig textarea{width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:70px;outline:none}
-.stu-mig textarea:focus{border-color:var(--accent)}
+/* Named for the migration helpers it was written for; those are gone but the
+   Settings screen's button rows still use it. */
 .stu-mig-actions{display:flex;gap:10px;margin-top:8px;align-items:center}
-.mig-box{border:1px dashed var(--border);border-radius:10px;padding:14px}
-.mig-box textarea{width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:90px;outline:none}
-.mig-box textarea:focus{border-color:var(--accent)}
 
 @media(max-width:600px){
   .app{padding:16px 12px 40px}
@@ -709,6 +699,21 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .aa-pct.amber{background:var(--amber-bg);color:#8a6a00}
 .aa-pct.red{background:var(--red-light);color:#c0472a}
 .aa-pct.none{background:var(--surface-alt);color:var(--text-light)}
+/* Health band chips on the trend views — same vocabulary as At-Risk. */
+.aa-hchip .aa-hdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+.aa-hdot.green{background:var(--green)}.aa-hdot.amber{background:var(--amber)}
+.aa-hdot.red{background:var(--red)}.aa-hdot.none{background:var(--text-light)}
+/* Settings checkbox. .set-label is uppercase mono and inputs are full-width, so
+   this has to out-specify both. */
+label.set-check{display:flex;align-items:center;gap:10px;cursor:pointer;
+  font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text);
+  text-transform:none;letter-spacing:0}
+label.set-check input[type="checkbox"]{width:17px;min-width:17px;height:17px;flex:none;
+  accent-color:var(--accent);cursor:pointer;margin:0;padding:0}
+.pay-chip.aa-h-red.active{background:var(--red-light);color:#c0472a;border-color:var(--red)}
+.pay-chip.aa-h-amber.active{background:var(--amber-bg);color:#8a6a00;border-color:var(--amber)}
+.pay-chip.aa-h-green.active{background:var(--green-bg);color:#5a7a00;border-color:var(--green)}
+.pay-chip.aa-h-none.active{background:var(--surface-alt);color:var(--text-dim);border-color:var(--text-light)}
 .aa-of{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .aa-wa-ico{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:7px;background:#fff;color:#25d366;cursor:pointer;transition:all .2s}
 .aa-wa-ico:hover{border-color:#25d366;background:#eafaf0}
@@ -853,25 +858,8 @@ table.avail td.occ{border:1px solid transparent}
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="leadsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
-    <div class="chart-card" id="migCard" style="display:none;">
-      <div class="mig-head" onclick="toggleMigCard('migBody','migChevLeads')">
-        <div class="chart-title">Leads Migration Helper (admin)</div>
-        <span class="mig-chev" id="migChevLeads">▾</span>
-      </div>
-      <div id="migBody" style="display:none;margin-top:12px;">
-      <div class="note">Paste your exported Leads as CSV (with headers) or a JSON array to import into Firestore for testing. Your production Google Sheet is untouched. Re-imports with the same Lead ID update rather than duplicate. Include an <strong>Enquiry Date</strong> column (or <em>Lead Date</em> / <em>Date</em>) so ageing carries over — without it every imported lead starts at zero days old.</div>
-      <div class="mig-box">
-        <textarea id="migInput" placeholder="Name,Enquiry Date,Country,Contact,Preferred Batch,Source,Status,Notes,Lead ID&#10;Arjun,2026-08-14,India,9198...,Sun 9:30,Google,Enquiry,,L001"></textarea>
-        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
-          <button class="btn-primary" onclick="runMigration()">Import to Firestore</button>
-          <span class="msg" id="migMsg" style="margin:0;text-align:left;"></span>
-        </div>
-      </div>
-      </div>
-    </div>
   </div>
 
-  <!-- ═══ STUDENTS (sub-step 1: migration + verification) ═══ -->
   <!-- ═══ SUMMARY ═══ -->
   <div id="summaryScreen" style="display:none;">
     <div class="stats-grid" id="statsGrid"></div>
@@ -924,51 +912,6 @@ table.avail td.occ{border:1px solid transparent}
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="studentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
-    <!-- Admin migration (collapsible) -->
-    <div class="chart-card" id="stuMigToggleCard" style="display:none;">
-      <div class="pay-head" style="margin-bottom:0;cursor:pointer;" onclick="toggleMig()">
-        <div class="chart-title">Migration Helper (admin)</div>
-        <span id="migChevron" style="font-family:var(--font-mono);color:var(--text-light);">▾</span>
-      </div>
-    </div>
-
-    <!-- Admin migration: Students -->
-    <div class="chart-card" id="stuMigCard" style="display:none;">
-      <div class="chart-title" style="margin-bottom:12px;">Students Migration Helper (admin)</div>
-      <div class="note">Paste each sheet's CSV export below and import in order. Student docs are keyed by <strong>ID</strong>. The <strong>Email</strong> field is split into a <code>parentEmails</code> array for secure parent access. Re-imports update, never duplicate. Your Google Sheets stay untouched.</div>
-
-      <div class="stu-mig">
-        <label class="stu-mig-label">1 · Students sheet CSV <span class="stu-mig-hint">(ID, Name, Current Level, Country, Tutor, Batch, Status, Join Date, Email, Contact, School, Address, Monthly Fee, Photo, Payment Ref, Inactive Date, Inactive Reason)</span></label>
-        <textarea id="migStudents" placeholder="Paste Students CSV (with header row)…"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migStudents()">Import Students</button><span class="msg" id="migStudentsMsg"></span></div>
-      </div>
-
-      <div class="stu-mig">
-        <label class="stu-mig-label">2 · Levels sheet CSV <span class="stu-mig-hint">(Level Name, …)</span></label>
-        <textarea id="migLevels" placeholder="Paste Levels CSV…"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migLevels()">Import Levels</button><span class="msg" id="migLevelsMsg"></span></div>
-      </div>
-
-      <div class="stu-mig">
-        <label class="stu-mig-label">3 · Topics sheet CSV <span class="stu-mig-hint">(Level Name, Topic, Description)</span></label>
-        <textarea id="migTopics" placeholder="Paste Topics CSV…"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migTopics()">Import Topics</button><span class="msg" id="migTopicsMsg"></span></div>
-      </div>
-
-      <div class="stu-mig">
-        <label class="stu-mig-label">4 · Progress sheet CSV <span class="stu-mig-hint">(Student ID, Level Name, Topic, Status, Completion Date, Notes)</span></label>
-        <textarea id="migProgress" placeholder="Paste Progress CSV…"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migProgress()">Import Progress</button><span class="msg" id="migProgressMsg"></span></div>
-      </div>
-
-      <div class="stu-mig">
-        <label class="stu-mig-label">5 · Projects sheet CSV <span class="stu-mig-hint">(Student ID, Level Name, Project Name, Description, Video Link, Code Link)</span></label>
-        <textarea id="migProjects" placeholder="Paste Projects CSV…"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migProjects()">Import Projects</button><span class="msg" id="migProjectsMsg"></span></div>
-      </div>
-
-      <div class="note" style="margin-top:12px;margin-bottom:0;">Certificates aren't a separate sheet — the <strong>Certificate Template</strong> column travels with the Levels import (step 2), and each certificate is generated on the fly from that template plus the student's completion date. Nothing extra to import.</div>
-    </div>
   </div>
 
   <!-- ═══ PAYMENTS ═══ -->
@@ -1035,20 +978,6 @@ table.avail td.occ{border:1px solid transparent}
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="revTable"></div></div>
     </div>
 
-    <div class="chart-card" id="payMigCard" style="display:none;">
-      <div class="mig-head" onclick="toggleMigCard('payMigBody','migChevPay')">
-        <div class="chart-title">Payments Migration (admin)</div>
-        <span class="mig-chev" id="migChevPay">▾</span>
-      </div>
-      <div id="payMigBody" style="display:none;margin-top:12px;">
-      <div class="note">Import your Payments sheet as CSV. Keys prevent duplicates on re-import. Google Sheets stay untouched. <strong>Attendance and Assignments now import from their own tabs.</strong></div>
-      <div class="stu-mig">
-        <label class="stu-mig-label">Payments CSV <span class="stu-mig-hint">(Student ID, Year, Month, Type, Status, Amount, Paid Date, Method, Note)</span></label>
-        <textarea id="migPayments" placeholder="Student ID,Year,Month,Type,Status,Amount,Paid Date,Method,Note&#10;EB001,2026,7,Fee,Paid,1500,2026-07-05,UPI,"></textarea>
-        <div class="stu-mig-actions"><button class="btn-primary" onclick="migPayments()">Import Payments</button><span class="msg" id="migPaymentsMsg"></span></div>
-      </div>
-      </div>
-    </div>
   </div>
 
   <!-- Payment modal (Fee / Kit / Components) -->
@@ -1113,14 +1042,6 @@ table.avail td.occ{border:1px solid transparent}
     </div>
   </div>
 
-  <!-- Component history modal -->
-  <div class="modal-overlay" id="compHistModal">
-    <div class="modal-card" style="max-width:460px;">
-      <div class="modal-head"><h3 id="compHistTitle">Components History</h3><button class="modal-close" onclick="closeComponentHistory()">&times;</button></div>
-      <div class="modal-body"><div class="hist-list" id="compHistList"></div><div class="wa-actions"><button class="wa-btn wa-cancel" onclick="closeComponentHistory()">Close</button></div></div>
-    </div>
-  </div>
-
   <!-- ═══ SETTINGS (admin) ═══ -->
   <div id="settingsScreen" style="display:none;">
     <div class="chart-card" style="padding:0;overflow:hidden;">
@@ -1181,6 +1102,7 @@ table.avail td.occ{border:1px solid transparent}
         </div>
       </div>
     </div>
+
   </div>
 
   <!-- ═══ ATTENDANCE / ASSIGNMENTS (markup generated by buildAaScreen) ═══ -->
@@ -1637,7 +1559,6 @@ function applyRoleUi(){
 function enterApp(){
   $('loginScreen').style.display='none'; $('leadsScreen').style.display='';
   $('headerRight').innerHTML=accountMenuHtml();
-  if(isAdmin())$('migCard').style.display='';
   $('staffTabs').style.display='';
   applyRoleUi();
   setTab('summary');
@@ -1652,7 +1573,6 @@ window.setTab=function(tab){
   });
   document.querySelectorAll('#staffTabs .dash-tab').forEach(b=>b.classList.toggle('active',b.getAttribute('data-tab')===tab));
   if(tab==='students'){
-    if(isAdmin())$('stuMigToggleCard').style.display='';
     if(!studentsLoaded)loadStudentsList();
     else{fillStudentFilters();renderStudents();}
   }
@@ -1664,7 +1584,6 @@ window.setTab=function(tab){
   if(tab==='attendance')initAttendance();
   if(tab==='assignments')initAssignments();
   if(tab==='payments'){
-    if(isAdmin())$('payMigCard').style.display='';
     initPayments();
     setTimeout(initTrend,300);
   }
@@ -1680,12 +1599,6 @@ async function ensureStudents(){
 function hideAllTabScreens(){
   ALL_TABS.forEach(t=>{const s=$(t+'Screen');if(s)s.style.display='none';});
 }
-window.toggleMigCard=function(bodyId,chevId){
-  const body=$(bodyId);if(!body)return;
-  const open=body.style.display==='none';
-  body.style.display=open?'':'none';
-  const chev=$(chevId);if(chev)chev.textContent=open?'▴':'▾';
-};
 window.toggleMenu=function(e){e.stopPropagation();const d=$('acctDrop');if(d)d.classList.toggle('open');};
 document.addEventListener('click',()=>{const d=$('acctDrop');if(d)d.classList.remove('open');});
 /* Every dialog opens at the top. Both the overlay and the body scroll, and the browser
@@ -1948,162 +1861,9 @@ window.saveHist=async function(){
   }catch(e){console.error('saveHist',e);msg.textContent='Could not save: '+(e.code||e.message);msg.className='msg err';btn.disabled=false;}
 };
 
-// Scans the whole text character by character rather than splitting on newlines first,
-// so a quoted Address or Notes cell containing a line break no longer shifts every
-// following column on that row.
-function parseCSV(text){
-  const s=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const rows=[];let row=[],cur='',inQ=false;
-  for(let i=0;i<s.length;i++){
-    const c=s[i];
-    if(inQ){
-      if(c==='"'){ if(s[i+1]==='"'){cur+='"';i++;} else inQ=false; }
-      else cur+=c;
-    }else if(c==='"'){inQ=true;}
-    else if(c===','){row.push(cur);cur='';}
-    else if(c==='\n'){row.push(cur);cur='';rows.push(row);row=[];}
-    else cur+=c;
-  }
-  row.push(cur);rows.push(row);
-  const blank=(r)=>r.every(c=>!String(c).trim());
-  while(rows.length&&blank(rows[rows.length-1]))rows.pop();
-  if(rows.length<2)return [];
-  const headers=rows[0].map(h=>String(h).trim());
-  const out=[];
-  for(let i=1;i<rows.length;i++){
-    if(blank(rows[i]))continue;
-    const obj={};headers.forEach((h,j)=>obj[h]=String(rows[i][j]===undefined?'':rows[i][j]).trim());
-    out.push(obj);
-  }
-  return out;
-}
-window.runMigration=async function(){
-  const raw=$('migInput').value.trim();const msg=$('migMsg');
-  if(!raw){msg.textContent='Paste CSV or JSON first.';msg.className='msg err';return;}
-  let records=[];
-  try{ records=raw[0]==='['?JSON.parse(raw):parseCSV(raw); }
-  catch(e){msg.textContent='Could not parse: '+e.message;msg.className='msg err';return;}
-  if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
-  msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
-  let done=0,fail=0;
-  for(const r of records){
-    try{
-      const leadId=String(r['Lead ID']||r.LeadID||('L'+Date.now()+Math.random().toString(36).slice(2,6)));
-      await setDoc(doc(db,'leads',leadId),{
-        'Lead ID':leadId,Name:r.Name||'',Country:r.Country||'',Contact:String(r.Contact||''),
-        'Preferred Batch':r['Preferred Batch']||r.Batch||'',Source:r.Source||'',Status:r.Status||'Enquiry',
-        Notes:r.Notes||'','Converted Student ID':r['Converted Student ID']||'',
-        // Without this every migrated lead would age from the import date and read 0 days old.
-        'Enquiry Date':aaNormDate(r['Enquiry Date']||r['Lead Date']||r.Date||'','auto'),
-        createdAt:serverTimestamp(),migratedAt:serverTimestamp(),migratedBy:currentUser.email
-      },{merge:true});
-      done++;
-    }catch(e){console.error('migrate row',r,e);fail++;}
-  }
-  msg.textContent=`Imported ${done} lead(s)`+(fail?`, ${fail} failed (see console)`:'')+'.';
-  msg.className=fail?'msg err':'msg ok';$('migInput').value='';
-};
-
-/* ═══ STUDENTS migration (sub-step 1) ═══ */
-// Split an Email cell (comma/semicolon/space separated) into a clean array.
-function splitEmails(raw){
-  return String(raw||'').toLowerCase().split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
-}
-async function importRows(records, mapFn, msgEl, label){
-  if(!records.length){msgEl.textContent='No rows found.';msgEl.className='msg err';return;}
-  msgEl.innerHTML='<span class="spinner"></span> Importing '+records.length+' '+label+'…';msgEl.className='msg busy';
-  let done=0,fail=0;
-  // Batched writes (up to 400 per batch) for speed.
-  let batch=writeBatch(db),n=0;
-  for(const r of records){
-    try{
-      const {ref,data}=mapFn(r);
-      if(!ref){fail++;continue;}
-      batch.set(ref,data,{merge:true});n++;done++;
-      if(n>=400){
-        // A failed commit must not poison the rest: a committed/failed batch throws on
-        // every later .set(), which used to turn one bad chunk into a total wipeout
-        // reported as a single failure.
-        try{await batch.commit();}
-        catch(ce){console.error('batch commit',label,ce);fail+=n;done-=n;}
-        batch=writeBatch(db);n=0;
-      }
-    }catch(e){console.error('import row',label,r,e);fail++;}
-  }
-  try{ if(n>0)await batch.commit(); }
-  catch(e){console.error('final batch',e);fail+=n;done-=n;}
-  msgEl.textContent=`Imported ${done} ${label}`+(fail?`, ${fail} failed (see console)`:'')+'.';
-  msgEl.className=fail?'msg err':'msg ok';
-  refreshStudentCounts();
-}
-
-window.migStudents=async function(){
-  const records=parseCSV($('migStudents').value.trim());
-  await importRows(records,(r)=>{
-    const id=String(r.ID||r['Student ID']||'').trim();
-    if(!id)return {ref:null};
-    return {ref:doc(db,'students',id),data:{
-      ID:id,Name:r.Name||'','Current Level':r['Current Level']||'',Country:r.Country||'',
-      Tutor:r.Tutor||'',Batch:r.Batch||'',Status:r.Status||'Active','Join Date':r['Join Date']||'',
-      Email:r.Email||'',parentEmails:splitEmails(r.Email),Contact:String(r.Contact||''),
-      School:r.School||'',Address:r.Address||'','Monthly Fee':r['Monthly Fee']||'',
-      Currency:String(r.Currency||'').trim().toUpperCase()||currencyForCountry(r.Country),
-      // Same Drive-link conversion the Add/Edit form applies, so migrated photos render too.
-      Photo:driveToImageUrl(r.Photo||''),
-      'Payment Ref':r['Payment Ref']||'','Inactive Date':r['Inactive Date']||'','Inactive Reason':r['Inactive Reason']||'',
-      migratedAt:serverTimestamp()
-    }};
-  },$('migStudentsMsg'),'students');
-};
-window.migLevels=async function(){
-  const records=parseCSV($('migLevels').value.trim());
-  let i=0;
-  await importRows(records,(r)=>{
-    const name=String(r['Level Name']||'').trim();if(!name)return {ref:null};
-    i++;return {ref:doc(db,'levels',String(i).padStart(3,'0')),data:{...r,'Level Name':name,order:i,migratedAt:serverTimestamp()}};
-  },$('migLevelsMsg'),'levels');
-};
-window.migTopics=async function(){
-  const records=parseCSV($('migTopics').value.trim());
-  let i=0;
-  await importRows(records,(r)=>{
-    const lvl=String(r['Level Name']||'').trim(),topic=String(r.Topic||'').trim();
-    if(!lvl||!topic)return {ref:null};
-    i++;return {ref:doc(db,'topics',String(i).padStart(4,'0')),data:{'Level Name':lvl,Topic:topic,Description:r.Description||'',order:i,migratedAt:serverTimestamp()}};
-  },$('migTopicsMsg'),'topics');
-};
-window.migProgress=async function(){
-  const records=parseCSV($('migProgress').value.trim());
-  await importRows(records,(r)=>{
-    const sid=String(r['Student ID']||'').trim();if(!sid)return {ref:null};
-    // deterministic id: level|topic so re-imports update the same row
-    const key=(String(r['Level Name']||'')+'|'+String(r.Topic||'')).replace(/[\/#\.\[\]]/g,'_').slice(0,180)||('p'+Math.random().toString(36).slice(2));
-    return {ref:doc(db,'students',sid,'progress',key),data:{
-      'Level Name':r['Level Name']||'',Topic:r.Topic||'',Status:r.Status||'','Completion Date':r['Completion Date']||'',Notes:r.Notes||'',migratedAt:serverTimestamp()
-    }};
-  },$('migProgressMsg'),'progress rows');
-};
-window.migProjects=async function(){
-  const records=parseCSV($('migProjects').value.trim());
-  let i=0;
-  await importRows(records,(r)=>{
-    const sid=String(r['Student ID']||'').trim();if(!sid)return {ref:null};
-    i++;const key=(String(r['Level Name']||'')+'|'+String(r['Project Name']||'')).replace(/[\/#\.\[\]]/g,'_').slice(0,180)||('proj'+i);
-    return {ref:doc(db,'students',sid,'projects',key),data:{
-      'Level Name':r['Level Name']||'','Project Name':r['Project Name']||'',Description:r.Description||'','Video Link':r['Video Link']||'','Code Link':r['Code Link']||'',migratedAt:serverTimestamp()
-    }};
-  },$('migProjectsMsg'),'projects');
-};
-
 // Count verification — reads server-side counts (cheap, 1 read each).
 window.refreshStudentCounts=function(){/* counts panel removed in sub-step 2; kept as no-op */};
-window.toggleMig=function(){
-  const card=$('stuMigCard');const chev=$('migChevron');
-  const open=card.style.display==='none';
-  card.style.display=open?'':'none';if(chev)chev.textContent=open?'▴':'▾';
-};
 
-/* ═══════════ STUDENTS (sub-step 2) ═══════════ */
 let studentsData=[], levelsData=[], topicsData=[], studentsLoaded=false, refDataLoaded=false;
 let currentStudentId=null, currentStudentName='', currentProgress=[], currentProjects=[];
 let profileReturnTab='students';
@@ -3703,24 +3463,7 @@ function renderCompCell(s,comp,selY,selM){
   return `<div class="pay-kit-wrap"><span class="pay-badge pending">${esc(label)}</span>`
     +`<div class="pay-detail">${esc(inr(comp.due))} due</div><div class="pay-kit-actions">${btn}</div></div>`;
 }
-window.migPayments=async function(){
-  const records=parseCSV($('migPayments').value.trim());const msg=$('migPaymentsMsg');
-  if(!records.length){msg.textContent='No rows found.';msg.className='msg err';return;}
-  msg.innerHTML='<span class="spinner"></span> Importing '+records.length+'…';msg.className='msg busy';
-  let done=0,fail=0,batch=writeBatch(db),n=0;
-  for(const r of records){
-    try{
-      const sid=String(r['Student ID']||'').trim();if(!sid){fail++;continue;}
-      const type=String(r.Type||'Fee').trim()||'Fee';const year=String(r.Year||'').trim();const month=String(r.Month||'').trim();
-      if(!year||!month){fail++;continue;}
-      batch.set(doc(db,'payments',payDocId(sid,year,month,type)),{'Student ID':sid,Year:payY(year),Month:payM(month),Type:type,Status:r.Status||'Paid',Amount:r.Amount||'',Currency:String(r.Currency||'').trim().toUpperCase()||PAY_CURRENCY,'Paid Date':r['Paid Date']||'',Method:r.Method||'',Note:r.Note||'',MarkedBy:r.MarkedBy||'',migratedAt:serverTimestamp()},{merge:true});
-      n++;done++;if(n>=400){await batch.commit();batch=writeBatch(db);n=0;}
-    }catch(e){console.error('mig pay row',r,e);fail++;}
-  }
-  try{if(n>0)await batch.commit();}catch(e){fail+=n;done-=n;}
-  msg.textContent=`Imported ${done} payment(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
-  paymentsLoaded=false;loadPayments();
-};
+
 // ── Kit flow ──
 // "+ Kit" / "+ Components" now ask for the amount, so the Pending column and the
 // reminder message can account for them instead of showing an unpriced due.
@@ -5011,19 +4754,17 @@ const AA={
     markHeading:'Mark attendance',trendHeading:'Attendance trends',
     markSub:"Every active student is listed. Narrow with the filters or the search box, then set status only for the students you need \u2014 unmarked students aren't saved.",
     saveBtn:'Save attendance',daysLabel:'Days attended',datesLabel:'Attended dates',
-    unit:'classes',verb:'attended',shareOne:'Attendance update',shareAll:'Attendance summary',
-    migTitle:'Attendance Migration',sheetName:'Attendance'},
+    unit:'classes',verb:'attended',shareOne:'Attendance update',shareAll:'Attendance summary'},
   assignments:{p:'asg',col:'assignments',
     pos:'submitted',neg:'not submitted',posLbl:'Submitted',negLbl:'Not submitted',posShort:'Sub.',negShort:'Not sub.',
     markHeading:'Demo submissions',trendHeading:'Submission trends',
     markSub:"Every active student is listed. Narrow with the filters or the search box, then set submission status only for the students you need \u2014 unmarked students aren't saved.",
     saveBtn:'Save submissions',daysLabel:'Days submitted',datesLabel:'Submitted dates',
-    unit:'submissions',verb:'submitted',shareOne:'Demo submission update',shareAll:'Demo submission summary',
-    migTitle:'Assignments Migration',sheetName:'Assignments'}
+    unit:'submissions',verb:'submitted',shareOne:'Demo submission update',shareAll:'Demo submission summary'}
 };
 const aaState={
-  attendance:{built:false,view:'mark',roster:[],mark:{},summary:[],prefillKey:null,prefill:{}},
-  assignments:{built:false,view:'mark',roster:[],mark:{},summary:[],prefillKey:null,prefill:{}}
+  attendance:{built:false,view:'mark',roster:[],mark:{},summary:[],prefillKey:null,prefill:{},health:''},
+  assignments:{built:false,view:'mark',roster:[],mark:{},summary:[],prefillKey:null,prefill:{},health:''}
 };
 const AA_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const AA_MONTHS_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -5095,7 +4836,7 @@ function buildAaScreen(mod){
         </div>
         <div class="stu-actions"><button class="aa-head-btn" onclick="aaShareAll('${mod}')">${aaWaIcon()} Share list</button></div>
       </div>
-      <div class="aa-sub">Defaults to this month. Widen the filters (e.g. Month = All) for a longer trend. Expected is 4 ${esc(c.unit)} per month.</div>
+      <div class="aa-sub">Defaults to this month. Widen the filters (e.g. Month = All) for a longer trend. Expected is each student\u2019s own class days, from their join date.</div>
       <div class="stu-filter-bar">
         <div class="filter-group"><label>Country</label><select id="${p}_tCountry" onchange="aaTrendFilter('${mod}')"><option value="">All countries</option></select></div>
         <div class="filter-group"><label>Batch</label><select id="${p}_tBatch" onchange="aaTrendFilter('${mod}')"><option value="">All batches</option></select></div>
@@ -5105,41 +4846,20 @@ function buildAaScreen(mod){
         <div class="filter-group"><label>Month</label><select id="${p}_tMonth" onchange="aaPeriodChange('${mod}')">${months}</select></div>
         <button class="filter-clear" onclick="aaClearTrendFilters('${mod}')">Clear</button>
       </div>
-      <div class="risk-criteria">Health: 🟢 75%+ · 🟡 50–74% · 🔴 below 50%.</div>
+      <div class="risk-criteria">Health: 🟢 75%+ · 🟡 50–74% · 🔴 below 50%. A student with no sessions expected yet is not rated.</div>
+      <div class="pay-summary" id="${p}_tChips" style="padding:4px 20px 12px;"></div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="${p}_trendTable"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
   </div>
-
-  <div class="chart-card" id="${p}_migCard" style="display:none;">
-    <div class="mig-head" onclick="toggleMigCard('${p}_migBody','${p}_migChev')">
-      <div class="chart-title">${esc(c.migTitle)} (admin)</div>
-      <span class="mig-chev" id="${p}_migChev">▾</span>
-    </div>
-    <div id="${p}_migBody" style="display:none;margin-top:12px;">
-      <div class="note">Paste the ${esc(c.sheetName)} sheet's CSV export below. Rows are keyed by <strong>Student ID + Date</strong>, so re-importing updates rather than duplicates. Dates are normalised to <code>YYYY-MM-DD</code> and statuses to <code>${esc(c.pos)}</code> / <code>${esc(c.neg)}</code> so they match what the ${esc(c.markHeading)} screen writes. Your Google Sheet stays untouched.</div>
-      <div class="stu-mig">
-        <label class="stu-mig-label">${esc(c.sheetName)} CSV <span class="stu-mig-hint">(StudentID, Date, Status, Count) — “${esc(c.posLbl)}” rows are the ones that count</span></label>
-        <textarea id="${p}_migInput" placeholder="StudentID,Date,Status,Count&#10;EB001,2026-09-06,${esc(c.posLbl)},1"></textarea>
-        <div class="stu-mig-actions">
-          <select id="${p}_migDateFmt" class="pay-mini" title="How to read ambiguous slash dates">
-            <option value="auto" selected>Dates: auto-detect</option>
-            <option value="dmy">Dates: DD/MM/YYYY</option>
-            <option value="mdy">Dates: MM/DD/YYYY</option>
-          </select>
-          <button class="wa-btn wa-cancel" style="padding:7px 14px;font-size:12px;" onclick="aaMigrate('${mod}',true)">Check first</button>
-          <button class="btn-primary" onclick="aaMigrate('${mod}',false)">Import ${esc(c.sheetName)}</button>
-          <span class="msg" id="${p}_migMsg"></span>
-        </div>
-      </div>
-    </div>
-  </div>`;
+`;
   st.built=true;
 }
 
-/* ── Migration helper (admin) ──
-   Same shape as the Students helper: paste CSV, keyed writes, no duplicates.
-   Adds date/status normalisation because the sheets carry display-formatted
-   dates and capitalised statuses, while the app reads YYYY-MM-DD + lowercase. */
+/* ── Date normalisation ──
+   Written for the Sheets importer (now removed) because those sheets carried
+   display-formatted dates while the app reads YYYY-MM-DD. Still used by
+   aaJoinedBy() below, which reads a student's Join Date straight off the
+   student record — that field is free text and may still be in any format. */
 function aaNormDate(raw,order){
   const s=String(raw||'').trim();
   if(!s)return '';
@@ -5162,81 +4882,11 @@ function aaNormDate(raw,order){
   if(!isNaN(dt))return new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,10);
   return '';
 }
-function aaNormStatus(mod,raw){
-  const c=AA[mod],s=String(raw||'').trim().toLowerCase();
-  if(!s)return '';
-  if(s===c.pos||s===c.neg)return s;
-  if(mod==='attendance'){
-    if(/^(p|present|yes|y|1|true)$/.test(s))return 'present';
-    if(/^(a|absent|no|n|0|false)$/.test(s))return 'absent';
-  }else{
-    if(/^(s|sub|submitted|yes|y|1|true|done|completed)$/.test(s))return 'submitted';
-    if(/^(not[\s_-]?submitted|ns|no|n|0|false|pending|missing)$/.test(s))return 'not submitted';
-  }
-  return s;   // unrecognised: keep it verbatim and report it, never silently drop
-}
-window.aaMigrate=async function(mod,dryRun){
-  const c=AA[mod],p=c.p,msg=$(p+'_migMsg');
-  const order=$(p+'_migDateFmt').value;
-  const rows=parseCSV($(p+'_migInput').value.trim());
-  if(!rows.length){msg.textContent='No rows found — paste the CSV including its header row.';msg.className='msg err';return;}
-  // Parse + normalise everything first, so a dry run and a real import agree.
-  const good=[],bad={noId:0,noDate:0,noStatus:0},seen={},tally={};
-  rows.forEach(r=>{
-    const sid=String(r.StudentID||r['Student ID']||r.ID||'').trim();
-    if(!sid){bad.noId++;return;}
-    const date=aaNormDate(r.Date||r.date,order);
-    if(!date){bad.noDate++;return;}
-    const status=aaNormStatus(mod,r.Status||r.status);
-    if(!status){bad.noStatus++;return;}
-    let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
-    const key=sid+'_'+date;
-    if(seen[key]!==undefined)good[seen[key]]={sid,date,status,count:n};   // later row wins
-    else{seen[key]=good.length;good.push({sid,date,status,count:n});}
-  });
-  const dupes=rows.length-(good.length+bad.noId+bad.noDate+bad.noStatus);
-  good.forEach(g=>{tally[g.status]=(tally[g.status]||0)+1;});   // count what will actually be written
-  const parts=[];
-  Object.keys(tally).sort().forEach(k=>parts.push(`${tally[k]} ${k}`));
-  const skipped=bad.noId+bad.noDate+bad.noStatus;
-  const skipNote=skipped?` · skipped ${skipped} (${[bad.noId?bad.noId+' no ID':'',bad.noDate?bad.noDate+' bad date':'',bad.noStatus?bad.noStatus+' no status':''].filter(Boolean).join(', ')})`:'';
-  const dupNote=dupes>0?` · ${dupes} duplicate student+date row(s) collapsed`:'';
-  const range=good.length?` · ${good.map(g=>g.date).sort()[0]} → ${good.map(g=>g.date).sort().slice(-1)[0]}`:'';
-  const detail=`${parts.length?parts.join(', '):'no recognised statuses'}${range}${dupNote}${skipNote}`;
-  const summary=`${good.length} row(s) — ${detail}`;
-  if(dryRun){
-    msg.textContent=(good.length?'Ready to import ':'Nothing to import — ')+summary+'. Nothing written yet.';
-    msg.className=good.length?'msg ok':'msg err';return;
-  }
-  if(!good.length){msg.textContent='Nothing importable — '+summary+'.';msg.className='msg err';return;}
-  msg.innerHTML='<span class="spinner"></span> Importing '+good.length+'…';msg.className='msg busy';
-  let done=0,fail=0,wb=writeBatch(db),n=0;
-  for(const g of good){
-    try{
-      const id=(g.sid+'_'+g.date).replace(/[\/#\.\[\]]/g,'_');
-      wb.set(doc(db,c.col,id),{StudentID:g.sid,Date:g.date,Status:g.status,Count:String(g.count),migratedAt:serverTimestamp()},{merge:true});
-      n++;done++;
-      if(n>=400){await wb.commit();wb=writeBatch(db);n=0;}
-    }catch(e){console.error('aa mig',g,e);fail++;}
-  }
-  try{if(n>0)await wb.commit();}catch(e){console.error('aa mig commit',e);fail+=n;done-=n;}
-  msg.textContent=`Imported ${done} ${c.sheetName.toLowerCase()} row(s)`+(fail?`, ${fail} failed`:'')+` — ${detail}.`;
-  msg.className=fail?'msg err':'msg ok';
-  // Force a refetch so Trends and At-Risk see the imported rows.
-  if(mod==='attendance'){attendanceLoaded=false;attendanceData=[];}
-  else{assignmentsLoaded=false;assignmentsData=[];}
-  aaState[mod].prefillKey=null;aaState[mod].prefill={};
-  riskData=null;
-  if(aaState[mod].view==='trend')aaLoadTrend(mod);
-};
-
-/* ── Entry points from setTab ── */
 window.initAttendance=function(){aaInit('attendance');};
 window.initAssignments=function(){aaInit('assignments');};
 async function aaInit(mod){
   buildAaScreen(mod);
   const st=aaState[mod];
-  if(isAdmin())aEl(mod,'migCard').style.display='';
   if(!studentsLoaded){
     try{const snap=await getDocs(collection(db,'students'));studentsData=snap.docs.map(d=>({_id:d.id,...d.data()}));studentsLoaded=true;}
     catch(e){console.error('aa students',e);}
@@ -5539,9 +5189,16 @@ function aaPatchCache(mod,date,records,removedIds){
 window.aaTrendFilter=function(mod){aaNarrow(mod,'t');aaFillTrendStudents(mod);aaRenderTrend(mod);};
 // Year/Month move the join-date cut-off, so the student dropdown is rebuilt too.
 window.aaPeriodChange=function(mod){aaFillTrendStudents(mod);aaRenderTrend(mod);};
+// Tapping the active band clears it, like every other chip row in the app.
+window.aaSetHealth=function(mod,band){
+  const st=aaState[mod];
+  st.health=(st.health===band)?'':band;
+  aaRenderTrend(mod);
+};
 window.aaClearTrendFilters=function(mod){
   const p=AA[mod].p;
   ['tCountry','tBatch','tTutor','tStudent','tSearch'].forEach(k=>{const e=$(p+'_'+k);if(e)e.value='';});
+  aaState[mod].health='';                                 // Clear means clear, chips included
   const now=new Date();                                   // back to this month, this year
   const y=$(p+'_tYear');if(y)y.value=String(now.getFullYear());
   const m=$(p+'_tMonth');if(m)m.value=String(now.getMonth()+1);
@@ -5632,7 +5289,7 @@ window.aaRenderTrend=function(mod){
     let n=parseFloat(r.Count);if(isNaN(n)||n<=0)n=1;
     (byStudent[id]=byStudent[id]||[]).push({date:d,count:n});
   });
-  st.summary=list.map(s=>{
+  const rows=list.map(s=>{
     const id=String(s.ID);
     const hits=(byStudent[id]||[]).sort((a,b)=>a.date.localeCompare(b.date));
     const days=hits.reduce((t,h)=>t+h.count,0);
@@ -5640,8 +5297,22 @@ window.aaRenderTrend=function(mod){
     const pct=exp?Math.round(days/exp*100):0;
     return {id,name:s.Name||'',contact:s.Contact||'',tutor:s.Tutor||'',days,exp,dates:hits,pct,tier:exp?aaTier(pct):'none'};
   });
-  aEl(mod,'tMeta').textContent=`· ${st.summary.length} student${st.summary.length===1?'':'s'} · ${aaPeriodLabel(mod)} · expected is per student, from their join date`;
-  if(!st.summary.length){card.innerHTML='<div class="pay-empty">No students match this selection.</div>';return;}
+  /* Health chips are counted from every student the other filters left, then the
+     table shows only the chosen band. st.summary stays the VISIBLE list, because
+     "Share list" and the per-row share index into it — sharing what is on screen
+     is the point of picking a band. */
+  const counts={green:0,amber:0,red:0,none:0};
+  rows.forEach(r=>{if(counts[r.tier]!==undefined)counts[r.tier]++;});
+  const band=st.health||'';
+  st.summary=band?rows.filter(r=>r.tier===band):rows;
+  const chip=(k,label)=>counts[k]?`<button class="pay-chip aa-hchip aa-h-${k} ${band===k?'active':''}" `
+    +`onclick="aaSetHealth('${mod}','${k}')"><span class="aa-hdot ${k}"></span>${counts[k]} ${label}</button>`:'';
+  const chipsEl=aEl(mod,'tChips');
+  if(chipsEl)chipsEl.innerHTML=
+    `<button class="pay-chip pay-chip-all ${band===''?'active':''}" onclick="aaSetHealth('${mod}','')">All ${rows.length}</button>`
+    +chip('red','At risk')+chip('amber','Watch')+chip('green','On track')+chip('none','Not rated');
+  aEl(mod,'tMeta').textContent=`· ${st.summary.length}${band?' of '+rows.length:''} student${rows.length===1?'':'s'} · ${aaPeriodLabel(mod)} · expected is per student, from their join date`;
+  if(!st.summary.length){card.innerHTML=`<div class="pay-empty">${band?'No student is in that band for this selection.':'No students match this selection.'}</div>`;return;}
   const fmtDates=(arr)=>arr.length?arr.map(d=>{
     return `<span class="aa-chip">${esc(chipDate(d.date))}${d.count>1?' ×'+d.count:''}</span>`;
   }).join(' '):'<span class="aa-nodates">—</span>';
