@@ -425,6 +425,50 @@ tr.row-flash{animation:rowFlash 1.6s ease-out}
 .pay-act-history:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 .pay-act-wa{color:#128c4b;border-color:#cde8d8;display:inline-flex;align-items:center;justify-content:center;padding:6px 9px}.pay-act-wa:hover{background:#25d366;color:#fff;border-color:#25d366}
 .pay-kit-wrap{display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+/* ── Receipt ──────────────────────────────────────────────────────────────
+   The sheet is a fixed 560px whatever the screen, so the PNG a parent receives
+   is identical from a phone and from a laptop. It is wrapped in a scroller
+   rather than being made responsive: a receipt that reflows is a receipt whose
+   columns move between downloads. Every colour is literal — html2canvas
+   resolves var() inconsistently across browsers. */
+.rcpt-scroll{overflow-x:auto;padding-bottom:6px;margin-bottom:16px}
+.rcpt-sheet{width:560px;background:#fff;color:#0a373a;font-family:var(--font-body);
+  border:1px solid #d0e4e6;border-radius:12px;padding:26px 28px;box-sizing:border-box}
+.rcpt-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding-bottom:16px;border-bottom:2px solid #008fa0}
+.rcpt-brand{font-family:var(--font-mono);font-size:20px;font-weight:700;color:#008fa0;letter-spacing:-.4px}
+.rcpt-brand span{color:#d76241}
+.rcpt-tag{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:1.4px;
+  text-transform:uppercase;color:#5a8a8e;margin-top:3px}
+.rcpt-meta{text-align:right;font-family:var(--font-mono);font-size:10px;color:#5a8a8e;line-height:1.7}
+.rcpt-meta b{color:#0a373a;font-size:12px}
+.rcpt-to{display:flex;justify-content:space-between;gap:16px;padding:16px 0;border-bottom:1px solid #d0e4e6}
+.rcpt-to-l{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:#8db5b9;margin-bottom:4px}
+.rcpt-to-v{font-size:15px;font-weight:700}
+.rcpt-to-s{font-family:var(--font-mono);font-size:11px;color:#5a8a8e;margin-top:2px}
+.rcpt-tbl{width:100%;border-collapse:collapse;margin:4px 0 0}
+.rcpt-tbl th{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:1px;
+  text-transform:uppercase;color:#8db5b9;text-align:left;padding:12px 0 8px;border-bottom:1px solid #d0e4e6}
+.rcpt-tbl th.r{text-align:right}
+.rcpt-tbl td{padding:9px 0;border-bottom:1px solid #edf6f7;vertical-align:top;font-size:13px}
+.rcpt-tbl td.r{text-align:right;font-family:var(--font-mono);white-space:nowrap}
+.rcpt-grp{font-weight:700}
+.rcpt-sub{font-size:11px;color:#5a8a8e;padding-left:14px}
+.rcpt-sub td{border-bottom:none;padding:2px 0}
+.rcpt-st{font-family:var(--font-mono);font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.rcpt-st.paid{background:#e8f5cc;color:#5a7a00}
+.rcpt-st.due{background:#fef0ed;color:#c0472a}
+.rcpt-tot{margin-top:14px;padding-top:12px;border-top:2px solid #0a373a}
+.rcpt-tot-row{display:flex;justify-content:space-between;gap:16px;font-family:var(--font-mono);
+  font-size:12px;color:#5a8a8e;padding:3px 0}
+.rcpt-tot-row.big{font-size:17px;font-weight:700;color:#0a373a;padding-top:8px}
+.rcpt-tot-row.due .v{color:#c0472a}
+.rcpt-note{font-family:var(--font-mono);font-size:10px;color:#8db5b9;line-height:1.7;
+  margin-top:18px;padding-top:14px;border-top:1px solid #d0e4e6}
+.rcpt-actions{flex-wrap:wrap}
+.pay-act-bill{background:#fff;color:var(--accent);border-color:var(--accent-light)}
+.pay-act-bill:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* Component bills — read from the inventory app */
 .pay-comp-none{font-family:var(--font-mono);font-size:11px;color:var(--text-light)}
 .bill-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
@@ -1033,6 +1077,24 @@ table.avail td.occ{border:1px solid transparent}
   </div>
 
   <!-- WhatsApp reminder modal -->
+  <!-- Receipt / bill for one student-month. #rcptSheet is what gets rasterised,
+       so it carries a fixed width and no app chrome. -->
+  <div class="modal-overlay" id="receiptModal">
+    <div class="modal-card" style="max-width:640px;">
+      <div class="modal-head"><h3 id="rcptTitle">Bill</h3><button class="modal-close" onclick="closeReceipt()">&times;</button></div>
+      <div class="modal-body">
+        <div class="rcpt-scroll"><div class="rcpt-sheet" id="rcptSheet"></div></div>
+        <div class="wa-actions rcpt-actions">
+          <button class="wa-btn wa-cancel" onclick="closeReceipt()">Close</button>
+          <button class="wa-btn wa-cancel" id="rcpt_PdfBtn" onclick="downloadReceipt('pdf')">PDF</button>
+          <button class="wa-btn pf-save" id="rcpt_PngBtn" onclick="downloadReceipt('png')">Download PNG</button>
+          <button class="wa-btn pf-save" id="rcpt_WaBtn" onclick="receiptWhatsApp()" style="background:#25d366;border-color:#25d366;">WhatsApp</button>
+        </div>
+        <div class="msg" id="rcptMsg"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay wa-overlay" id="waModal">
     <div class="modal-card wa-card">
       <div class="modal-head">
@@ -3476,10 +3538,13 @@ window.buildPayments=function(){
       const detail=(st==='paid'&&rec)?`<div class="pay-detail">${rec.Amount?esc(money(payAmt(rec.Amount)||0,payRowCur(rec))):''}${rec['Paid Date']?(' · '+esc(String(rec['Paid Date']))):''}</div>`:'';
       const kitCell=renderKitCell(s,kitRec,kitSt);const compCell=renderCompCell(s,comp,selY,selM);
       let action='';
+      // The bill is always offered — it reads as an invoice while anything is due
+      // and as a receipt once everything is settled.
+      const billBtn=`<button class="pay-act pay-act-bill" title="Itemised bill for this month" onclick="openReceipt('${jsq(s.ID)}',${selY},${selM})">Bill</button>`;
       if(st==='pending'){
         const wa=`<button class="pay-act pay-act-wa" title="WhatsApp reminder" onclick="payWhatsApp('${jsq(s.ID)}')">${waIco}</button>`;
-        action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${jsq(s.ID)}','${jsq(s.Name)}','${jsq(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub"><button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${jsq(s.ID)}',this)">Ignore</button></div></div>`;
-      }else{action=`<button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button>`;}
+        action=`<div class="pay-actions"><div class="pay-actions-main"><button class="pay-act pay-act-paid" onclick="openPaymentForm('${jsq(s.ID)}','${jsq(s.Name)}','${jsq(String(fee))}')">+ Add payment</button> ${wa}</div><div class="pay-actions-sub">${billBtn}<button class="pay-act pay-act-ignore" onclick="markPaymentIgnore('${jsq(s.ID)}',this)">Ignore</button></div></div>`;
+      }else{action=`<div class="pay-actions"><div class="pay-actions-main">${billBtn}</div><div class="pay-actions-sub"><button class="pay-act pay-act-undo" onclick="revertPayment('${jsq(s.ID)}',this)">Undo</button></div></div>`;}
       // Batch + monthly fee now ride along under the name, like the student ID.
       const sc=studentCurrency(s),fv=payAmt(fee);
       const feeTxt=fv===null?'':(sc==='INR'?inr(fv):`${money(fv,sc)} ≈ ${inr(toINR(fv,sc,selY,selM))}`);
@@ -3874,6 +3939,200 @@ function renderLegacyComponents(){
       +`<span>${r.amount!==null?esc(money(r.amount,r.cur)):'—'} · ${esc(r.status)}</span></div>`).join('')
     +'</div>';
 }
+/* ── Receipt for one student-month ───────────────────────────────────────────
+   Covers the month's fee, kit and every component bill in one sheet, each line
+   marked Paid or Due, so the same document serves as an invoice before payment
+   and a receipt after. Amounts stay in the currency each item was billed in;
+   a rupee equivalent appears only when the sheet is mixed. */
+let rcptCtx=null;
+/* Lazily fetched, only when a receipt is first opened — a parent-facing render
+   library has no business in the cost of every page load. */
+const LAZY={};
+function lazyScript(src){
+  if(LAZY[src])return LAZY[src];
+  LAZY[src]=new Promise((res,rej)=>{
+    const el=document.createElement('script');
+    el.src=src;el.async=true;
+    el.onload=()=>res();
+    el.onerror=()=>{delete LAZY[src];rej(new Error('offline'));};
+    document.head.appendChild(el);
+  });
+  return LAZY[src];
+}
+const H2C_SRC='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+const JSPDF_SRC='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+
+/** Every billable line for a student-month, from all three sources. */
+function receiptLines(s,selY,selM){
+  const sid=String(s.ID||'').trim();
+  const cur=studentCurrency(s);
+  const lines=[];
+  const push=(o)=>lines.push(o);
+  // Fee — falls back to the quoted monthly fee when no row exists yet.
+  const fee=payRecord(sid,selY,selM,'Fee');
+  const feeSt=fee?String(fee.Status||'').toLowerCase():'';
+  if(feeSt!=='ignore'){
+    const rec=fee&&payAmt(fee.Amount)!==null;
+    const amt=rec?payAmt(fee.Amount):payAmt(s['Monthly Fee']);
+    const c=rec?payRowCur(fee):cur;
+    if(amt!==null)push({label:'Monthly Fee — '+PAY_MONTHS[selM-1]+' '+selY,
+      amount:amt,currency:c,paid:feeSt==='paid',when:(fee&&fee['Paid Date'])||'',
+      how:(fee&&fee.Method)||''});
+  }
+  // Kit — only when a row exists; there is no standing kit charge.
+  const kit=payRecord(sid,selY,selM,'Kit');
+  const kitSt=kit?String(kit.Status||'').toLowerCase():'';
+  if(kit&&kitSt!=='ignore'){
+    const amt=payAmt(kit.Amount);
+    if(amt!==null)push({label:'Kit — '+PAY_MONTHS[selM-1]+' '+selY,
+      amount:amt,currency:payRowCur(kit),paid:kitSt==='paid',
+      when:kit['Paid Date']||'',how:kit.Method||''});
+  }
+  // Components — one group per bill, itemised from the inventory app's lines.
+  salesFor(sid,selM).forEach(b=>{
+    push({label:'Components · '+(b.billNo||b._id),
+      amount:Number(b.total)||0,currency:'INR',paid:saleIsPaid(b),
+      when:b.paidOn||'',how:b.method||'',
+      items:(Array.isArray(b.lines)?b.lines:[]).map(l=>({
+        name:l.name||l.itemCode||'',qty:Number(l.qty)||0,
+        rate:Number(l.rate)||0,amount:Number(l.amount)||0}))});
+  });
+  return lines;
+}
+function receiptTotals(lines,selY,selM){
+  const billed={},paid={},due={};
+  let bINR=0,pINR=0,dINR=0;
+  lines.forEach(l=>{
+    const c=l.currency,v=Number(l.amount)||0,inrV=toINR(v,c,selY,selM);
+    billed[c]=(billed[c]||0)+v;bINR+=inrV;
+    if(l.paid){paid[c]=(paid[c]||0)+v;pINR+=inrV;}
+    else{due[c]=(due[c]||0)+v;dINR+=inrV;}
+  });
+  const txt=(m)=>Object.keys(m).sort().map(k=>money(m[k],k)).join(' + ');
+  const keys=Object.keys(billed);
+  return {billed,paid,due,bINR,pINR,dINR,
+    billedText:txt(billed),paidText:txt(paid),dueText:txt(due),
+    mixed:keys.length>1||(keys.length===1&&keys[0]!=='INR')};
+}
+window.openReceipt=function(sid,year,month){
+  const s=studentsData.find(x=>String(x.ID)===String(sid));if(!s)return;
+  const selY=+year,selM=+month;
+  const lines=receiptLines(s,selY,selM);
+  const t=receiptTotals(lines,selY,selM);
+  const no='EB/'+selY+'/'+String(selM).padStart(2,'0')+'/'+String(s.ID);
+  rcptCtx={sid:String(s.ID),name:s.Name||String(s.ID),year:selY,month:selM,lines,totals:t,no};
+  $('rcptTitle').textContent='Bill · '+PAY_MONTHS[selM-1]+' '+selY;
+  $('rcptMsg').textContent='';$('rcptMsg').className='msg';
+  const today=new Date();
+  const issued=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  const row=(l)=>{
+    const sub=(l.items&&l.items.length)
+      ? l.items.map(it=>`<tr class="rcpt-sub"><td colspan="2">${esc(it.name)} — ${it.qty} × ${esc(inr(it.rate))}</td><td class="r">${esc(inr(it.amount))}</td></tr>`).join('')
+      : '';
+    const when=l.paid&&l.when?`<div class="rcpt-sub" style="padding:0">paid ${esc(l.when)}${l.how?' · '+esc(l.how):''}</div>`:'';
+    return `<tr><td class="rcpt-grp">${esc(l.label)}${when}</td>`
+      +`<td class="r"><span class="rcpt-st ${l.paid?'paid':'due'}">${l.paid?'Paid':'Due'}</span></td>`
+      +`<td class="r"><b>${esc(money(l.amount,l.currency))}</b></td></tr>`+sub;
+  };
+  const totRow=(lbl,txt,inrTxt,cls)=>txt?`<div class="rcpt-tot-row ${cls||''}"><span>${esc(lbl)}</span>`
+    +`<span class="v">${esc(txt)}${inrTxt?' <span style="opacity:.6">('+inrTxt+')</span>':''}</span></div>`:'';
+  $('rcptSheet').innerHTML=`
+    <div class="rcpt-head">
+      <div><div class="rcpt-brand">Electro<span>Botics</span></div>
+        <div class="rcpt-tag">Robotics &amp; Coding for Young Makers</div></div>
+      <div class="rcpt-meta"><b>${esc(no)}</b><br>Issued ${esc(issued)}<br>${esc(PAY_MONTHS[selM-1])} ${selY}</div>
+    </div>
+    <div class="rcpt-to">
+      <div><div class="rcpt-to-l">Billed to</div><div class="rcpt-to-v">${esc(s.Name||'')}</div>
+        <div class="rcpt-to-s">${esc(s.ID)}${s.Batch?' · '+esc(s.Batch):''}${s['Current Level']?' · '+esc(s['Current Level']):''}</div></div>
+      <div style="text-align:right"><div class="rcpt-to-l">Status</div>
+        <div class="rcpt-to-v" style="color:${t.dINR>0.5?'#c0472a':'#5a7a00'}">${t.dINR>0.5?'Payment due':'Settled'}</div>
+        ${s.Tutor?`<div class="rcpt-to-s">Tutor: ${esc(s.Tutor)}</div>`:''}</div>
+    </div>
+    ${lines.length?`<table class="rcpt-tbl"><thead><tr><th>Item</th><th class="r">Status</th><th class="r">Amount</th></tr></thead>
+      <tbody>${lines.map(row).join('')}</tbody></table>`
+      :'<div class="rcpt-note" style="border-top:none;margin-top:14px">Nothing billed for this month.</div>'}
+    <div class="rcpt-tot">
+      ${totRow('Total billed',t.billedText,t.mixed?inr(t.bINR):'')}
+      ${totRow('Received',t.paidText,t.mixed?inr(t.pINR):'')}
+      ${t.dINR>0.5?totRow('Balance due',t.dueText,t.mixed?inr(t.dINR):'','big due')
+        :'<div class="rcpt-tot-row big"><span>Balance due</span><span class="v" style="color:#5a7a00">Nil</span></div>'}
+    </div>
+    <div class="rcpt-note">${t.dINR>0.5
+      ? 'Please ignore this notice if you have already paid — it may not be recorded yet.'
+      : 'Thank you. This is a computer-generated receipt and needs no signature.'}
+      <br>ElectroBotics · team.electrobotics@gmail.com</div>`;
+  showModal('receiptModal');
+};
+window.closeReceipt=function(){$('receiptModal').classList.remove('open');};
+function rcptFileName(ext){
+  return `ElectroBotics_Bill_${rcptCtx.sid}_${PAY_MONTHS[rcptCtx.month-1]}_${rcptCtx.year}.${ext}`;
+}
+/** Rasterise the sheet at 2× so the PNG is legible when a parent zooms in. */
+async function rcptCanvas(){
+  await lazyScript(H2C_SRC);
+  if(typeof html2canvas!=='function')throw new Error('offline');
+  return await html2canvas($('rcptSheet'),{scale:2,backgroundColor:'#ffffff',logging:false,useCORS:true});
+}
+window.downloadReceipt=async function(kind){
+  if(!rcptCtx)return;
+  const msg=$('rcptMsg'),btn=$(kind==='pdf'?'rcpt_PdfBtn':'rcpt_PngBtn');
+  const prev=btn.textContent;btn.disabled=true;btn.textContent='Preparing…';
+  msg.innerHTML='<span class="spinner"></span> Rendering…';msg.className='msg busy';
+  try{
+    const canvas=await rcptCanvas();
+    if(kind==='png'){
+      const a=document.createElement('a');
+      a.href=canvas.toDataURL('image/png');a.download=rcptFileName('png');
+      document.body.appendChild(a);a.click();a.remove();
+    }else{
+      await lazyScript(JSPDF_SRC);
+      const JsPDF=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
+      if(!JsPDF)throw new Error('offline');
+      // One A4 page, the sheet scaled to fit the width with a 12mm margin.
+      const pdf=new JsPDF({unit:'mm',format:'a4'});
+      const pw=pdf.internal.pageSize.getWidth(),m=12,w=pw-m*2;
+      const h=canvas.height*w/canvas.width;
+      pdf.addImage(canvas.toDataURL('image/png'),'PNG',m,m,w,h,undefined,'FAST');
+      pdf.save(rcptFileName('pdf'));
+    }
+    msg.textContent='Saved to your downloads.';msg.className='msg ok';
+  }catch(e){
+    console.error('downloadReceipt',e);
+    msg.innerHTML='Could not build the file — the renderer could not be reached. '
+      +'Check your connection and try again.';
+    msg.className='msg err';
+  }
+  btn.disabled=false;btn.textContent=prev;
+};
+/* wa.me carries TEXT ONLY — no web page can attach a file to WhatsApp. So the
+   image is downloaded first and the message opened with the summary prefilled;
+   the parent gets the picture when you attach it from your gallery. Saying so
+   here beats a silent "why did nothing attach". */
+window.receiptWhatsApp=function(){
+  if(!rcptCtx)return;
+  const s=studentsData.find(x=>String(x.ID)===String(rcptCtx.sid));
+  const t=rcptCtx.totals,due=t.dINR>0.5;
+  const L=['Dear Parent,',''];
+  L.push(`${due?'Bill':'Receipt'} for ${rcptCtx.name} — ${PAY_MONTHS[rcptCtx.month-1]} ${rcptCtx.year}.`);
+  L.push('');
+  rcptCtx.lines.forEach(l=>{
+    L.push(`• ${l.label}: ${money(l.amount,l.currency)} — ${l.paid?'Paid':'Due'}`);
+    (l.items||[]).forEach(it=>L.push(`   ${it.name} — ${it.qty} × ${inr(it.rate)}`));
+  });
+  L.push('');
+  L.push(`Total: ${t.billedText}${t.mixed?' ('+inr(t.bINR)+')':''}`);
+  if(due)L.push(`Balance due: ${t.dueText}${t.mixed?' ('+inr(t.dINR)+')':''}`);
+  L.push('');
+  L.push(due?'Kindly share the screenshot of your transfer if done already.':'Thank you for the payment.');
+  L.push('');L.push('Thank you,');L.push('Team ElectroBotics');
+  waTargetPhone=String((s&&s.Contact)||'').replace(/[^0-9+]/g,'');
+  $('waModalTitle').textContent='Bill · '+rcptCtx.name;
+  $('wa_Msg').value=L.join('\n');
+  $('rcptMsg').innerHTML='WhatsApp only carries text — <b>download the PNG</b> and attach it in the chat.';
+  $('rcptMsg').className='msg';
+  showModal('waModal');
+};
 window.billsWhatsApp=function(){
   if(!billsCtx)return;
   const s=studentsData.find(x=>String(x.ID)===String(billsCtx.sid));
