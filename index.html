@@ -759,6 +759,18 @@ table.avail td.occ{border:1px solid transparent}
 .avail-chip{display:flex;align-items:center;justify-content:space-between;gap:5px;font-family:var(--font-mono);font-size:10px;font-weight:600;color:#fff;border-radius:4px;padding:2px 5px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avail-count{flex:none;background:rgba(255,255,255,.28);border-radius:8px;padding:0 5px;font-weight:700;font-size:9px}
 .avail-free-txt{font-family:var(--font-mono);font-size:9px;color:var(--text-light);opacity:.6}
+/* A tutor chip drills through to the Students table, the same way a Summary chart bar
+   does. Only the tutor chips are clickable — a "free" tutor has no students in that
+   slot, so there would be nothing to show. */
+.avail-chip-btn{cursor:pointer;transition:filter .12s,box-shadow .12s}
+.avail-chip-btn:hover{filter:brightness(1.12);box-shadow:0 1px 5px rgba(0,0,0,.22)}
+.avail-chip-btn:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+/* Explains a drill-through that could not filter exactly. Only ever shown when a
+   slot's Batch field is spelled more than one way. */
+.stu-note{margin:0 20px 10px;padding:8px 12px;border-radius:7px;background:var(--amber-light);border:1px solid var(--amber);
+  font-family:var(--font-mono);font-size:11px;line-height:1.5;color:var(--text);display:flex;gap:10px;align-items:flex-start}
+.stu-note .note-x{flex:none;margin-left:auto;background:none;border:none;cursor:pointer;font-size:13px;line-height:1;color:var(--text-light);padding:0 2px}
+.stu-note .note-x:hover{color:var(--text)}
 .tn-list{max-height:280px;overflow-y:auto;margin-bottom:14px}
 .tn-item{padding:10px 0;border-bottom:1px solid var(--border)}.tn-item:last-child{border-bottom:none}
 .tn-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:3px}
@@ -909,6 +921,7 @@ table.avail td.occ{border:1px solid transparent}
         <div class="filter-group"><label>Status</label><select id="stuFilterStatus" onchange="renderStudents()"><option value="">Active</option><option value="all">All</option><option value="inactive">Inactive</option></select></div>
         <button class="filter-clear" onclick="clearStudentFilters()">Clear</button>
       </div>
+      <div id="stuFilterNote" class="stu-note" style="display:none;"></div>
       <div class="avail-scroll" style="padding:0 20px 16px;"><div id="studentsList"><div class="pay-loading"><span class="spinner"></span> Loading…</div></div></div>
     </div>
 
@@ -2023,16 +2036,37 @@ function fillStudentFilters(){
   setSel('stuFilterTutor','All tutors',tutors);
   setSel('stuFilterCountry','All countries',countries);
   setSel('stuFilterBatch','All batches',batches);
+  if(!fillStudentFilters._wired){fillStudentFilters._wired=true;wireStuFilterNote();}
 }
 
 let filteredStudents=[];
 // Sticky marker for the student whose profile was last opened, so returning to
 // the table shows you where you were.
 let selectedStudentId=null;
+/* The note under the filter bar. Set only by a drill-through that could not filter
+   exactly; any change the user then makes to a filter clears it, because it would no
+   longer describe what is on screen. */
+window.setStuFilterNote=function(txt){
+  const el=$('stuFilterNote');if(!el)return;
+  if(txt){
+    el.innerHTML=`<span>${esc(txt)}</span><button class="note-x" title="Dismiss" onclick="setStuFilterNote('')">✕</button>`;
+    el.style.display='';
+  }else{el.innerHTML='';el.style.display='none';}
+};
+/* Registered once, after the filter bar exists. The selects keep their inline
+   onchange="renderStudents()"; this listener runs alongside it and only drops the note. */
+function wireStuFilterNote(){
+  ['stuFilterCountry','stuFilterLevel','stuFilterTutor','stuFilterBatch','stuFilterStatus'].forEach(id=>{
+    const e=$(id);if(e)e.addEventListener('change',()=>setStuFilterNote(''));
+  });
+  const q=$('stuSearch');if(q)q.addEventListener('input',()=>setStuFilterNote(''));
+}
+
 window.clearStudentFilters=function(){
   ['stuSearch'].forEach(id=>{const el=$(id);if(el)el.value='';});
   ['stuFilterCountry','stuFilterLevel','stuFilterTutor','stuFilterBatch'].forEach(id=>{const el=$(id);if(el)el.value='';});
   $('stuFilterStatus').value=''; // back to Active default
+  setStuFilterNote('');
   renderStudents();
 };
 window.renderStudents=function(){
@@ -4577,9 +4611,16 @@ function buildAvailabilityGrid(){
   const PALETTE=['#008fa0','#c77d00','#7048a8','#2e8b57','#b03060','#3a6ea5','#9a6324','#d4496a','#46887f','#8a5a00'];
   function parseBatch(raw){const s=String(raw||'').trim();if(!s)return null;const dm=s.match(/^([A-Za-z]+)/);if(!dm)return null;const day=DAY_ALIAS[dm[1].toLowerCase()];if(!day)return null;const tm=s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);if(!tm)return null;let h=parseInt(tm[1]),min=tm[2]?parseInt(tm[2]):0;const ap=tm[3].toLowerCase();if(ap==='pm'&&h!==12)h+=12;if(ap==='am'&&h===12)h=0;const mins=h*60+min;const slot=(((h%12)||12))+':'+String(min).padStart(2,'0')+' '+ap;return{day,slot,mins};}
   const occupancy={},slotMins={},tutorsSet=new Set();
+  /* The raw Batch strings behind each chip, keyed "mins|day|tutor". parseBatch is
+     lenient, so "Sun 9:30 am" and "Sun - 9:30 am" land in the SAME cell — the grid is
+     right to merge them, but the Students table's Batch filter matches the raw string
+     exactly. Recording the set lets the drill-through know whether one dropdown value
+     can reproduce the chip's count, or whether the data needs tidying first. */
+  const cellRaw={};
   studentsData.filter(s=>(s.Status||'Active').toLowerCase()==='active').forEach(s=>{
     const tutor=(s.Tutor||'').trim();const p=parseBatch(s.Batch);if(!tutor||!p)return;
     tutorsSet.add(tutor);slotMins[p.mins]=p.slot;(occupancy[p.mins]=occupancy[p.mins]||{});const cell=(occupancy[p.mins][p.day]=occupancy[p.mins][p.day]||{});cell[tutor]=(cell[tutor]||0)+1;
+    const k=p.mins+'|'+p.day+'|'+tutor;(cellRaw[k]=cellRaw[k]||new Set()).add(String(s.Batch||'').trim());
   });
   const tutors=[...tutorsSet].sort();const slots=Object.keys(slotMins).map(Number).sort((a,b)=>a-b);
   if(!slots.length){legend.innerHTML='';grid.innerHTML='<p style="font-family:var(--font-mono);font-size:12px;color:var(--text-light);">No batch/time data found. Add values like <strong>Sun - 9:30 am</strong> in the Batch field.</p>';return;}
@@ -4591,7 +4632,18 @@ function buildAvailabilityGrid(){
     DAY_ORDER.forEach(day=>{
       const cell=occupancy[mins]&&occupancy[mins][day]?occupancy[mins][day]:null;const here=cell?Object.keys(cell).sort():[];
       if(here.length){
-        const chips=here.map(t=>`<span class="avail-chip" style="background:${colorOf[t]}" title="${esc(t)} — ${cell[t]} student${cell[t]===1?'':'s'}">${esc(t)} <span class="avail-count">${cell[t]}</span></span>`).join('');
+        const chips=here.map(t=>{
+          const n=cell[t];
+          const raws=[...(cellRaw[mins+'|'+day+'|'+t]||[])];
+          // One spelling → the Batch dropdown can reproduce this exact cell. Several →
+          // pass '' and let goTutorSlot explain why the table shows more than the chip.
+          const batch=raws.length===1?raws[0]:'';
+          const tip=`${t} — ${n} student${n===1?'':'s'} · click to see them`;
+          return `<span class="avail-chip avail-chip-btn" style="background:${colorOf[t]}" role="button" tabindex="0" title="${esc(tip)}"`
+            +` onclick="goTutorSlot('${jsq(t)}','${jsq(batch)}','${jsq(day+' · '+slotMins[mins])}',${n})"`
+            +` onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">`
+            +`${esc(t)} <span class="avail-count">${n}</span></span>`;
+        }).join('');
         const free=tutors.filter(t=>!here.includes(t));
         html+=`<td class="occ">${chips}${free.length?`<span class="avail-free-txt" title="Free: ${esc(free.join(', '))}">+${free.length} free</span>`:''}</td>`;
       }else{html+=`<td class="free"><span class="avail-free-txt">All free</span></td>`;}
@@ -4647,6 +4699,14 @@ function wrapLabel(s,max){
   }
   return lines.length>1?lines:t;
 }
+/* A canvas has no per-bar hover target, so CSS cannot do this: only Chart.js knows
+   whether the pointer is actually over a bar. Set on the three charts that drill
+   through to the Students table — the enrolment chart is not clickable, so it keeps
+   the default arrow. */
+function chartCursor(e,els){
+  const c=e&&e.native&&e.native.target;
+  if(c&&c.style)c.style.cursor=els&&els.length?'pointer':'default';
+}
 function buildCharts(){
   if(typeof Chart==='undefined')return;
   if(window.ChartDataLabels&&Chart.register)try{Chart.register(window.ChartDataLabels);}catch(e){}
@@ -4657,7 +4717,7 @@ function buildCharts(){
   const levelCounts=levelsData.map(l=>active.filter(s=>normLevel(s['Current Level'])===normLevel(l.name)).length);
   summaryCharts.level=new Chart($('chartLevel'),{type:'bar',
     data:{labels:levelsData.map(l=>l.name),datasets:[{data:levelCounts,backgroundColor:levelsData.map((l,i)=>colors[i%colors.length]),borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,onClick:(e,els)=>{if(els.length)goStudentsFiltered('level',levelsData[els[0].index].name);},
+    options:{responsive:true,maintainAspectRatio:false,onClick:(e,els)=>{if(els.length)goStudentsFiltered('level',levelsData[els[0].index].name);},onHover:chartCursor,
       plugins:{legend:{display:false},tooltip:noTip,datalabels:{anchor:'end',align:'top',color:'#0a373a',font:{family:fontMono,size:12,weight:700},formatter:v=>v>0?v:''}},
       scales:{x:{ticks:{font:{family:fontMono,size:9},color:'#8db5b9',maxRotation:45}},y:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'15%'}}}});
   const cMap={};active.forEach(s=>{const c=s.Country||'Unknown';cMap[c]=(cMap[c]||0)+1;});
@@ -4671,7 +4731,7 @@ function buildCharts(){
     +`<span>International <b>${nIntl}</b>${tot?' · '+Math.round(nIntl/tot*100)+'%':''}</span>`;
   summaryCharts.batch=new Chart($('chartBatch'),{type:'bar',
     data:{labels:cLabels,datasets:[{data:cData,backgroundColor:colors.slice(0,cLabels.length),borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:48}},onClick:(e,els)=>{if(els.length)goStudentsFiltered('country',cLabels[els[0].index]);},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',layout:{padding:{right:48}},onClick:(e,els)=>{if(els.length)goStudentsFiltered('country',cLabels[els[0].index]);},onHover:chartCursor,
       plugins:{legend:{display:false},tooltip:noTip,datalabels:{anchor:'end',align:'right',color:'#0a373a',clamp:true,clip:false,font:{family:fontMono,size:11,weight:700},formatter:v=>{const p=tot?Math.round(v/tot*100):0;return v+' ('+p+'%)';}}},
       scales:{x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'30%'},
         /* Chart.js caps how wide a left axis may grow (roughly a third of the chart), so a
@@ -4684,7 +4744,7 @@ function buildCharts(){
   const tLabels=Object.keys(tMap),tData=Object.values(tMap);
   summaryCharts.tutor=new Chart($('chartTutor'),{type:'bar',
     data:{labels:tLabels,datasets:[{data:tData,backgroundColor:colors.slice(0,tLabels.length),borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',onClick:(e,els)=>{if(els.length)goStudentsFiltered('tutor',tLabels[els[0].index]);},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',onClick:(e,els)=>{if(els.length)goStudentsFiltered('tutor',tLabels[els[0].index]);},onHover:chartCursor,
       plugins:{legend:{display:false},tooltip:noTip,datalabels:{anchor:'end',align:'right',color:'#0a373a',font:{family:fontMono,size:12,weight:700},formatter:v=>v>0?v:''}},
       scales:{x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,grace:'15%'},y:{ticks:{font:{family:fontMono,size:11},color:'#8db5b9'}}}}});
   try{buildEnrollmentChart();}catch(e){console.warn('enroll',e);}
@@ -4719,17 +4779,39 @@ window.buildEnrollmentChart=function(){
     scales:{x:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9',maxRotation:45},grid:{display:false}},y:{ticks:{font:{family:fontMono,size:10},color:'#8db5b9'},beginAtZero:true,title:{display:true,text:'Students',font:{family:fontMono,size:10},color:'#8db5b9'}}}}});
   const scroller=document.querySelector('#summaryScreen .enroll-scroll');if(scroller)requestAnimationFrame(()=>{scroller.scrollLeft=scroller.scrollWidth;});
 };
-function goStudentsFiltered(type,value){
+/* A tutor chip in the availability grid. `batch` is the one raw Batch string behind
+   that cell, or '' when the slot is spelled more than one way — in which case the
+   table can only be narrowed to the tutor, and the note says so rather than quietly
+   showing a different number from the one on the chip. */
+window.goTutorSlot=function(tutor,batch,slotLabel,n){
+  if(batch){goStudentsFiltered('tutor',tutor,{batch:batch});return;}
+  goStudentsFiltered('tutor',tutor,{note:`Showing all of ${tutor}'s students. The `
+    +`${slotLabel} slot has ${n}, but its Batch field is spelled more than one way, so it `
+    +`cannot be filtered exactly — tidy those Batch values to the same wording and this `
+    +`will land on ${n}.`});
+};
+
+/* Drill-through into the Students table, from a Summary chart bar or an availability
+   chip. `extra` may carry {batch} to narrow further and {note} to explain a filter that
+   could not be applied exactly. */
+function goStudentsFiltered(type,value,extra){
   setTab('students');
   // Apply once the list is actually loaded — a 200ms guess lost the filter whenever
   // loadStudentsList() returned late and re-rendered over it.
   const apply=()=>{
     ['stuFilterCountry','stuFilterLevel','stuFilterTutor','stuFilterBatch'].forEach(id=>{const e=$(id);if(e)e.value='';});
     const s=$('stuSearch');if(s)s.value='';
+    // Every drill-through source — the Summary charts and the availability grid alike —
+    // counts ACTIVE students only. Force Status back to Active so the table cannot show
+    // more rows than the bar or chip that was clicked.
+    const stat=$('stuFilterStatus');if(stat)stat.value='';
     const map={level:'stuFilterLevel',country:'stuFilterCountry',tutor:'stuFilterTutor'};
     const sel=$(map[type]);
     // Charts label a blank field "Unknown"; there is no such filter value, so fall back to All.
     if(sel&&value&&value!=='Unknown'&&[...sel.options].some(o=>o.value===value))sel.value=value;
+    const bsel=$('stuFilterBatch');
+    if(bsel&&extra&&extra.batch&&[...bsel.options].some(o=>o.value===extra.batch))bsel.value=extra.batch;
+    setStuFilterNote(extra&&extra.note?extra.note:'');
     renderStudents();
   };
   let tries=0;
