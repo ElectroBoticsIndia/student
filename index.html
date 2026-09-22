@@ -776,6 +776,15 @@ table.avail td.occ{border:1px solid transparent}
   text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
 .pem-check input{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);
   border-radius:7px;min-width:260px;background:var(--card);color:var(--text)}
+/* The technical reason behind a failed sign-in. Small and muted — a parent can ignore it,
+   an admin can act on it, and nobody has to open the console to see it. */
+.login-diag{margin:10px 0;padding:8px 10px;border-radius:6px;background:var(--amber-light);
+  border:1px solid var(--amber);font-family:var(--font-mono);font-size:10.5px;line-height:1.5;
+  color:var(--text);text-align:left}
+.login-diag code{background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px}
+.pem-fields{margin-top:8px;padding:8px 10px;border-radius:6px;background:var(--bg);border:1px solid var(--border);
+  font-family:var(--font-mono);font-size:11px;line-height:1.7;word-break:break-all}
+.pem-fields code{background:rgba(0,0,0,.05);padding:1px 4px;border-radius:3px}
 .tn-list{max-height:280px;overflow-y:auto;margin-bottom:14px}
 .tn-item{padding:10px 0;border-bottom:1px solid var(--border)}.tn-item:last-child{border-bottom:none}
 .tn-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:3px}
@@ -1528,12 +1537,28 @@ onAuthStateChanged(auth, async (user)=>{
 
 async function enterParentMode(email){
   $('loginErr').innerHTML='<span class="spinner"></span> Signing in…';
-  let mine=[];
+  let mine=[],lookupErr=null;
   try{
     await loadRefData();
     const snap=await getDocs(query(collection(db,'students'),where('parentEmails','array-contains',email)));
     mine=snap.docs.map(d=>({_id:d.id,...d.data()}));
-  }catch(e){console.error('parent lookup',e);}
+  }catch(e){console.error('parent lookup',e);lookupErr=e;}
+  /* A failed lookup and an empty one are NOT the same thing, and telling a parent their
+     account isn't linked when Firestore actually refused the query sends everyone hunting
+     through the data for a problem that is in the rules. Say which one happened. */
+  if(lookupErr){
+    const code=String(lookupErr.code||lookupErr.message||'unknown');
+    showLogin();
+    $('loginErr').innerHTML='We couldn\'t check your account just now. Please try again in a moment, '
+      +'or contact ElectroBotics if it keeps happening.'
+      +'<div class="login-diag">Lookup failed: <strong>'+esc(code)+'</strong>'
+      +(/permission|insufficient/i.test(code)
+        ? ' \u2014 the database refused the parent lookup. The published Firestore rules for <code>students</code> '
+          +'need to allow a read when <code>parentEmails</code> contains the signed-in address.'
+        : '')
+      +'</div><a href="#" onclick="doSignOut();return false;">Sign out</a>';
+    return;
+  }
   if(!mine.length){
     showLogin();
     // Name the address actually used. Once the data is right, the usual cause is a parent
@@ -4384,6 +4409,16 @@ window.pemWhyRefused=async function(){
   let sc;
   try{ sc=await pemScan(); }
   catch(e){out.innerHTML=`<div class="stu-note"><span>Could not read students: ${esc(e.code||e.message)}</span></div>`;return;}
+  /* Two different reads, and the difference between them is the whole diagnosis:
+       \u2022 sc.rows  \u2014 a full-collection read, which only an admin is allowed to do
+       \u2022 liveQ    \u2014 the EXACT query the parent's browser runs at sign-in
+     If the address is in the data but liveQ comes back empty or throws, the data is fine
+     and the published rules (or an index) are refusing the parent's query. */
+  let liveN=null,liveErr=null;
+  try{
+    const snap=await getDocs(query(collection(db,'students'),where('parentEmails','array-contains',addr)));
+    liveN=snap.docs.length;
+  }catch(e){console.error('pem live query',e);liveErr=e;}
   // Exactly what enterParentMode() will find.
   const willFind=sc.rows.filter(st=>Array.isArray(st.parentEmails)&&st.parentEmails.includes(addr));
   // On the record's email text but not in the list \u2014 the repair fixes these.
@@ -4398,13 +4433,39 @@ window.pemWhyRefused=async function(){
   const near=sc.rows.filter(st=>!willFind.includes(st)&&!inText.includes(st)
     &&pemListFor(st).some(e=>gnorm(e)===target&&e!==addr));
   const name=(st)=>esc((st.ID||st._id)+(st.Name?' \u2014 '+st.Name:''));
+  /* Print both fields verbatim. They are DIFFERENT fields and both must be right: Email is
+     the free text you type, parentEmails is the lowercased list sign-in actually matches.
+     The Firestore console sorts capitals first, so parentEmails hides far below Email and
+     looks absent. */
+  const fields=(st)=>`<div class="pem-fields"><strong>${name(st)}</strong><br>`
+    +`Email: <code>${esc(String(st.Email==null?'(not set)':st.Email))}</code><br>`
+    +`parentEmails: <code>${Array.isArray(st.parentEmails)
+        ?esc('['+st.parentEmails.map(x=>'"'+x+'"').join(', ')+']')
+        :'(missing \u2014 this is what a parent sign-in matches on)'}</code></div>`;
   let h=`<div class="set-note">Signing in as <strong>${esc(addr)}</strong>`
     +(addr!==raw?` (addresses are matched in lower case)`:'')+`.</div>`;
   if(willFind.length){
-    h+=`<div class="set-note" style="border-left:3px solid var(--green,#8ab600);padding-left:10px;">`
-      +`<strong>This address works.</strong> It opens: ${willFind.map(name).join(' \u00b7 ')}.<br>`
-      +`If the parent is still refused, they are signing in with a different Google account than this one \u2014 `
-      +`the login screen now prints the address it actually received.</div>`;
+    if(liveErr||liveN===0){
+      /* The address IS in the data, but the sign-in query cannot see it. Nothing in the
+         Students data will fix this \u2014 it is the rules or the index. */
+      h+=`<div class="stu-note"><span><strong>The data is correct, but the sign-in query fails.</strong><br>`
+        +`This address is on ${willFind.map(name).join(' \u00b7 ')}, and a full read finds it. `
+        +`But the query the parent's browser actually runs \u2014 `
+        +`<code>where('parentEmails','array-contains','${esc(addr)}')</code> \u2014 `
+        +(liveErr?`failed with <strong>${esc(String(liveErr.code||liveErr.message))}</strong>.`
+                :`returned <strong>0</strong> rows.`)
+        +`<br><br>Rebuilding the list will not help. Check the <strong>published Firestore rules</strong>: `
+        +`<code>match /students/{id}</code> must allow a read when <code>parentEmails</code> contains the `
+        +`signed-in address, not only for staff. A rules file published with just the staff half does exactly this.`
+        +`</span></div>`;
+    }else{
+      h+=`<div class="set-note" style="border-left:3px solid var(--green,#8ab600);padding-left:10px;">`
+        +`<strong>This address works.</strong> It opens: ${willFind.map(name).join(' \u00b7 ')}. `
+        +`The live sign-in query returns ${liveN} row(s), so the data and the query both agree.`
+        +willFind.map(fields).join('')+`<br>`
+        +`If the parent is still refused, they are signing in with a different Google account than this one \u2014 `
+        +`the login screen prints the address it actually received.</div>`;
+    }
   }else if(inText.length){
     h+=`<div class="stu-note"><span><strong>On the record, but not in the sign-in list.</strong> `
       +`Found on: ${inText.map(name).join(' \u00b7 ')}. Press <strong>Rebuild the list</strong> above and this address will work.</span></div>`;
