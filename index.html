@@ -1092,6 +1092,19 @@ table.avail td.occ{border:1px solid transparent}
     </div>
 
     <div class="chart-card" style="padding:0;overflow:hidden;">
+      <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Repair · Parent Sign-in</span></div></div>
+      <div class="aa-sub">A parent signs in with Google and the app finds their children by matching their address against the student's <strong>parentEmails</strong> list. That list is built from the Parent / Student Email field, but only when a student is saved through the Add / Edit form — records that came in any other way carry the email without the list, and those parents are told their account isn't linked to any student. This rebuilds the list for every student from the email already on their record. Nothing else on the record is touched.</div>
+      <div style="padding:4px 20px 20px;">
+        <div class="stu-mig-actions">
+          <button class="wa-btn wa-cancel" style="padding:7px 14px;font-size:12px;" onclick="repairParentEmails(true)">Check first</button>
+          <button class="btn-primary" onclick="repairParentEmails(false)">Rebuild the list</button>
+          <span class="msg" id="pemMsg"></span>
+        </div>
+        <div id="pemList" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <div class="chart-card" style="padding:0;overflow:hidden;">
       <div class="stu-header"><div class="stu-title-wrap"><span class="table-title">Repair · Payment Currency</span></div></div>
       <div class="aa-sub">Payments are always received in rupees. Rows imported before this was settled may be tagged with the student's quoted currency (CHF, USD, CAD…), which made them convert and inflated revenue. This re-tags every such row as ₹ without touching the amounts.</div>
       <div style="padding:4px 20px 20px;">
@@ -1510,7 +1523,11 @@ async function enterParentMode(email){
   }catch(e){console.error('parent lookup',e);}
   if(!mine.length){
     showLogin();
-    $('loginErr').innerHTML='This account isn\'t linked to any student. If you believe this is an error, contact ElectroBotics. <a href="#" onclick="doSignOut();return false;">Sign out</a>';
+    // Name the address actually used. Once the data is right, the usual cause is a parent
+    // signing in with a different Google account from the one on their child's record.
+    $('loginErr').innerHTML='<strong>'+esc(email)+'</strong> isn\'t linked to any student. '
+      +'If you have another Google account, sign out and try that one \u2014 otherwise contact '
+      +'ElectroBotics and we\'ll add this address. <a href="#" onclick="doSignOut();return false;">Sign out</a>';
     return;
   }
   userRole='parent';
@@ -4224,6 +4241,81 @@ function renderFrozenList(){
       return `<tr><td><strong>${esc(PAY_MONTHS[(+p[1])-1])} ${esc(p[0])}</strong></td><td>${r('USD')}</td><td>${r('CHF')}</td><td>${r('CAD')}</td><td>${r('GBP')}</td><td><span class="pay-sid2">${esc(when)}</span></td></tr>`;
     }).join('')}</tbody></table>`;
 }
+/* Rebuild parentEmails from the Email field.
+
+   Parent sign-in is a server-side query: where('parentEmails','array-contains',<their
+   address, lowercased>). It has to be — the rules deny a parent any listing of students,
+   so the app cannot read them all and filter client-side. That makes the array the ONLY
+   thing standing between a parent and their child's page, and saveStudent() is the only
+   place that writes it. Any student record created another way has Email but no
+   parentEmails, and that parent is told their account isn't linked to anything.
+
+   Rewrites only the records whose stored list actually differs from the one their Email
+   implies, so re-running it is cheap and safe. */
+function pemListFor(st){return splitEmailsClient(st&&st.Email);}
+function pemSame(a,b){
+  if(!Array.isArray(a)||!Array.isArray(b)||a.length!==b.length)return false;
+  const x=a.slice().sort(),y=b.slice().sort();
+  return x.every((v,i)=>v===y[i]);
+}
+window.repairParentEmails=async function(dryRun){
+  if(!isAdmin())return;
+  const msg=$('pemMsg'),list=$('pemList');
+  msg.innerHTML='<span class="spinner"></span> Scanning…';msg.className='msg busy';
+  let rows=[];
+  try{
+    const snap=await getDocs(collection(db,'students'));
+    rows=snap.docs.map(d=>({_id:d.id,...d.data()}));
+  }catch(e){console.error('pem scan',e);msg.textContent='Could not read students: '+(e.code||e.message);msg.className='msg err';return;}
+  const noEmail=[],fix=[];
+  rows.forEach(st=>{
+    const want=pemListFor(st);
+    if(!want.length){noEmail.push(st);return;}          // nothing to build a list from
+    const have=Array.isArray(st.parentEmails)?st.parentEmails:null;
+    if(!pemSame(have,want))fix.push({st,want,had:have?have.length:0});
+  });
+  const linked=rows.length-noEmail.length;
+  let html='';
+  if(fix.length){
+    const fresh=fix.filter(f=>!f.had).length, stale=fix.length-fresh;
+    html+=`<div class="set-note"><strong>${fix.length}</strong> student(s) to fix`
+      +(fresh?` · ${fresh} with no list at all`:'')
+      +(stale?` · ${stale} whose list no longer matches the email on the record`:'')
+      +`.<br>After this, ${linked} of ${rows.length} student(s) can be reached by a parent sign-in.</div>`;
+    html+='<table class="pay-table"><thead><tr><th>ID</th><th>Name</th><th>Email on record</th><th>Will allow sign-in by</th></tr></thead><tbody>'
+      +fix.slice(0,50).map(f=>`<tr><td><strong>${esc(f.st.ID||f.st._id)}</strong></td><td>${esc(f.st.Name||'')}</td>`
+        +`<td>${esc(f.st.Email||'')}</td><td>${esc(f.want.join(', '))}</td></tr>`).join('')
+      +'</tbody></table>'+(fix.length>50?`<div class="set-note">…and ${fix.length-50} more.</div>`:'');
+  }else{
+    html+='<div class="pay-empty">Every student with an email already has a matching list. Nothing to repair.</div>';
+  }
+  if(noEmail.length){
+    html+=`<div class="set-note"><strong>${noEmail.length}</strong> student(s) have no Parent / Student Email, so no parent can sign in for them. `
+      +`Add an address on each record and run this again: `
+      +esc(noEmail.slice(0,12).map(s=>(s.ID||s._id)+(s.Name?' '+s.Name:'')).join(' · '))
+      +(noEmail.length>12?` · …and ${noEmail.length-12} more`:'')+`.</div>`;
+  }
+  list.innerHTML=html;
+  if(dryRun){
+    msg.textContent=fix.length?`${fix.length} student(s) would be updated. Nothing written yet.`:'Nothing to repair.';
+    msg.className='msg ok';return;
+  }
+  if(!fix.length){msg.textContent='Nothing to repair.';msg.className='msg ok';return;}
+  msg.innerHTML='<span class="spinner"></span> Updating '+fix.length+'…';msg.className='msg busy';
+  let done=0,fail=0,wb=writeBatch(db),n=0;
+  for(const f of fix){
+    try{
+      wb.set(doc(db,'students',f.st._id),{parentEmails:f.want,parentEmailsRepairedAt:serverTimestamp()},{merge:true});
+      n++;done++;
+      if(n>=400){try{await wb.commit();}catch(ce){console.error(ce);fail+=n;done-=n;}wb=writeBatch(db);n=0;}
+    }catch(e){console.error('pem row',f.st._id,e);fail++;}
+  }
+  try{if(n>0)await wb.commit();}catch(e){console.error(e);fail+=n;done-=n;}
+  msg.textContent=`Updated ${done} student(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
+  studentsLoaded=false;
+  toast('Parent sign-in rebuilt — those parents can sign in with Google now.');
+};
+
 // One-time repair: payment rows carrying a non-INR currency hold rupee amounts that were
 // being multiplied by the exchange rate. Re-tag them; the amounts themselves are correct.
 window.repairPayCurrency=async function(dryRun){
