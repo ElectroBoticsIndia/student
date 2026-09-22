@@ -771,6 +771,11 @@ table.avail td.occ{border:1px solid transparent}
   font-family:var(--font-mono);font-size:11px;line-height:1.5;color:var(--text);display:flex;gap:10px;align-items:flex-start}
 .stu-note .note-x{flex:none;margin-left:auto;background:none;border:none;cursor:pointer;font-size:13px;line-height:1;color:var(--text-light);padding:0 2px}
 .stu-note .note-x:hover{color:var(--text)}
+.pem-check{margin-top:16px;padding-top:14px;border-top:1px dashed var(--border)}
+.pem-check>label{display:block;font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+.pem-check input{font-family:var(--font-mono);font-size:12px;padding:7px 10px;border:1px solid var(--border);
+  border-radius:7px;min-width:260px;background:var(--card);color:var(--text)}
 .tn-list{max-height:280px;overflow-y:auto;margin-bottom:14px}
 .tn-item{padding:10px 0;border-bottom:1px solid var(--border)}.tn-item:last-child{border-bottom:none}
 .tn-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-light);margin-bottom:3px}
@@ -1101,6 +1106,14 @@ table.avail td.occ{border:1px solid transparent}
           <span class="msg" id="pemMsg"></span>
         </div>
         <div id="pemList" style="margin-top:12px;"></div>
+        <div class="pem-check">
+          <label>Why is an address refused?</label>
+          <div class="stu-mig-actions">
+            <input type="text" id="pemTest" placeholder="parent@gmail.com" onkeydown="if(event.key==='Enter'){event.preventDefault();pemWhyRefused();}">
+            <button class="wa-btn wa-cancel" style="padding:7px 14px;font-size:12px;" onclick="pemWhyRefused()">Check this address</button>
+          </div>
+          <div id="pemTestOut" style="margin-top:10px;"></div>
+        </div>
       </div>
     </div>
 
@@ -4258,50 +4271,92 @@ function pemSame(a,b){
   const x=a.slice().sort(),y=b.slice().sort();
   return x.every((v,i)=>v===y[i]);
 }
+/* Read every student once. Kept separate so the repair and the address checker see
+   exactly the same rows, and so "how many did we actually read" is always reported —
+   an empty read used to render identically to "everything is fine", which is how this
+   tool told Ganesh there was nothing to repair while parents were still locked out. */
+async function pemScan(){
+  const snap=await getDocs(collection(db,'students'));
+  const rows=snap.docs.map(d=>({_id:d.id,...d.data()}));
+  const noEmail=[],fix=[],ok=[];
+  rows.forEach(st=>{
+    const want=pemListFor(st);
+    if(!want.length){noEmail.push(st);return;}
+    const have=Array.isArray(st.parentEmails)?st.parentEmails:null;
+    if(pemSame(have,want))ok.push(st); else fix.push({st,want,had:have?have.length:0});
+  });
+  return {rows,noEmail,fix,ok};
+}
+/* Which fields on these records look like they hold an email? If the import wrote
+   "Parent Email" or "Email ID" instead of "Email", nothing downstream can work and this
+   is the only place it would show up. */
+function pemMailKeys(rows){
+  const seen={};
+  rows.forEach(st=>Object.keys(st).forEach(k=>{
+    if(/mail/i.test(k)&&k!=='parentEmails'&&k!=='parentEmailsRepairedAt'){
+      const v=st[k];
+      if(v!==undefined&&v!==null&&String(v).trim()!=='')seen[k]=(seen[k]||0)+1;
+    }
+  }));
+  return Object.entries(seen).sort((a,b)=>b[1]-a[1]);
+}
+function pemHeadline(sc){
+  const n=sc.rows.length;
+  if(!n)return '<div class="stu-note"><span><strong>Read 0 student records.</strong> '
+    +'The repair cannot see any students at all, so it has nothing to report either way. '
+    +'Open the Students tab and confirm it lists your students, then come back.</span></div>';
+  const keys=pemMailKeys(sc.rows);
+  let h=`<div class="set-note">Read <strong>${n}</strong> student record(s). `
+    +`<strong>${sc.ok.length+sc.fix.length}</strong> carry an email · `
+    +`<strong>${sc.ok.length}</strong> already have a working sign-in list · `
+    +`<strong>${sc.fix.length}</strong> need one · `
+    +`<strong>${sc.noEmail.length}</strong> have no email at all.</div>`;
+  // Every record lacking a usable Email is the signature of a differently-named field.
+  if(sc.noEmail.length===n&&keys.length){
+    h+=`<div class="stu-note"><span>No record has an <strong>Email</strong> field, but these `
+      +`email-like fields are present: ${esc(keys.map(k=>k[0]+' ('+k[1]+')').join(', '))}. `
+      +`The app reads <strong>Email</strong> — tell me which of these holds the parent address `
+      +`and I will make it read that instead.</span></div>`;
+  }
+  return h;
+}
 window.repairParentEmails=async function(dryRun){
   if(!isAdmin())return;
   const msg=$('pemMsg'),list=$('pemList');
-  msg.innerHTML='<span class="spinner"></span> Scanning…';msg.className='msg busy';
-  let rows=[];
-  try{
-    const snap=await getDocs(collection(db,'students'));
-    rows=snap.docs.map(d=>({_id:d.id,...d.data()}));
-  }catch(e){console.error('pem scan',e);msg.textContent='Could not read students: '+(e.code||e.message);msg.className='msg err';return;}
-  const noEmail=[],fix=[];
-  rows.forEach(st=>{
-    const want=pemListFor(st);
-    if(!want.length){noEmail.push(st);return;}          // nothing to build a list from
-    const have=Array.isArray(st.parentEmails)?st.parentEmails:null;
-    if(!pemSame(have,want))fix.push({st,want,had:have?have.length:0});
-  });
-  const linked=rows.length-noEmail.length;
-  let html='';
+  msg.innerHTML='<span class="spinner"></span> Scanning\u2026';msg.className='msg busy';
+  let sc;
+  try{ sc=await pemScan(); }
+  catch(e){console.error('pem scan',e);msg.textContent='Could not read students: '+(e.code||e.message);msg.className='msg err';return;}
+  const {rows,noEmail,fix}=sc;
+  let html=pemHeadline(sc);
   if(fix.length){
     const fresh=fix.filter(f=>!f.had).length, stale=fix.length-fresh;
     html+=`<div class="set-note"><strong>${fix.length}</strong> student(s) to fix`
-      +(fresh?` · ${fresh} with no list at all`:'')
-      +(stale?` · ${stale} whose list no longer matches the email on the record`:'')
-      +`.<br>After this, ${linked} of ${rows.length} student(s) can be reached by a parent sign-in.</div>`;
+      +(fresh?` \u00b7 ${fresh} with no list at all`:'')
+      +(stale?` \u00b7 ${stale} whose list no longer matches the email on the record`:'')
+      +`.</div>`;
     html+='<table class="pay-table"><thead><tr><th>ID</th><th>Name</th><th>Email on record</th><th>Will allow sign-in by</th></tr></thead><tbody>'
       +fix.slice(0,50).map(f=>`<tr><td><strong>${esc(f.st.ID||f.st._id)}</strong></td><td>${esc(f.st.Name||'')}</td>`
         +`<td>${esc(f.st.Email||'')}</td><td>${esc(f.want.join(', '))}</td></tr>`).join('')
-      +'</tbody></table>'+(fix.length>50?`<div class="set-note">…and ${fix.length-50} more.</div>`:'');
-  }else{
-    html+='<div class="pay-empty">Every student with an email already has a matching list. Nothing to repair.</div>';
+      +'</tbody></table>'+(fix.length>50?`<div class="set-note">\u2026and ${fix.length-50} more.</div>`:'');
+  }else if(rows.length&&(sc.ok.length+sc.fix.length)){
+    html+='<div class="pay-empty">Every student that has an email already has a matching list \u2014 '
+      +'nothing here needs rebuilding. If a parent is still refused, check their exact address below.</div>';
   }
-  if(noEmail.length){
-    html+=`<div class="set-note"><strong>${noEmail.length}</strong> student(s) have no Parent / Student Email, so no parent can sign in for them. `
-      +`Add an address on each record and run this again: `
-      +esc(noEmail.slice(0,12).map(s=>(s.ID||s._id)+(s.Name?' '+s.Name:'')).join(' · '))
-      +(noEmail.length>12?` · …and ${noEmail.length-12} more`:'')+`.</div>`;
+  if(noEmail.length&&noEmail.length!==rows.length){
+    html+=`<div class="set-note"><strong>${noEmail.length}</strong> student(s) have no Parent / Student Email, so no parent can sign in for them: `
+      +esc(noEmail.slice(0,12).map(s=>(s.ID||s._id)+(s.Name?' '+s.Name:'')).join(' \u00b7 '))
+      +(noEmail.length>12?` \u00b7 \u2026and ${noEmail.length-12} more`:'')+`.</div>`;
   }
   list.innerHTML=html;
   if(dryRun){
-    msg.textContent=fix.length?`${fix.length} student(s) would be updated. Nothing written yet.`:'Nothing to repair.';
-    msg.className='msg ok';return;
+    msg.textContent=fix.length?`${fix.length} student(s) would be updated. Nothing written yet.`
+      :(rows.length?'Nothing to rebuild.':'Read no students \u2014 see below.');
+    msg.className=rows.length?'msg ok':'msg err';return;
   }
-  if(!fix.length){msg.textContent='Nothing to repair.';msg.className='msg ok';return;}
-  msg.innerHTML='<span class="spinner"></span> Updating '+fix.length+'…';msg.className='msg busy';
+  if(!fix.length){msg.textContent=rows.length?'Nothing to rebuild.':'Read no students \u2014 see below.';
+    msg.className=rows.length?'msg ok':'msg err';return;}
+  msg.innerHTML='<span class="spinner"></span> Updating '+fix.length+'\u2026';msg.className='msg busy';
   let done=0,fail=0,wb=writeBatch(db),n=0;
   for(const f of fix){
     try{
@@ -4313,7 +4368,77 @@ window.repairParentEmails=async function(dryRun){
   try{if(n>0)await wb.commit();}catch(e){console.error(e);fail+=n;done-=n;}
   msg.textContent=`Updated ${done} student(s)`+(fail?`, ${fail} failed`:'')+'.';msg.className=fail?'msg err':'msg ok';
   studentsLoaded=false;
-  toast('Parent sign-in rebuilt — those parents can sign in with Google now.');
+  toast('Parent sign-in rebuilt \u2014 those parents can sign in with Google now.');
+};
+
+/* Answers the only question that matters when a parent is refused: is this address on
+   any student record, and in a form the sign-in query can find? Applies exactly the
+   normalisation the login path applies, so what it reports is what will happen. */
+window.pemWhyRefused=async function(){
+  if(!isAdmin())return;
+  const out=$('pemTestOut');
+  const raw=($('pemTest').value||'').trim();
+  if(!raw){out.innerHTML='<div class="set-note">Type the address the parent signs in with.</div>';return;}
+  const addr=raw.toLowerCase();
+  out.innerHTML='<div class="set-note"><span class="spinner"></span> Looking\u2026</div>';
+  let sc;
+  try{ sc=await pemScan(); }
+  catch(e){out.innerHTML=`<div class="stu-note"><span>Could not read students: ${esc(e.code||e.message)}</span></div>`;return;}
+  // Exactly what enterParentMode() will find.
+  const willFind=sc.rows.filter(st=>Array.isArray(st.parentEmails)&&st.parentEmails.includes(addr));
+  // On the record's email text but not in the list \u2014 the repair fixes these.
+  const inText=sc.rows.filter(st=>!willFind.includes(st)&&pemListFor(st).includes(addr));
+  // Same local part, different spelling \u2014 catches typos and wrong-account sign-ins.
+  /* Gmail ignores dots and anything after a '+', so o.ne@ and one@ are one inbox but two
+     different strings to Firestore. Compare on that normalised form to surface the very
+     near miss that an exact match will never find. */
+  const gnorm=(e)=>{const [l,d]=String(e||'').split('@');
+    return (l||'').split('+')[0].replace(/\./g,'')+'@'+(d||'');};
+  const target=gnorm(addr);
+  const near=sc.rows.filter(st=>!willFind.includes(st)&&!inText.includes(st)
+    &&pemListFor(st).some(e=>gnorm(e)===target&&e!==addr));
+  const name=(st)=>esc((st.ID||st._id)+(st.Name?' \u2014 '+st.Name:''));
+  let h=`<div class="set-note">Signing in as <strong>${esc(addr)}</strong>`
+    +(addr!==raw?` (addresses are matched in lower case)`:'')+`.</div>`;
+  if(willFind.length){
+    h+=`<div class="set-note" style="border-left:3px solid var(--green,#8ab600);padding-left:10px;">`
+      +`<strong>This address works.</strong> It opens: ${willFind.map(name).join(' \u00b7 ')}.<br>`
+      +`If the parent is still refused, they are signing in with a different Google account than this one \u2014 `
+      +`the login screen now prints the address it actually received.</div>`;
+  }else if(inText.length){
+    h+=`<div class="stu-note"><span><strong>On the record, but not in the sign-in list.</strong> `
+      +`Found on: ${inText.map(name).join(' \u00b7 ')}. Press <strong>Rebuild the list</strong> above and this address will work.</span></div>`;
+  }else{
+    /* Before declaring it absent, look in every other email-ish field. If the import wrote
+       "Parent Email" instead of "Email", the address IS on the record and the answer is to
+       read a different field \u2014 not to retype 600 addresses. */
+    const elsewhere=[];
+    sc.rows.forEach(st=>Object.keys(st).forEach(k=>{
+      if(!/mail/i.test(k)||k==='Email'||k==='parentEmails'||k==='parentEmailsRepairedAt')return;
+      if(splitEmailsClient(st[k]).includes(addr))elsewhere.push({st,k});
+    }));
+    if(elsewhere.length){
+      const fields=[...new Set(elsewhere.map(x=>x.k))];
+      h+=`<div class="stu-note"><span><strong>Found \u2014 but in the wrong field.</strong> `
+        +`This address is on ${elsewhere.slice(0,6).map(x=>name(x.st)).join(' \u00b7 ')}`
+        +(elsewhere.length>6?` and ${elsewhere.length-6} more`:'')
+        +`, stored under <strong>${esc(fields.join(', '))}</strong> rather than <strong>Email</strong>, `
+        +`which is the only field sign-in reads. Tell me that field name and I will make the app read it.</span></div>`;
+    }else{
+      h+=`<div class="stu-note"><span><strong>No student record carries this address.</strong> `
+        +`Nothing the repair can do \u2014 add it to the Parent / Student Email field on the child's record `
+        +`(Students \u2192 the student \u2192 Edit), then run the rebuild.</span></div>`;
+    }
+    if(near.length){
+      h+=`<div class="set-note"><strong>Same Gmail inbox, different spelling.</strong> Gmail ignores dots `
+        +`and anything after a \u201c+\u201d, so these reach the same person but will never match: `
+        +near.slice(0,8).map(st=>`${name(st)} \u2192 ${esc(pemListFor(st).join(', '))}`).join('<br>')+`</div>`;
+    }
+    h+=`<div class="set-note">Note: Gmail treats <code>a.b@gmail.com</code>, <code>ab@gmail.com</code> and `
+      +`<code>ab+x@gmail.com</code> as one inbox, but this match is exact \u2014 store the address `
+      +`the parent actually signs in with.</div>`;
+  }
+  out.innerHTML=h;
 };
 
 // One-time repair: payment rows carrying a non-INR currency hold rupee amounts that were
